@@ -7,6 +7,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { CartIcon } from "@/components/cart/CartIcon";
+
 type NavItem = {
   href: string;
   label: string;
@@ -215,18 +217,24 @@ export function Navbar() {
             </ul>
           </nav>
 
-          {/* Mobile trigger */}
-          <button
-            ref={toggleRef}
-            type="button"
-            onClick={() => setOpenedAtPath(pathname)}
-            aria-expanded={isOpen}
-            aria-controls="mobile-menu"
-            aria-label="Open menu"
-            className="-mr-1 flex size-11 items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:hidden"
-          >
-            <Menu size={24} strokeWidth={2} aria-hidden="true" />
-          </button>
+          {/* Actions. The cart sits above the menu trigger on a phone, so it is
+              reachable without opening the drawer first. */}
+          <div className="flex items-center gap-1">
+            <CartIcon />
+
+            {/* Mobile trigger */}
+            <button
+              ref={toggleRef}
+              type="button"
+              onClick={() => setOpenedAtPath(pathname)}
+              aria-expanded={isOpen}
+              aria-controls="mobile-menu"
+              aria-label="Open menu"
+              className="-mr-1 flex size-11 items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:hidden"
+            >
+              <Menu size={24} strokeWidth={2} aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </header>
 

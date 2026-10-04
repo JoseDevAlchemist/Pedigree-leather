@@ -23,10 +23,17 @@
   --pedigree-border: #e2d3bf; /* warm hairline, decorative only (1.2:1) */
   --pedigree-muted: #6e5b4c; /* secondary text on cream, 5.4:1 */
 
-  /* Elevation. Brown and charcoal surfaces need more shadow than cream ones. */
+  /* Elevation. Brown and charcoal surfaces need more shadow than cream ones.
+     Every value is warm rather than neutral grey: a grey shadow on a cream page
+     reads as dirt, and these surfaces are all warm. */
   --pedigree-shadow-bar: 0 1px 2px -1px rgb(43 43 43 / 0.18),
     0 12px 28px -18px rgb(43 43 43 / 0.55);
   --pedigree-shadow-panel: -28px 0 70px -40px rgb(43 43 43 / 0.7);
+  --pedigree-shadow-card: 0 1px 2px -1px rgb(43 43 43 / 0.1),
+    0 8px 20px -16px rgb(43 43 43 / 0.45);
+  --pedigree-shadow-card-lift: 0 2px 6px -2px rgb(43 43 43 / 0.14),
+    0 18px 38px -22px rgb(43 43 43 / 0.55);
+  --pedigree-shadow-inset-hairline: inset 0 0 0 1px rgb(0 0 0 / 0.08);
 }
 
 @theme inline {
@@ -53,6 +60,8 @@
 
   --shadow-bar: var(--pedigree-shadow-bar);
   --shadow-panel: var(--pedigree-shadow-panel);
+  --shadow-card: var(--pedigree-shadow-card);
+  --shadow-card-lift: var(--pedigree-shadow-card-lift);
 }
 
 body {
