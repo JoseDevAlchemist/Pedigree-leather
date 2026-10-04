@@ -40,6 +40,17 @@ export interface Product {
   stockQuantity: number;
   colors: ColorVariant[];
   category: "bag" | "shoe";
+  /**
+   * Curated by hand in the admin. `true` puts the product in the home page's
+   * "Featured" rail — a merchandising decision, so it is never derived.
+   */
+  featured: boolean;
+  /**
+   * ISO 8601 timestamp of when the product was listed. The only ordering the
+   * "New Arrivals" grid trusts: freshness comes from adding stock, not from a
+   * rotating shuffle.
+   */
+  createdAt: string;
 }
 
 /**

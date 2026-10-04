@@ -31,6 +31,12 @@ const liftVariants = {
 
 type ProductCardProps = {
   product: Product;
+  /**
+   * Applied to the card itself. The home page's featured rail sets a width here
+   * so a carousel card can be larger than a grid card without a second card
+   * component.
+   */
+  className?: string;
 };
 
 /**
@@ -44,8 +50,14 @@ type ProductCardProps = {
  * six cards' colour choices around as the shopper browses would be noise. The
  * colour they were looking at is handed to the detail page through the shared
  * transition, so the page opens on what they picked.
+ *
+ * Two densities, one component. Under `sm` the grid is two columns wide, so the
+ * card drops its description, tightens its padding and stacks the price above
+ * the swatches — a row holding "KES 11,900" and four swatches cannot fit in
+ * 141px without wrapping the price mid-number. From `sm` up it is the roomier
+ * card the desktop grid was designed around.
  */
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, className = "" }: ProductCardProps) {
   const reduceMotion = useReducedMotion();
   const { capture } = useSharedImageTransition();
   const imageRef = useRef<HTMLDivElement>(null);
@@ -78,7 +90,7 @@ export function ProductCard({ product }: ProductCardProps) {
       initial="rest"
       whileHover={reduceMotion ? undefined : "hover"}
       transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-      className="group relative flex flex-col rounded-2xl bg-card shadow-card"
+      className={`group relative flex flex-col rounded-2xl bg-card shadow-card ${className}`}
     >
       {/* First in the DOM so the shadow paints behind everything else here. */}
       <motion.span
@@ -87,13 +99,15 @@ export function ProductCard({ product }: ProductCardProps) {
         className="pointer-events-none absolute inset-0 rounded-2xl shadow-card-lift"
       />
 
-      {/* Image well. Its `layoutId` is shared with the detail page. */}
+      {/* Image well. A plain div, deliberately: see the note in
+          `SharedImageTransition.tsx` about why nothing here carries a
+          `layoutId`. */}
       <div
         ref={imageRef}
         className="relative overflow-hidden rounded-2xl"
         style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.06)" }}
       >
-        <motion.div layoutId={`card-image-${product.id}`}>
+        <div>
           <ProductImage
             sizing="square"
             src={color.images[angle] ?? null}
@@ -102,40 +116,57 @@ export function ProductCard({ product }: ProductCardProps) {
             productName={product.name}
             angle={angle}
           />
-        </motion.div>
+        </div>
 
-        {hasDiscount(product.discountPercent) ? (
+        {/* No discount badge on a sold-out product: the price is not something
+            the shopper can act on, and under the sold-out scrim the badge
+            renders as a muddy patch rather than as a number. */}
+        {!isSoldOut && hasDiscount(product.discountPercent) ? (
           <DiscountBadge
             discountPercent={product.discountPercent}
-            className="absolute top-3 right-3"
+            className="absolute top-2 right-2 sm:top-3 sm:right-3"
           />
         ) : null}
 
         {isSoldOut ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-card/70 backdrop-blur-[2px]">
-            <span className="rounded-full border border-border bg-card/95 px-4 py-1.5 font-serif text-sm font-semibold text-foreground">
+          /* A dark scrim, not a cream one. `bg-card/70` bleached every colour
+             to the same pale grey, which read as a photograph that failed to
+             load rather than as a bag we have sold out of. */
+          <div className="absolute inset-0 flex items-center justify-center bg-charcoal/25 backdrop-blur-[2px]">
+            <span className="rounded-full border border-border bg-card/95 px-3 py-1 font-serif text-xs font-semibold text-foreground sm:px-4 sm:py-1.5 sm:text-sm">
               Sold out
             </span>
           </div>
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-2.5 px-4 pt-3.5 pb-5">
+      <div className="flex flex-1 flex-col gap-2 px-3 pt-3 pb-4 sm:gap-2.5 sm:px-4 sm:pt-3.5 sm:pb-5">
         <AngleDots activeIndex={angleIndex} align="start" />
 
-        <h3 className="mt-0.5 font-serif text-lg leading-snug font-semibold tracking-tight text-foreground">
+        <h3 className="mt-0.5 font-serif text-base leading-snug font-semibold tracking-tight text-foreground sm:text-lg">
           {product.name}
         </h3>
 
-        <p className="line-clamp-2 text-sm leading-relaxed text-pretty text-muted">
+        {/* Hidden rather than clamped on mobile: at two-up there are about
+            fourteen characters per line, so a clamp would show a fragment.
+            `sm:line-clamp-2` and not `sm:block` — `line-clamp` sets `display`
+            itself, and a sibling `block` would win the cascade and uncap it. */}
+        <p className="hidden text-sm leading-relaxed text-pretty text-muted sm:line-clamp-2">
           {product.description}
         </p>
 
-        <div className="mt-auto flex items-end justify-between gap-3 pt-1.5">
+        {/* Price and swatches share one row, and the row wraps as a whole rather than
+            as words: a 254px card cannot hold "KES 14,850" and 140px of
+            swatches side by side, and letting flex wrap *inside* the price
+            broke the figure across lines ("KES" / "14,850" / "KES" / "16,500").
+            `flex-wrap` here moves the whole swatch group to its own line
+            instead, which is also the layout a 375px phone gets anyway. */}
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-1.5">
           <PriceRow
             basePrice={product.basePrice}
             discountPercent={product.discountPercent}
             muted={isSoldOut}
+            stacked
           />
 
           {/* Above the stretched link, so it stays clickable and focusable. */}

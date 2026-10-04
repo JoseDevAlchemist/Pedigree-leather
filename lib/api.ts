@@ -4,8 +4,8 @@ import type { Product } from "@/lib/types";
 /**
  * The one place the shop reads products from.
  *
- * Components import from here and never from `lib/mock-data.ts`. Both functions
- * are `async` even though they currently resolve from memory, so callers are
+ * Components import from here and never from `lib/mock-data.ts`. Every function
+ * is `async` even though they currently resolve from memory, so callers are
  * already written against a promise — swapping in the admin API changes the
  * bodies below and nothing else.
  *
@@ -41,11 +41,19 @@ import type { Product } from "@/lib/types";
  */
 
 /**
+ * Newest first. Compares as dates, not as strings, so a product saved with a
+ * `+03:00` offset sorts correctly against one saved in `Z`.
+ */
+function byCreatedAtDesc(a: Product, b: Product): number {
+  return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+}
+
+/**
  * All products, newest first. The grid filters by `category` itself, which
  * keeps shoes a one-line change when they launch.
  */
 export async function getProducts(): Promise<Product[]> {
-  return MOCK_PRODUCTS;
+  return [...MOCK_PRODUCTS].sort((a, b) => byCreatedAtDesc(a, b));
 }
 
 /** A single product by slug, or `null` when the slug does not exist. */
@@ -59,4 +67,55 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
  */
 export async function getProductSlugs(): Promise<string[]> {
   return MOCK_PRODUCTS.map((product) => product.slug);
+}
+
+/**
+ * The home page's "Featured" rail.
+ *
+ * Manual curation, not a ranking: a product is in here because somebody set
+ * `featured` on it in the admin. The home page never reorders or re-picks these
+ * slots, so a bag stays at the front of the rail for as long as it is
+ * featured.
+ *
+ * ---------------------------------------------------------------------------
+ * FUTURE: real API
+ * ---------------------------------------------------------------------------
+ *   const res = await fetch(`${API}/products?featured=true&order=featured`, {
+ *     next: { revalidate: 300, tags: ["products", "featured"] },
+ *   });
+ *
+ * The `order` param is the one thing worth adding on the server: once more than
+ * a handful of products are featured the admin needs a rank column, otherwise
+ * the rail has no stable order.
+ */
+export async function getFeaturedProducts(): Promise<Product[]> {
+  return MOCK_PRODUCTS.filter((product) => product.featured);
+}
+
+/**
+ * The home page's "New Arrivals" grid, and the basis of any future
+ * "recently added" list.
+ *
+ * Automatic by construction — sorted by `createdAt` descending and cut to
+ * `limit`. There is no cron and no daily shuffle: a product reaches this list
+ * the moment it is created, and falls off it only when `limit` newer products
+ * push it out. Freshness should come from new stock, not from rotation.
+ *
+ * `limit` is clamped to what exists rather than padded, so a small catalogue
+ * renders a short grid instead of an empty-state box.
+ *
+ * ---------------------------------------------------------------------------
+ * FUTURE: real API
+ * ---------------------------------------------------------------------------
+ *   const res = await fetch(`${API}/products?order=created_at.desc&limit=${limit}`, {
+ *     next: { revalidate: 300, tags: ["products"] },
+ *   });
+ *
+ * The sort must happen server-side eventually — asking the database for 8 of
+ * the newest is an indexed query, whereas fetching every product and slicing in
+ * JS does not scale past a few hundred rows.
+ */
+export async function getNewArrivals(limit: number): Promise<Product[]> {
+  const newestFirst = [...MOCK_PRODUCTS].sort((a, b) => byCreatedAtDesc(a, b));
+  return newestFirst.slice(0, Math.max(0, limit));
 }

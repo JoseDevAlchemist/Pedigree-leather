@@ -78,3 +78,14 @@ body {
     transparent 3px 7px
   );
 }
+
+/* Hides a scroll container's scrollbar without hiding its scrolling. Only for
+   rails where the cut-off card is already the affordance — the scroll position
+   must stay keyboard reachable, so this never goes on a page-level scroller. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

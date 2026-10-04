@@ -20,7 +20,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home" },
   { href: "/bags", label: "Bags" },
   { href: "/shoes", label: "Shoes", comingSoon: true },
-  { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
 

@@ -9,6 +9,16 @@ import type { Angle, ColorVariant, Product } from "@/lib/types";
  * Every `images` value is `null` because there is no photography yet. The UI
  * treats `null` as "show the colour block", so these slots fill in without any
  * component needing to know whether the images exist.
+ *
+ * `createdAt` values are hard-coded rather than computed from `Date.now()`:
+ * a mock that re-dates itself on every render would make the "New Arrivals"
+ * ordering untestable, and would shift the prerendered HTML between builds.
+ * They are spread over the 30 days before 2026-10-04.
+ *
+ * `featured: true` is set by hand on four bags. The sold-out Rift Valley
+ * Backpack and the three-left Karen Briefcase are deliberately excluded: a
+ * featured rail is merchandising, and it should not spend one of its four slots
+ * on something a shopper cannot buy or is unlikely to be able to.
  */
 
 function pendingImages(): Record<Angle, string | null> {
@@ -48,6 +58,8 @@ export const MOCK_PRODUCTS: Product[] = [
     stockQuantity: 12,
     category: "bag",
     colors: [COGNAC, BLACK, FOREST, TAN],
+    featured: true,
+    createdAt: "2026-09-05T08:00:00.000Z",
   },
   {
     id: "bag-ngong-satchel",
@@ -60,6 +72,8 @@ export const MOCK_PRODUCTS: Product[] = [
     stockQuantity: 8,
     category: "bag",
     colors: [OXBLOOD, COGNAC, BLACK],
+    featured: true,
+    createdAt: "2026-09-08T11:30:00.000Z",
   },
   {
     id: "bag-kilimanjaro-weekender",
@@ -72,6 +86,8 @@ export const MOCK_PRODUCTS: Product[] = [
     stockQuantity: 5,
     category: "bag",
     colors: [BLACK, TAN, OXBLOOD],
+    featured: true,
+    createdAt: "2026-09-14T16:20:00.000Z",
   },
   {
     id: "bag-rift-valley-backpack",
@@ -84,6 +100,8 @@ export const MOCK_PRODUCTS: Product[] = [
     stockQuantity: 0,
     category: "bag",
     colors: [FOREST, BLACK, CREAM, COGNAC],
+    featured: false,
+    createdAt: "2026-09-21T10:05:00.000Z",
   },
   {
     id: "bag-lamu-crossbody",
@@ -96,6 +114,8 @@ export const MOCK_PRODUCTS: Product[] = [
     stockQuantity: 15,
     category: "bag",
     colors: [CREAM, TAN, BLACK],
+    featured: true,
+    createdAt: "2026-09-29T14:40:00.000Z",
   },
   {
     id: "bag-karen-briefcase",
@@ -108,5 +128,7 @@ export const MOCK_PRODUCTS: Product[] = [
     stockQuantity: 3,
     category: "bag",
     colors: [OXBLOOD, BLACK, TAN],
+    featured: false,
+    createdAt: "2026-10-03T09:12:00.000Z",
   },
 ];

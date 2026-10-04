@@ -48,9 +48,9 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const [angleIndex, setAngleIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
-  /* The wrapper carries the arrival morph; the `layoutId` element sits inside it.
-     They must be separate because Motion's projection owns the transform of any
-     element with a `layoutId`, and would overwrite a hand-rolled one. */
+  /* The wrapper carries the arrival morph. It was once also the element with
+     the card's `layoutId`; that is gone (see `SharedImageTransition.tsx`), so
+     nothing competes for this element's transform now. */
   const morphRef = useRef<HTMLDivElement>(null);
   const [hasArrived, setHasArrived] = useState(!snapshot);
 
@@ -145,7 +145,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                  the browser never paints. */
               style={{ visibility: hasArrived ? "visible" : "hidden" }}
             >
-              <motion.div layoutId={`card-image-${product.id}`}>
+              <div>
                 <div className="relative">
                   <AngleSwiper
                     productName={product.name}
@@ -161,7 +161,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                     />
                   ) : null}
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
 

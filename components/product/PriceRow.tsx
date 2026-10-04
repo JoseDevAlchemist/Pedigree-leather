@@ -5,8 +5,20 @@ import { hasDiscount, formatPrice, calculateDiscountedPrice } from "@/lib/format
 type PriceRowProps = {
   basePrice: number;
   discountPercent: number;
-  /** `card` for the grid, `detail` for the product page. */
+  /**
+   * `card` for the grid, `detail` for the product page. The card size is
+   * responsive rather than fixed: the grid goes two-up under `sm`, where a
+   * 16px price beats a 18px one, so the row does not wrap mid-number.
+   */
   size?: "card" | "detail";
+  /**
+   * Put the struck-through base price on its own line. Cards want this: the
+   * price sits in a row with up to four swatches, and a 254px card cannot hold
+   * "KES 11,900 KES 14,000" plus 128px of swatches. Without it the formatter's
+   * own `flex-wrap` breaks the pair mid-figure — "KES" / "14,850" / "KES
+   * 16,500". The detail page has room, so it reads them on one line.
+   */
+  stacked?: boolean;
   /** Sold-out products still show their price — they just cannot be bought. */
   muted?: boolean;
   className?: string;
@@ -27,17 +39,22 @@ export function PriceRow({
   discountPercent,
   size = "card",
   muted = false,
+  stacked = false,
   className = "",
 }: PriceRowProps) {
   const discounted = hasDiscount(discountPercent);
   const price = discounted ? calculateDiscountedPrice(basePrice, discountPercent) : basePrice;
 
-  const priceSize = size === "detail" ? "text-3xl md:text-4xl" : "text-base";
-  const baseSize = size === "detail" ? "text-lg" : "text-sm";
+  const priceSize = size === "detail" ? "text-3xl md:text-4xl" : "text-sm sm:text-base";
+  const baseSize = size === "detail" ? "text-lg" : "text-xs sm:text-sm";
+
+  const layout = stacked
+    ? "flex-col items-start gap-y-0"
+    : "flex-wrap items-baseline gap-x-2.5 gap-y-0.5";
 
   return (
     <div
-      className={`flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 ${className}`}
+      className={`flex ${layout} ${className}`}
       /* Read out as one phrase: "12500 shillings, reduced from 14000". */
       aria-label={
         discounted
