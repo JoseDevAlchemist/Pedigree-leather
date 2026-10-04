@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Pedigree Leather design tokens.
+
+   This is the ONLY place colours are written down. Components reference the
+   semantic tokens these produce — bg-primary, text-accent, bg-card,
+   border-border, text-muted, text-accent-ink — never a raw hex value.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* Brand primitives */
+  --pedigree-brown: #5d4037;
+  --pedigree-gold: #d4af37;
+  --pedigree-cream: #f5e9d9;
+  --pedigree-charcoal: #2b2b2b;
+
+  /* Derived tints — same hues, tuned for contrast on the surfaces above.
+     Ratios in the comments are measured against their background. */
+  --pedigree-brown-deep: #3b2a24; /* 11.4:1 on cream */
+  --pedigree-gold-bright: #e8ce7a; /* 6.0:1 on brown — gold is only 4.4:1 as text there */
+  --pedigree-cream-soft: #fcf6ee; /* cards sit a shade above the page */
+  --pedigree-border: #e2d3bf; /* warm hairline, decorative only (1.2:1) */
+  --pedigree-muted: #6e5b4c; /* secondary text on cream, 5.4:1 */
+
+  /* Elevation. Brown and charcoal surfaces need more shadow than cream ones. */
+  --pedigree-shadow-bar: 0 1px 2px -1px rgb(43 43 43 / 0.18),
+    0 12px 28px -18px rgb(43 43 43 / 0.55);
+  --pedigree-shadow-panel: -28px 0 70px -40px rgb(43 43 43 / 0.7);
+}
+
+@theme inline {
+  /* Type: a high-contrast serif for display, a plain sans for everything else */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), ui-serif, Georgia, serif;
+
+  /* Brand primitives, for the rare case that needs the raw hue */
+  --color-brown: var(--pedigree-brown);
+  --color-gold: var(--pedigree-gold);
+  --color-cream: var(--pedigree-cream);
+  --color-charcoal: var(--pedigree-charcoal);
+
+  /* Semantic tokens — these are what components use */
+  --color-background: var(--pedigree-cream);
+  --color-foreground: var(--pedigree-charcoal);
+  --color-primary: var(--pedigree-brown);
+  --color-primary-deep: var(--pedigree-brown-deep);
+  --color-accent: var(--pedigree-gold);
+  --color-accent-ink: var(--pedigree-gold-bright);
+  --color-card: var(--pedigree-cream-soft);
+  --color-border: var(--pedigree-border);
+  --color-muted: var(--pedigree-muted);
+
+  --shadow-bar: var(--pedigree-shadow-bar);
+  --shadow-panel: var(--pedigree-shadow-panel);
+}
+
+body {
+  background-color: var(--pedigree-cream);
+  color: var(--pedigree-charcoal);
+}
+
+/* Saddle stitch: a dashed rule in the current text colour. Used as the
+   "you are here" marker under the active nav link. */
+@utility stitch {
+  background-image: repeating-linear-gradient(
+    90deg,
+    currentColor 0 3px,
+    transparent 3px 7px
+  );
+}
