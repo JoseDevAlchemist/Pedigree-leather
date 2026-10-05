@@ -1,46 +1,99 @@
 import type { Angle } from "@/lib/types";
 
-/** Angle order. The index in this array is what the dots, arrows and swipe all address. */
-export const ANGLES: readonly Angle[] = [
-  "front",
-  "side-left",
-  "side-right",
-  "top",
-  "back",
-] as const;
+/**
+ * Angle helpers.
+ *
+ * There is no global angle list any more. Every function that used to clamp
+ * against `ANGLES.length` now takes the product's own `angles` array, because
+ * the roll order, the dots and the "1 / 5" counter are all per product: a bag
+ * rolls through five views and a shoe through five *different* views, and a
+ * product with four photographs must not inherit five dots.
+ */
 
-/** Human-readable names, shown stamped on the placeholder and read out to screen readers. */
+/**
+ * Short display labels. These are stamped onto the placeholder and shown in the
+ * card's corner, where horizontal space is scarce — hence "Side L" rather than
+ * "Side left". Use `angleSpoken` for anything a screen reader will read.
+ */
 export const ANGLE_LABELS: Record<Angle, string> = {
   front: "Front",
-  "side-left": "Side left",
-  "side-right": "Side right",
+  "side-left": "Side L",
+  "side-right": "Side R",
+  side: "Side",
   top: "Top",
+  bottom: "Bottom",
   back: "Back",
+  laces: "Laces",
 };
 
-export function angleAt(index: number): Angle {
-  return ANGLES[index] ?? ANGLES[0];
+/**
+ * Spoken labels, for alt text and `aria-label`. "Side L view" is fine stamped on
+ * a leather swatch and wrong in a sentence read aloud, so the two are kept apart.
+ */
+const ANGLE_SPOKEN: Record<Angle, string> = {
+  front: "front",
+  "side-left": "left side",
+  "side-right": "right side",
+  side: "side",
+  top: "top",
+  bottom: "sole",
+  back: "back",
+  laces: "laces",
+};
+
+/** The view at `index` in this product's roll, falling back to the first view. */
+export function angleAt(index: number, angles: readonly Angle[]): Angle {
+  return angles[index] ?? angles[0];
 }
 
+/** Short display label, e.g. "Side L". Stamped on the placeholder. */
 export function angleLabel(angle: Angle): string {
   return ANGLE_LABELS[angle];
 }
 
-/** Clamp any integer into the valid angle range, so arrows stop at the ends. */
-export function normaliseIndex(index: number): number {
-  if (Number.isNaN(index)) return 0;
-  return Math.min(ANGLES.length - 1, Math.max(0, Math.round(index)));
+/** Lower-case label for alt text and `aria-label`, e.g. "left side". */
+export function angleSpoken(angle: Angle): string {
+  return ANGLE_SPOKEN[angle];
+}
+
+/**
+ * Clamp any number into the valid index range for this product. The dots, the
+ * arrows and the roll all call this, so nothing can address an angle the product
+ * does not have — including a stale timer from a previous product id.
+ */
+export function clampIndex(index: number, count: number): number {
+  if (Number.isNaN(index) || count <= 0) return 0;
+  return Math.min(count - 1, Math.max(0, Math.round(index)));
 }
 
 /** Step through angles, stopping at either end rather than wrapping. */
-export function stepIndex(index: number, delta: number): number {
-  return normaliseIndex(index + delta);
+export function stepIndex(index: number, delta: number, count: number): number {
+  return clampIndex(index + delta, count);
 }
 
-export function isFirstIndex(index: number): boolean {
-  return normaliseIndex(index) === 0;
+/** Wrap forward one step, for the timed roll, which loops rather than stopping. */
+export function nextIndex(index: number, count: number): number {
+  if (count <= 0) return 0;
+  return (clampIndex(index, count) + 1) % count;
 }
 
-export function isLastIndex(index: number): boolean {
-  return normaliseIndex(index) === ANGLES.length - 1;
+export function isFirstIndex(index: number, count: number): boolean {
+  return clampIndex(index, count) === 0;
+}
+
+export function isLastIndex(index: number, count: number): boolean {
+  return clampIndex(index, count) === count - 1;
+}
+
+/**
+ * Where an angle sits in the roll, or -1 if this product does not have it.
+ *
+ * Used by the hover roll: the cursor's position names a *view* ("the left side"),
+ * and this finds which of this product's angles is that view. The two lists are
+ * related but not identical — a bag has `side-left` and `side-right`, a shoe has
+ * one `side` — so the lookup has to go through the product rather than assuming
+ * positions line up.
+ */
+export function angleIndexOf(angles: readonly Angle[], angle: Angle): number {
+  return angles.indexOf(angle);
 }

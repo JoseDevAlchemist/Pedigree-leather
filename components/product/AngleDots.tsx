@@ -1,9 +1,12 @@
 "use client";
 
-import { ANGLES, angleLabel } from "@/lib/angles";
+import { angleSpoken } from "@/lib/angles";
+import type { Angle } from "@/lib/types";
 
 type AngleDotsProps = {
   activeIndex: number;
+  /** This product's views, in roll order. One dot per entry. */
+  angles: readonly Angle[];
   /** Supplied on the detail page, where a dot jumps to an angle. Omitted on the card, where the dots are a read-only indicator. */
   onSelect?: (index: number) => void;
   size?: "sm" | "md";
@@ -13,14 +16,19 @@ type AngleDotsProps = {
 };
 
 /**
- * The five-angle position indicator.
+ * The position indicator for a product's views.
+ *
+ * One dot per `Product.angles` entry, so a bag shows five and a shoe shows five
+ * different ones — a shoe never gets a "top of the gusset" dot it was not
+ * photographed from.
  *
  * On a product card it is decoration: the dots just report which view is showing
  * and sit behind the card's link, so they are hidden from assistive tech. On the
- * detail page the same component becomes five real buttons.
+ * detail page the same component becomes real buttons.
  */
 export function AngleDots({
   activeIndex,
+  angles,
   onSelect,
   size = "sm",
   align = "center",
@@ -38,7 +46,7 @@ export function AngleDots({
         ? { role: "group", "aria-label": "Choose a view" }
         : { "aria-hidden": "true" })}
     >
-      {ANGLES.map((angle, index) => {
+      {angles.map((angle, index) => {
         const isActive = index === activeIndex;
         const dot = (
           <span
@@ -55,7 +63,7 @@ export function AngleDots({
             key={angle}
             type="button"
             onClick={() => onSelect(index)}
-            aria-label={`Show ${angleLabel(angle).toLowerCase()} view`}
+            aria-label={`Show ${angleSpoken(angle)} view`}
             aria-current={isActive ? "true" : undefined}
             /* The dot is small; the hit area is not. */
             className="-m-2 flex size-8 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"

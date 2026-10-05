@@ -7,8 +7,24 @@
  * `ColorVariant.images` and every consumer already handles the `null` case.
  */
 
-/** The five angles a bag is photographed from, in the order they are shown. */
-export type Angle = "front" | "side-left" | "side-right" | "top" | "back";
+/**
+ * One view of a product.
+ *
+ * The union is the union of everything the workshop might photograph, not the
+ * views any single product has. Which of these a product actually has is
+ * `Product.angles` — a bag has no laces and a shoe has no gusset to shoot from
+ * above, so the two categories carry different subsets. Nothing outside
+ * `Product.angles` should ever be indexed for a given product.
+ */
+export type Angle =
+  | "front"
+  | "side-left"
+  | "side-right"
+  | "side"
+  | "top"
+  | "bottom"
+  | "back"
+  | "laces";
 
 /**
  * One colourway of a product. `hex` drives both the swatch fill and the
@@ -22,6 +38,12 @@ export interface ColorVariant {
   name: string;
   /** Swatch + placeholder fill, e.g. "#8B4513". */
   hex: string;
+  /**
+   * A slot for every `Angle`, not just the ones this product uses. Keeping the
+   * record total is what makes `images[angle] ?? null` safe: a missing key and
+   * an unphotographed slot read the same, so a shoe's `laces` slot exists and is
+   * simply null.
+   */
   images: Record<Angle, string | null>;
 }
 
@@ -51,6 +73,18 @@ export interface Product {
    * rotating shuffle.
    */
   createdAt: string;
+  /**
+   * This product's views, in roll order. A bag rolls front → side-left →
+   * side-right → top → back; a shoe rolls front → laces → side → back → bottom.
+   *
+   * Per product rather than one global list, because the roll, the dots, the
+   * arrows and the "1 / 5" counter all address positions in *this* array. A
+   * product with four angles must not inherit five dots, and a shoe must not
+   * offer a top-down gusset view it was never photographed from.
+   *
+   * Always non-empty, and `front` first — the roll starts and settles there.
+   */
+  angles: Angle[];
 }
 
 /**

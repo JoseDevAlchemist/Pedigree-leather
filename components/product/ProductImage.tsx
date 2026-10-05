@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 
-import { angleLabel } from "@/lib/angles";
+import { angleLabel, angleSpoken } from "@/lib/angles";
 import { onColorOpacity, readableTextClass, shade } from "@/lib/color";
 import type { Angle } from "@/lib/types";
 
@@ -49,7 +49,9 @@ export function ProductImage({
 }: ProductImageProps) {
   const reduceMotion = useReducedMotion();
 
-  const alt = `${productName} in ${colorName}, ${angleLabel(angle).toLowerCase()} view`;
+  /* Alt text reads as a sentence, so it uses the spoken label ("left side")
+   * rather than the stamped one ("Side L"). */
+  const alt = `${productName} in ${colorName}, ${angleSpoken(angle)} view`;
 
   const frame = sizing === "square" ? "relative aspect-square w-full" : "relative size-full";
 

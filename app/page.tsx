@@ -48,15 +48,17 @@ import { getFeaturedProducts, getNewArrivals, getProducts } from "@/lib/api";
 export default async function Home() {
   /* Three reads, all through the api seam. `Promise.all` because they are
      independent requests the moment any of them is a real fetch. */
-  const [featured, newArrivals, all] = await Promise.all([
+  const [featured, newArrivals, bags, shoes] = await Promise.all([
     getFeaturedProducts(),
     getNewArrivals(8),
-    getProducts(),
+    getProducts("bag"),
+    getProducts("shoe"),
   ]);
 
-  /* Previewed rather than hand-picked: the first four bags by `createdAt`, so
-     this section moves on its own in step with "New Arrivals" above it. */
-  const bagPreview = all.filter((product) => product.category === "bag").slice(0, 4);
+  /* Previewed rather than hand-picked: the newest of each category, so these two
+     sections move on their own in step with "New Arrivals" above them. */
+  const bagPreview = bags.slice(0, 4);
+  const shoePreview = shoes.slice(0, 4);
 
   return (
     <main id="main" className="flex-1">
@@ -168,24 +170,34 @@ export default async function Home() {
       </section>
 
       {/* ------------------------------------------------------------------
-          The two categories. Bags gets real products; shoes gets an honest
-          "not yet" rather than a fake grid of placeholders.
+          The two categories. Both are real grids now that shoes have launched, and
+          both are pinned to two columns — this split is half a page wide, so the
+          responsive shop grid would try to fit four cards in a 528px column and
+          crush all of them.
           ------------------------------------------------------------------ */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8">
         {/* Stacked until `lg`, not `md`: two columns at 768px leave each preview card
             about 146px, which is too narrow for a product name and a price on
             the same line. Two columns need 1024px to work. */}
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-8">
-          <div>
+          {/* Both columns are `flex h-full flex-col` and the "Shop X" link is
+              `mt-auto`. This split used to be balanced by a fixed-height
+              placeholder on the shoes side, which is no longer there — with two
+              real grids of differing content, the columns came out different
+              heights and the two links landed 50px apart, which reads as a
+              mistake rather than as two columns. `mt-auto` pins both links to the
+              same baseline, and `items-stretch` (the grid default) gives both
+              columns the full row height to distribute. */}
+          <div className="flex h-full flex-col">
             <h2 className="font-sans text-xs font-semibold tracking-[0.16em] text-muted uppercase">
               Bags
             </h2>
 
-            <div className="mt-6">
+            <div className="mt-6 flex-1">
               {/* Pinned to two: this grid already sits in half a page, and the
                   responsive shop grid would try to fit four cards in a 528px
                   column and crush all of them. */}
-              <ProductGrid products={bagPreview} columns={2} />
+              <ProductGrid products={bagPreview} columns={2} className="h-full" />
             </div>
 
             <div className="mt-6">
@@ -204,32 +216,34 @@ export default async function Home() {
             </div>
           </div>
 
-          <div>
+          <div className="flex h-full flex-col">
             <h2 className="font-sans text-xs font-semibold tracking-[0.16em] text-muted uppercase">
               Shoes
             </h2>
 
-            {/* Sized to match the bags column beside it so the split reads as
-                two equal halves, not one section with a stub hanging off it. */}
-            <div className="mt-6 flex h-full flex-col justify-center rounded-2xl border border-border bg-card px-6 py-10 sm:px-10 sm:py-14">
-              <p className="max-w-sm font-serif text-2xl leading-snug font-semibold tracking-tight text-foreground text-balance sm:text-3xl">
-                Our first pairs are on the bench now
-              </p>
-              <p className="mt-3 max-w-sm text-pretty leading-relaxed text-muted">
-                Goodyear-welted, resolable, made the same way as the bags. We
-                will list them here the day they are ready.
-              </p>
+            {/* Was a "not on sale yet" panel while shoes were still on the bench.
+                It is now the same real grid as bags, because shoes *are* on sale
+                and the stub was quietly lying about it — and it sat directly
+                below a nav item and above a footer link that both said the
+                opposite. A placeholder that contradicts its own site is worse
+                than no placeholder. */}
+            <div className="mt-6 flex-1">
+              <ProductGrid products={shoePreview} columns={2} className="h-full" />
+            </div>
 
-              <div className="mt-7">
-                <span
-                  aria-disabled="true"
-                  title="Shoes are not on sale yet"
-                  className="inline-flex min-h-11 cursor-not-allowed items-center gap-1.5 rounded-full border border-border px-6 py-3 text-sm font-semibold tracking-wide text-muted/70"
-                >
-                  Shop shoes
-                  <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
-                </span>
-              </div>
+            <div className="mt-6">
+              <Link
+                href="/shoes"
+                className="group inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold tracking-wide text-foreground transition-colors duration-150 ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+              >
+                Shop shoes
+                <ArrowRight
+                  size={16}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                  className="transition-transform duration-150 ease-out group-hover:translate-x-0.5"
+                />
+              </Link>
             </div>
           </div>
         </div>

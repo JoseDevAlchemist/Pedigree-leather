@@ -5,7 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { ANGLES } from "@/lib/angles";
+import { angleAt } from "@/lib/angles";
+import { categoryName as categoryNameFor, categoryPath as categoryPathFor } from "@/lib/category";
 import { effectivePrice, hasDiscount } from "@/lib/format";
 import type { CartItem, Product } from "@/lib/types";
 
@@ -111,6 +112,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
   const maxQuantity = Math.min(MAX_QUANTITY, product.stockQuantity || MAX_QUANTITY);
 
+  /* The one place the "where did you come from" link and its label are decided,
+     so a shoe page says "All shoes" and links to /shoes without this component
+     knowing it is being rendered under /bags or /shoes. */
+  const categoryPath = categoryPathFor(product.category);
+  const categoryName = categoryNameFor(product.category);
+
   /* The cart line, assembled where all its pieces live. */
   const cartItem: CartItem = {
     productId: product.id,
@@ -121,22 +128,24 @@ export function ProductDetail({ product }: ProductDetailProps) {
     colorHex: color.hex,
     unitPrice: effectivePrice(product.basePrice, product.discountPercent),
     quantity,
-    image: color.images[ANGLES[angleIndex]] ?? color.images.front ?? null,
+    /* `angleAt` clamps, so a stale index from a previous product can never
+       address an angle this product does not have. */
+    image: color.images[angleAt(angleIndex, product.angles)] ?? color.images.front ?? null,
   };
 
   return (
     <main id="main" className="flex-1">
       <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <Link
-          href="/bags"
+          href={categoryPath}
           className="-ml-2 inline-flex items-center gap-1.5 rounded-full px-2 py-2 text-sm font-medium text-muted transition-colors duration-150 ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <ArrowLeft size={16} strokeWidth={2} aria-hidden="true" />
-          All bags
+          All {categoryName}
         </Link>
 
         <div className="mt-4 grid gap-8 lg:mt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-12 xl:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
-          {/* Image. Sticky on desktop so the five views stay reachable while the
+          {/* Image. Sticky on desktop so every view stays reachable while the
               shopper reads. */}
           <div className="lg:sticky lg:top-24 lg:self-start">
             <div
@@ -150,6 +159,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   <AngleSwiper
                     productName={product.name}
                     color={color}
+                    angles={product.angles}
                     angleIndex={angleIndex}
                     onAngleChange={setAngleIndex}
                   />

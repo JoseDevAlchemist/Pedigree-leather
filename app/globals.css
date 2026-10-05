@@ -34,6 +34,13 @@
   --pedigree-shadow-card-lift: 0 2px 6px -2px rgb(43 43 43 / 0.14),
     0 18px 38px -22px rgb(43 43 43 / 0.55);
   --pedigree-shadow-inset-hairline: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+
+  /* WhatsApp's own brand green. The one token here that is not part of the
+     Pedigree palette, and it is deliberately quarantined: it belongs to the
+     floating chat button and nothing else. A shop green adopted anywhere else
+     would stop reading as "this opens WhatsApp" and start reading as a second
+     brand colour, which is how a palette rots. */
+  --whatsapp-green: #25d366;
 }
 
 @theme inline {
@@ -57,6 +64,11 @@
   --color-card: var(--pedigree-cream-soft);
   --color-border: var(--pedigree-border);
   --color-muted: var(--pedigree-muted);
+
+  /* Exposed as a token rather than reached for as `bg-[var(--whatsapp-green)]`,
+     so the floating button's colour is still written down in exactly one place
+     and the pairing of green-and-glyph can be changed in one place. */
+  --color-whatsapp: var(--whatsapp-green);
 
   --shadow-bar: var(--pedigree-shadow-bar);
   --shadow-panel: var(--pedigree-shadow-panel);
@@ -87,5 +99,35 @@ body {
   -ms-overflow-style: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Loading placeholder.
+
+   The pulse is an opacity animation and nothing else. Opacity is the one
+   property that stays on the compositor, so a grid of skeletons costs no layout
+   and no repaint; animating a background colour here would put every block on
+   the main thread for the whole time it is on screen.
+   --------------------------------------------------------------------------- */
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Opt-in through the media query rather than switched off in the reduced-motion
+   case. With reduced motion the skeleton is a still block, and that is still a
+   working loading state: it holds the page's shape so nothing jumps when the
+   real content lands. The animation is a nicety on top of structure, never the
+   thing that communicates "loading". */
+@utility skeleton-pulse {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: skeleton-pulse 1.7s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

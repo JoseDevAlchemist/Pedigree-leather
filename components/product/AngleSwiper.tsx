@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
-import { ANGLES, angleLabel, stepIndex } from "@/lib/angles";
+import { angleAt, angleSpoken, isFirstIndex, isLastIndex, stepIndex } from "@/lib/angles";
 import type { Angle, ColorVariant } from "@/lib/types";
 
 import { AngleDots } from "@/components/product/AngleDots";
@@ -18,19 +18,25 @@ const SWIPE_VELOCITY = 380;
 type AngleSwiperProps = {
   productName: string;
   color: ColorVariant;
+  /** This product's views, in roll order. The swiper walks exactly these. */
+  angles: readonly Angle[];
   angleIndex: number;
   onAngleChange: (index: number) => void;
   className?: string;
 };
 
 /**
- * Walks through the five angles of one colour by dragging.
+ * Walks through one product's views by dragging.
  *
  * The drag is a gesture, not a carousel: the image nudges under the finger and
  * springs back, and releasing past the threshold commits the next angle, which
- * then cross-fades in. That keeps the five views readable as five separate
- * images instead of a filmstrip cropped mid-bag, and it means the photo for each
- * angle can have its own aspect ratio later without reflowing the layout.
+ * then cross-fades in. That keeps the views readable as separate images instead
+ * of a filmstrip cropped mid-bag, and it means the photo for each angle can have
+ * its own aspect ratio later without reflowing the layout.
+ *
+ * Everything positional is derived from `angles`, so a bag walks its five views
+ * and a shoe walks its own five. The counter reads "1 / 5" either way, which is
+ * why it asks the array for its length rather than hardcoding five.
  *
  * Keyboard: the arrows and the dots are real buttons, so this is operable
  * without a pointer at all.
@@ -38,15 +44,17 @@ type AngleSwiperProps = {
 export function AngleSwiper({
   productName,
   color,
+  angles,
   angleIndex,
   onAngleChange,
   className = "",
 }: AngleSwiperProps) {
   const reduceMotion = useReducedMotion();
 
-  const angle: Angle = ANGLES[angleIndex];
-  const isFirst = angleIndex === 0;
-  const isLast = angleIndex === ANGLES.length - 1;
+  const count = angles.length;
+  const angle: Angle = angleAt(angleIndex, angles);
+  const isFirst = isFirstIndex(angleIndex, count);
+  const isLast = isLastIndex(angleIndex, count);
 
   return (
     <div className={className}>
@@ -59,9 +67,9 @@ export function AngleSwiper({
           const { offset, velocity } = info;
 
           if (offset.x <= -SWIPE_DISTANCE || velocity.x <= -SWIPE_VELOCITY) {
-            onAngleChange(stepIndex(angleIndex, 1));
+            onAngleChange(stepIndex(angleIndex, 1, count));
           } else if (offset.x >= SWIPE_DISTANCE || velocity.x >= SWIPE_VELOCITY) {
-            onAngleChange(stepIndex(angleIndex, -1));
+            onAngleChange(stepIndex(angleIndex, -1, count));
           }
         }}
         /* Lift slightly under the finger, so the frame reads as a physical
@@ -72,7 +80,7 @@ export function AngleSwiper({
         role="group"
         aria-roledescription="carousel"
         className="relative aspect-square w-full touch-pan-y overflow-hidden rounded-2xl bg-card select-none"
-        aria-label={`${productName} in ${color.name}, ${angleLabel(angle).toLowerCase()} view`}
+        aria-label={`${productName} in ${color.name}, ${angleSpoken(angle)} view`}
       >
         {/* Keyed on colour and angle so a change fades rather than swaps. The
             outgoing view leaves before the incoming one arrives. `initial={false}`
@@ -118,6 +126,7 @@ export function AngleSwiper({
       <div className="mt-4 flex items-center justify-between gap-4">
         <AngleDots
           activeIndex={angleIndex}
+          angles={angles}
           onSelect={onAngleChange}
           size="md"
           className="flex-1"
@@ -125,7 +134,7 @@ export function AngleSwiper({
 
         <div className="flex items-center gap-1.5">
           <SwipeButton
-            onClick={() => onAngleChange(stepIndex(angleIndex, -1))}
+            onClick={() => onAngleChange(stepIndex(angleIndex, -1, count))}
             disabled={isFirst}
             label="Previous view"
           >
@@ -133,11 +142,11 @@ export function AngleSwiper({
           </SwipeButton>
 
           <span className="min-w-16 text-center text-xs tabular-nums text-muted">
-            {angleIndex + 1} / {ANGLES.length}
+            {angleIndex + 1} / {count}
           </span>
 
           <SwipeButton
-            onClick={() => onAngleChange(stepIndex(angleIndex, 1))}
+            onClick={() => onAngleChange(stepIndex(angleIndex, 1, count))}
             disabled={isLast}
             label="Next view"
           >

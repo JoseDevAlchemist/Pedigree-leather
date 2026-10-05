@@ -25,6 +25,25 @@ _(updated at the end of each session)_
 - **Session 3 was verified in a real browser** — 79 automated checks at 375 / 640 / 768 / 1024 /
   1440px, plus frame-by-frame sampling of the card → detail morph. Session 2's unverified list is
   now closed except the `prefers-reduced-motion` pass.
+- **Session 4 was verified in a real browser** — 87 automated checks, all passing, plus the
+  `prefers-reduced-motion` pass that sessions 2 and 3 left open. The hybrid hover roll, the mobile
+  in-view roll, the footer, the 404 and the skeletons are all confirmed working, not just building.
+- **`<Footer />` and `<WhatsAppButton />` are mounted in `app/layout.tsx`**, so both render on every
+  route including the 404. `body` is a flex column and every page's `<main>` is `flex-1`, which is
+  what puts the footer at the bottom of the viewport on short pages and below the fold on long ones.
+- Shoes are live. `/shoes` and `/shoes/[slug]` are real routes and the home page's shoes column is a
+  real grid — session 3's "coming soon" stub was replaced this session, because it had started
+  contradicting the nav and the footer.
+- **Contact details live in `lib/contact.ts` and nav items in `lib/navigation.ts`.** Both are read by
+  the navbar, the footer, the contact page and the floating WhatsApp button, so the phone number in
+  the footer and the number the button texts cannot drift apart. `lib/contact.ts` contains invented
+  placeholder details, flagged in the file.
+- **Builds must use `--webpack` on this machine.** `pnpm build` (Turbopack) fails in
+  `next/font/google` with `Can't resolve '@vercel/turbopack-next/internal/font/google/font'` and
+  `next/font/google queries have exactly one entry`, across repeated attempts. Google Fonts is
+  reachable from both curl and node fetch, and `next dev` is unaffected, so this is a Turbopack font
+  resolution fault rather than a network one. `pnpm exec next build --webpack` produces an identical
+  route table and a working site. Worth retrying plain `pnpm build` once the toolchain moves.
 
 ## Design decisions worth remembering
 
@@ -91,6 +110,35 @@ _(updated at the end of each session)_
 - Added `zustand` in session 2 (the brief required it) even though `GEMINI.md` says not to add major
   dependencies without asking. Flagging it here so the next session knows it was a deliberate,
   brief-driven exception.
+- **There is no `loading.tsx` anywhere, and adding one at a segment level breaks `notFound()` on
+  that segment's children.** This cost the most time this session and the failure mode is silent.
+  `app/bags/loading.tsx` rendered the skeletons exactly as intended — and silently turned every bad
+  product URL into **HTTP 200 with the page permanently stuck on "Loading bags…"**. A segment's
+  loading file wraps *every route beneath it*, `/bags/[slug]` included, so the `notFound()` thrown in
+  the slug page was caught by that Suspense boundary and answered with the fallback shell. `/shoes`
+  had no `loading.tsx` and 404ed correctly, so the two routes had byte-identical logic and opposite
+  behaviour. The skeletons now live in a `<Suspense>` **inside** `app/bags/page.tsx`, which scopes
+  the boundary to that page and leaves `/bags/[slug]` alone. **If you ever add a `loading.tsx`,
+  check the status code of a bad child URL, not just that the skeleton renders.**
+- The hybrid hover roll measures the cursor against the **image well, not the card** (`surfaceRef`),
+  because a card is taller than its square picture: measuring the card put the bottom third of the
+  photo in the middle band and showed the front view when it should have shown the back. The zone
+  helper resolves a *named view* against the product's own `angles` with a fallback chain, so a shoe
+  showing its sole and a bag showing its back panel are the same gesture resolved per product.
+- **Roll trigger is `useHasHover()` (`hover: hover` and `pointer: fine`), not `min-width: 768px`.**
+  A narrow desktop window has hover; a touch laptop has hover *and* a touchscreen. Viewport width is
+  the wrong question, and it is also a hydration hazard — a media query cannot be answered on the
+  server, so the roll hooks start inert and settle on the second render.
+- Motion's `useReducedMotion()` returns `false` on the server and flips on hydration, so the skeleton
+  pulse is CSS inside a `prefers-reduced-motion: no-preference` query rather than a JS check. A
+  `useReducedMotion()` branch would start the animation anyway, one frame late.
+- `--whatsapp-green` is the only non-Pedigree colour token and it is deliberately quarantined to the
+  two WhatsApp surfaces. A shop green adopted anywhere else would stop reading as "this opens
+  WhatsApp".
+- The home page's bags/shoes split needed `flex h-full flex-col` on both columns with `mt-auto` on
+  the links. The two grids have different content heights, so without it the "Shop bags" and
+  "Shop shoes" links landed 50px apart at 1440 and read as a bug rather than as two columns.
+  `ProductGrid` grew a `className` prop for this.
 
 ## Roadmap
 
@@ -99,8 +147,10 @@ _(updated at the end of each session)_
 3. Angle viewer + colour switching — **done (session 2)**
 4. Shop grid: product cards, discount badge, stock status — **done (session 2)**
 5. Cart — **done (session 2)**
-6. Grid breakpoints + compact mobile card, About removed, home page, shoes stub — **done (session 3)**
-7. Checkout · 8. Supabase · 9. Admin · 10. Paystack · 11. Polish
+6. Grid breakpoints + compact mobile card, About removed, home page — **done (session 3)**
+7. Hybrid hover image-roll, footer, empty/loading states, WhatsApp button — **done (session 4)**
+8. Shoes category — **done (session 4)**. `/shoes` grid and detail page are live.
+9. Checkout · 10. Supabase · 11. Admin · 12. Paystack · 13. Polish
 
 ---
 
@@ -258,3 +308,117 @@ the repo) driving the dev server: 61 layout/interaction checks across `/`, `/bag
 **Next session, first job:** the reduced-motion pass, then admin — `featured` and `createdAt` are the
 two columns the home page reads, and `getFeaturedProducts()` / `getNewArrivals()` are already shaped
 for them. Shoes after that.
+
+---
+
+### Session 4 — 2026-10-05 — Hybrid hover roll, footer, empty/loading states, WhatsApp button
+
+**Status:** code complete, building, and **verified in a real browser**. 87 automated checks, 0
+failures, against a production build.
+
+The desktop browser tool reported no connected browser again (third session running), so
+verification was headless Chromium (Playwright installed in `/tmp`, nothing added to the repo).
+Scripts live in `/tmp/opencode/verify/`: `lib.js` (the 87-check suite), `hybrid.js`, `mobile.js`,
+`split.js`, `probe404.js`, `rm.js`, `console.js`.
+
+**Picked up from:** session 4's first half was already written and on disk — the three hooks
+(`useHoverAngleRoll`, `useInViewAutoRoll`, `useMediaQuery`) and the `ProductCard` integration, all
+untracked in git and absent from `progress.md`. Also on disk and unrecorded: the whole shoes
+category (`Product.category`, `lib/category.ts`, `app/shoes/[slug]/`, six shoes in the mock data).
+This session's work is the footer, the empty/loading/404 states, the WhatsApp button, and finishing
+and verifying the roll.
+
+**What was built**
+
+- `components/layout/Footer.tsx` — charcoal, three columns from `md`, stacked below. Brand +
+  tagline, nav from `lib/navigation`, contact from `lib/contact` with phone/email/address icons and a
+  WhatsApp button. Bottom bar with copyright and an editable credit line, divided by the brand's
+  `stitch` rule rather than a second invented decoration.
+- `components/layout/Brand.tsx` — `BrandMark` and `Wordmark` extracted out of `Navbar.tsx`. Both the
+  navbar and the footer open with the wordmark, and two copies of the one piece of brand typography
+  that must be identical everywhere is a drift waiting to happen. `Wordmark` deliberately carries no
+  size class, because two size utilities for the same breakpoint in one class string resolve by
+  stylesheet order rather than by intent.
+- `lib/navigation.ts`, `lib/contact.ts` — the nav list and the contact details, each read by several
+  components. See the design notes on drift.
+- `components/ui/Skeleton.tsx` — pulsing block. CSS-driven, not Motion.
+- `components/product/ProductCardSkeleton.tsx` — a skeleton that is the card's layout, not generic
+  bars: square image, five dots, name, description, price, four swatches, both densities. `count`
+  defaults to 8.
+- `app/bags/page.tsx` — rewritten around a `<Suspense>` boundary with `ProductGridSkeleton` as the
+  fallback. Read the design notes before adding a `loading.tsx`.
+- `app/not-found.tsx` — compass mark, "We couldn't find that page", Browse bags (primary) and Back
+  home. `main#main` so the navbar's skip link works on the one page where a keyboard user most wants
+  it.
+- `components/layout/WhatsAppButton.tsx` — 56px circle, `z-40` (above content, below the navbar and
+  the drawer), spring in once, hover scale 1.05, press 0.92. Hidden on `/admin`.
+- `app/globals.css` — `--whatsapp-green` + `--color-whatsapp`, and the `skeleton-pulse` utility with
+  its keyframes.
+- `components/cart/CartDrawer.tsx` — empty state gained an icon, a heading and a filled primary
+  button. It had the message and a link but read as an unfinished panel.
+- `app/contact/page.tsx` — built out against `lib/contact`. It previously said "Phone, WhatsApp and
+  shop hours go here", which invited someone to type the phone number directly into the markup and
+  then let the footer disagree with it. Shop hours were **not** invented: a made-up opening hours on
+  a real shop's contact page is worse than an honest gap.
+- `app/page.tsx` — the shoes column's "our first pairs are on the bench" stub is now a real grid and
+  a live "Shop shoes" link. It was directly contradicting the nav, the footer and `/shoes`.
+- `components/product/ProductGrid.tsx` — exports `gridColumnsClass()` (so the skeleton and the real
+  grid cannot end up on different column counts) and takes a `className`.
+
+**Verified — all 87 checks**
+
+- Footer on `/`, `/bags`, `/shoes`, `/contact`, a product page and a 404 page; three columns at
+  1440, stacked full-width at 375, no horizontal overflow at 375; computed background is exactly
+  `rgb(43,43,43)` and text `rgb(245,233,217)`; copyright, credit line, tagline, phone, email and
+  address all present; every nav link 200; the WhatsApp href carries `254700000000` and a
+  percent-encoded `?text=`.
+- WhatsApp button: 56×56 at both 1440 and 375, bottom-right inside the viewport, `position: fixed`,
+  `background-color: rgb(37,211,102)`, `target=_blank`, `rel~=noopener`, an accessible name, scales on
+  hover, and present on every non-`/admin` route.
+- Hybrid roll at 1440, pointer parked in each zone: left→side-left, right→side-right, centre-column
+  top→top, centre-column bottom→back, dead centre→front. Timed roll takes over when the pointer is
+  still (2+ unprompted changes in 6s). 2s of continuous movement inside the left third holds
+  side-left — the roll does not leak. Leaving resets to front.
+- Mobile at 375 (touch, coarse pointer, no hover): scroll-in plays `FRONT → SIDE L → SIDE R → TOP →
+  BACK → FRONT` and settles on front; it replays identically after leaving and re-entering the
+  viewport; sweeping the pointer through all four zones does nothing; desktop does not auto-roll.
+- `prefers-reduced-motion: reduce` at 1440: front view held through 3s parked and through a
+  six-position sweep — no timed roll and no pointer-driven roll. The skeleton animation is absent.
+- Cart end to end: empty drawer shows the icon, "Your cart is empty" and a 44px+ "Browse bags";
+  Add to Cart confirms, the drawer shows the product and price, the badge is non-zero, and it
+  survives a reload.
+- No unexpected console errors on any route.
+
+**Errors found and fixed while verifying**
+
+1. **`app/bags/loading.tsx` turned every bad product URL into a 200 with a stuck skeleton.** The
+   big one. Full explanation in the design notes. This is the single most important thing to read
+   before touching loading states in this repo.
+2. **The home page's shoes column was a lie.** A "shoes aren't ready yet" panel sitting above a
+   footer link and a nav item that both said shoes were on sale. Replaced with the real grid.
+3. **The bags/shoes split links were 50px apart** at 1440 once both sides became real grids.
+   `flex h-full flex-col` + `mt-auto` on the link wrappers; `ProductGrid` took a `className`.
+4. **`pnpm build` (Turbopack) fails on `next/font/google`**, repeatedly and with a network that
+   demonstrably works. `next build --webpack` is the workaround for now; not caused by any change
+   here, and it needs watching.
+5. The dev-only "n/5" indicator is compiled out of a production build, which initially made the
+   angle look unreadable in prod verification. Read the placeholder's stamped label instead, and
+   check the indicator separately against the dev server (it does work: `1/5 front` → `2/5
+   side-left` → `3/5 side-right` → `1/5 front`).
+
+**Not verified**
+
+- The skeleton is visible in the streamed HTML (104 blocks confirmed in the SSR payload) but is
+  effectively never *seen*, because the mock api resolves instantly and the route is prerendered.
+  That is the correct outcome — the boundary is already in place for the real api — but it means the
+  skeleton's appearance has not been judged by eye, only asserted on.
+- Real product photography. Every angle is still a placeholder colour block, so the roll has been
+  verified on colour transitions rather than on real images.
+- The footer's three columns at the awkward widths between 768 and 1024 were measured for alignment
+  and overflow, not reviewed at 768 / 896 in a screenshot.
+- A real touch drag on the featured rail is still outstanding from session 3.
+
+**Next session, first job:** admin — `featured` and `createdAt` are the two columns the home page
+reads, and `getFeaturedProducts()` / `getNewArrivals()` are already shaped for them. Before that,
+replace the placeholders in `lib/contact.ts` with the real workshop details; they are invented, and
+`254700000000` is well-formed enough that it will not fail loudly.

@@ -2,52 +2,17 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Menu, X } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { NAV_ITEMS } from "@/lib/navigation";
+
 import { CartIcon } from "@/components/cart/CartIcon";
-
-type NavItem = {
-  href: string;
-  label: string;
-  /** Not live yet. Rendered as a disabled item with a quiet "Soon" tag. */
-  comingSoon?: boolean;
-};
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Home" },
-  { href: "/bags", label: "Bags" },
-  { href: "/shoes", label: "Shoes", comingSoon: true },
-  { href: "/contact", label: "Contact" },
-];
+import { BrandMark, Wordmark } from "@/components/layout/Brand";
 
 /** Gold stitch sliding between links is the one piece of motion in the bar. */
 const STITCH_SPRING = { type: "spring", duration: 0.35, bounce: 0 } as const;
-
-function BrandMark() {
-  return (
-    <Image
-      src="/pedigree-logo.png"
-      alt=""
-      width={40}
-      height={40}
-      priority
-      className="size-9 shrink-0 rounded-full outline outline-1 -outline-offset-1 outline-black/10 md:size-10"
-    />
-  );
-}
-
-function Wordmark({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`font-serif text-xl leading-none font-semibold tracking-tight text-background md:text-2xl ${className}`}
-    >
-      Pedigree Leather
-    </span>
-  );
-}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -162,8 +127,8 @@ export function Navbar() {
             href="/"
             className="-m-1 flex items-center gap-3 rounded-full p-1 transition-transform duration-150 ease-out active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
           >
-            <BrandMark />
-            <Wordmark />
+            <BrandMark priority />
+            <Wordmark className="text-xl md:text-2xl" />
           </Link>
 
           {/* Desktop navigation */}

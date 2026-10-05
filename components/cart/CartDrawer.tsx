@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { X } from "lucide-react";
+import { ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 
@@ -267,17 +267,42 @@ function CartLineThumbnail({
   );
 }
 
+/**
+ * The empty cart.
+ *
+ * Three parts, and all three earn their place: an icon so the empty panel is
+ * visibly a *cart* rather than an unfinished drawer, a sentence that suggests
+ * what to do next rather than merely reporting that there is nothing, and one
+ * prominent action. Two buttons here would be a false choice — there is exactly
+ * one place to go.
+ *
+ * The icon is a soft circle in the card token rather than a bare glyph, because
+ * the panel is a warm cream and a floating outline icon at this size reads as
+ * loading, not as an empty basket.
+ */
 function EmptyCart({ onClose }: { onClose: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
-      <p className="max-w-[26ch] text-pretty leading-relaxed text-muted">
-        Nothing in the cart yet. Have a look at the bags — the weekenders go quickly.
-      </p>
+    <div className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center">
+      <span
+        aria-hidden="true"
+        className="flex size-16 items-center justify-center rounded-full bg-border/40 text-primary"
+      >
+        <ShoppingBag className="size-7" strokeWidth={1.5} />
+      </span>
+
+      <div className="space-y-1.5">
+        <p className="font-serif text-xl font-semibold tracking-tight text-foreground">
+          Your cart is empty
+        </p>
+        <p className="max-w-[26ch] text-pretty leading-relaxed text-muted">
+          Nothing in yet. Have a look at the bags — the weekenders go quickly.
+        </p>
+      </div>
 
       <Link
         href="/bags"
         onClick={onClose}
-        className="inline-flex h-11 items-center justify-center rounded-full border border-primary px-6 text-sm font-semibold text-primary transition-colors duration-200 ease-out hover:bg-primary hover:text-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         Browse bags
       </Link>

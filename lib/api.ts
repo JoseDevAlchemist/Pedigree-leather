@@ -51,22 +51,48 @@ function byCreatedAtDesc(a: Product, b: Product): number {
 /**
  * All products, newest first. The grid filters by `category` itself, which
  * keeps shoes a one-line change when they launch.
+ *
+ * The optional `category` is the query the real API will want — asking the
+ * database for one category is an indexed read, where fetching everything and
+ * filtering here is not. It is applied as well as `ProductGrid`'s own filter, and
+ * the two agree, so nothing is filtered twice.
  */
-export async function getProducts(): Promise<Product[]> {
-  return [...MOCK_PRODUCTS].sort((a, b) => byCreatedAtDesc(a, b));
+export async function getProducts(category?: Product["category"]): Promise<Product[]> {
+  const newestFirst = [...MOCK_PRODUCTS].sort((a, b) => byCreatedAtDesc(a, b));
+  return category ? newestFirst.filter((p) => p.category === category) : newestFirst;
 }
 
-/** A single product by slug, or `null` when the slug does not exist. */
-export async function getProductBySlug(slug: string): Promise<Product | null> {
-  return MOCK_PRODUCTS.find((product) => product.slug === slug) ?? null;
+/**
+ * A single product by slug, or `null` when the slug does not exist.
+ *
+ * The optional `category` is not a filter for convenience — it is what keeps
+ * `/bags/karura-tote` and `/shoes/karura-tote` from both existing. Slugs are
+ * unique across the whole catalogue, so without it a shoe slug resolves on the
+ * bags route and vice versa: a page that renders, is crawlable, and shows the
+ * wrong category. Each route passes the category it is responsible for.
+ */
+export async function getProductBySlug(
+  slug: string,
+  category?: Product["category"],
+): Promise<Product | null> {
+  const product = MOCK_PRODUCTS.find((entry) => entry.slug === slug);
+  if (!product) return null;
+  if (category && product.category !== category) return null;
+  return product;
 }
 
 /**
  * Every known slug, for `generateStaticParams`. Without this the dynamic route
  * can only be resolved at request time.
+ *
+ * The optional `category` keeps each category route prerendering only its own
+ * products, matching what `getProductBySlug` will accept.
  */
-export async function getProductSlugs(): Promise<string[]> {
-  return MOCK_PRODUCTS.map((product) => product.slug);
+export async function getProductSlugs(category?: Product["category"]): Promise<string[]> {
+  const products = category
+    ? MOCK_PRODUCTS.filter((product) => product.category === category)
+    : MOCK_PRODUCTS;
+  return products.map((product) => product.slug);
 }
 
 /**

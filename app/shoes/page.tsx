@@ -1,49 +1,35 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+
+import { ProductGrid } from "@/components/product/ProductGrid";
+import { getProducts } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Shoes",
   description:
-    "Handmade leather shoes, cut and stitched in Nairobi. Goodyear-welted and built to be resoled.",
+    "Handmade leather shoes, welted and stitched in Nairobi. Derbies, boots and loafers, built to be resoled rather than replaced.",
 };
 
 /**
- * The shoes stub.
+ * The shoes grid.
  *
- * Deliberately a page and not a 404: the nav already advertises the category,
- * and a link that dies is worse than a link that explains itself. It states
- * what is coming and how to reach the workshop in the meantime, and carries no
- * product grid — there is nothing to grid yet.
+ * Deliberately identical to `/bags` — same container, same padding, same
+ * breakpoints, and no page heading. The two categories are the same kind of
+ * thing, so they should look the same, and the only reason a shopper is on this
+ * page rather than that one is the nav item they just tapped. A heading would
+ * only restate it and push the shoes below the fold.
  */
-export default function ShoesPage() {
+export default async function ShoesPage() {
+  /* Read through the api seam so this page never learns where data comes from. */
+  const shoes = await getProducts("shoe");
+
   return (
-    <main id="main" className="flex flex-1">
-      <div className="mx-auto flex w-full max-w-6xl flex-col justify-center px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
-        <p className="stitch h-px w-10 text-accent" aria-hidden="true" />
-
-        <h1 className="mt-6 max-w-2xl font-serif text-4xl leading-[1.05] font-semibold tracking-tight text-foreground text-balance sm:text-5xl">
-          Shoes are on the bench
-        </h1>
-
-        <p className="mt-4 max-w-md text-pretty leading-relaxed text-muted">
-          We are cutting and stitching the first pairs now. The bags are ready
-          today — start there, and we will have shoes for you soon.
-        </p>
-
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link
-            href="/bags"
-            className="inline-flex min-h-11 items-center rounded-full bg-primary px-6 py-3 text-sm font-semibold tracking-wide text-background transition-colors duration-150 ease-out hover:bg-primary-deep active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
-          >
-            Shop bags
-          </Link>
-          <Link
-            href="/contact"
-            className="inline-flex min-h-11 items-center rounded-full border border-border px-6 py-3 text-sm font-semibold tracking-wide text-foreground transition-colors duration-150 ease-out hover:bg-card active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
-          >
-            Ask us to let you know
-          </Link>
-        </div>
+    <main id="main" className="flex-1">
+      <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-16 sm:px-6 sm:pt-8 sm:pb-20 lg:px-8">
+        <ProductGrid
+          products={shoes}
+          category="shoe"
+          emptyMessage="No shoes are listed right now. Our bags are ready today."
+        />
       </div>
     </main>
   );

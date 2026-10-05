@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
+import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
 import { CartDrawerProvider } from "@/components/cart/CartDrawerProvider";
 import { SharedImageTransitionProvider } from "@/components/motion/SharedImageTransition";
 import "./globals.css";
@@ -39,6 +41,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <CartDrawerProvider>
             <Navbar />
             {children}
+            {/* Below the page, above nothing. `body` is a flex column and every
+                page's `<main>` is `flex-1`, so the footer sits at the bottom of
+                the viewport on short pages and below the fold on long ones
+                instead of floating mid-page. */}
+            <Footer />
+            {/* Outside the providers: it needs neither the cart nor the image
+                transition, and it must render even if a page above it throws. */}
+            <WhatsAppButton />
           </CartDrawerProvider>
         </SharedImageTransitionProvider>
       </body>
