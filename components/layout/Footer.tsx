@@ -57,8 +57,23 @@ export function Footer() {
 
   return (
     <footer className="mt-auto bg-charcoal text-background">
-      <div className="mx-auto w-full max-w-6xl px-4 pt-14 pb-8 sm:px-6 sm:pt-16 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-3 md:gap-8">
+      {/* The footer was ~318px tall — about a third of a 900px viewport, which is a
+            lot of page for three columns and four links. It is now ~240px. None of
+            that came from the type: the logo, headings and links are all the size
+            they were, because shrinking text to save space is how a footer starts
+            looking like fine print. It came from the padding (`pt-16 pb-8` →
+            `pt-7 pb-4`), from folding the WhatsApp button into the contact column so
+            it stopped being a row of its own, and from the address going on one
+            line above `sm`. The contact column is the tallest of the three and
+            therefore sets this height, so it is the one that had to get shorter.
+
+            Mobile stacks the three blocks, which is the one place this is still
+            tall — ~580px, because a stacked footer carries three times the
+            vertical spacing of a side-by-side one. `gap-8` below `sm` rather than
+            a uniform `gap-8` keeps that honest without touching the desktop
+            number this trim was actually about. */}
+        <div className="mx-auto w-full max-w-6xl px-4 pt-7 pb-4 sm:px-6 lg:px-8">
+          <div className="grid gap-7 md:grid-cols-3 md:gap-8">
           {/* Brand */}
           <div>
             <Link
@@ -68,7 +83,7 @@ export function Footer() {
               <BrandMark />
               <Wordmark className="text-xl" />
             </Link>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-pretty text-background/70">
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-pretty text-background/70">
               Luxury leather goods, handcrafted in Nairobi.
             </p>
           </div>
@@ -76,7 +91,7 @@ export function Footer() {
           {/* Quick links */}
           <nav aria-label="Footer">
             <ColumnHeading>Shop</ColumnHeading>
-            <ul className="mt-4 space-y-1">
+            <ul className="mt-3 space-y-0">
               {NAV_ITEMS.map((item) => (
                 <li key={item.href}>
                   {item.comingSoon ? (
@@ -104,7 +119,7 @@ export function Footer() {
           {/* Contact */}
           <div>
             <ColumnHeading>Contact</ColumnHeading>
-            <ul className="mt-4 space-y-3 text-sm">
+            <ul className="mt-3 space-y-1.5 text-sm">
               <li>
                 <a
                   href={phoneHref}
@@ -134,7 +149,16 @@ export function Footer() {
                   aria-hidden="true"
                   className="mt-0.5 size-4 shrink-0 text-accent/70"
                 />
-                <span>
+                {/* Comma-joined from `sm` up. The contact column is the tallest
+                    of the three and sets the whole footer's height, so the
+                    second address line was 20px of the total for no gain — a
+                    full column is wide enough for "Ngong Road, Nairobi, Kenya"
+                    on one line, and it reads as an address rather than as a
+                    list. Stacked below `sm`, where one line would wrap anyway. */}
+                <span className="hidden sm:inline">
+                  {addressLines.join(", ")}
+                </span>
+                <span className="sm:hidden">
                   {addressLines.map((line) => (
                     <span key={line} className="block">
                       {line}
@@ -142,23 +166,29 @@ export function Footer() {
                   ))}
                 </span>
               </li>
+            {/* Last item in the contact column rather than a row of its own. WhatsApp is a
+                way to reach the shop, so it belongs with the phone and the email;
+                giving it a separate row below all three columns meant it could
+                not be trimmed without moving it, and it was most of the extra
+                height. */}
+              <li>
+                <a
+                  href={whatsappUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group mt-2 inline-flex items-center gap-2 rounded-full bg-whatsapp px-4 py-1.5 text-sm font-semibold text-charcoal transition-colors duration-200 ease-out hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <MessageCircle aria-hidden="true" className="size-4" />
+                  Chat on WhatsApp
+                </a>
+              </li>
             </ul>
-
-            <a
-              href={whatsappUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group mt-5 inline-flex items-center gap-2 rounded-full bg-whatsapp px-4 py-2 text-sm font-semibold text-charcoal transition-colors duration-200 ease-out hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              <MessageCircle aria-hidden="true" className="size-4" />
-              Chat on WhatsApp
-            </a>
           </div>
-        </div>
+          </div>
 
-        <StitchRule className="mt-12" />
+          <StitchRule className="mt-6" />
 
-        <div className="mt-6 flex flex-col items-start justify-between gap-3 text-xs text-background/55 sm:flex-row sm:items-center">
+          <div className="mt-3 flex flex-col items-start justify-between gap-2 text-xs text-background/55 sm:flex-row sm:items-center">
           <p>© {year} Pedigree Leather. All rights reserved.</p>
           {/* Editable credit line. Kept as literal text rather than pulled from a
               config object: it is prose, it changes when someone decides to

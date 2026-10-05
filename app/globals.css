@@ -18,6 +18,11 @@
   /* Derived tints — same hues, tuned for contrast on the surfaces above.
      Ratios in the comments are measured against their background. */
   --pedigree-brown-deep: #3b2a24; /* 11.4:1 on cream */
+  /* The navbar's own brown. Deeper and slightly greyer than `--pedigree-brown`
+     so the sticky bar reads as a separate surface from the hero it sits on
+     without looking like a different palette. Only 2% darker than the hero,
+     which is enough to see an edge and not enough to notice a seam. */
+  --pedigree-brown-dark: #4a332b;
   --pedigree-gold-bright: #e8ce7a; /* 6.0:1 on brown — gold is only 4.4:1 as text there */
   --pedigree-cream-soft: #fcf6ee; /* cards sit a shade above the page */
   --pedigree-border: #e2d3bf; /* warm hairline, decorative only (1.2:1) */
@@ -59,6 +64,7 @@
   --color-foreground: var(--pedigree-charcoal);
   --color-primary: var(--pedigree-brown);
   --color-primary-deep: var(--pedigree-brown-deep);
+  --color-primary-dark: var(--pedigree-brown-dark);
   --color-accent: var(--pedigree-gold);
   --color-accent-ink: var(--pedigree-gold-bright);
   --color-card: var(--pedigree-cream-soft);

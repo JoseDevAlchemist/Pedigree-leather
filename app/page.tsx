@@ -45,6 +45,35 @@ import { getFeaturedProducts, getNewArrivals, getProducts } from "@/lib/api";
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * A section heading: the label, then the brand's stitch rule running out to the
+ * right edge of whatever column the section has.
+ *
+ * The rule is the part that does the work. These were `text-xs text-muted` — 12px
+ * of muted brown on cream, about 4.5:1, which reads as a whisper from any normal
+ * viewing distance. Larger and darker helps, but what actually marks a section
+ * is the trailing rule: it gives the eye a line to stop on and ties the label to
+ * the row of cards beneath it.
+ *
+ * `stitch` is the same dashed saddle-stitch mark that sits under the active nav
+ * item and is quoted at the top of the hero, so this is the brand's existing
+ * divider rather than a new one invented for headings. `flex-1` lets it fill
+ * whatever width is available — the full container for Featured and New
+ * arrivals, half for each column of the bags/shoes split — from one component,
+ * which is why this is a component and not four hand-written h2s that would drift
+ * apart again.
+ */
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-4">
+      <h2 className="shrink-0 font-sans text-sm font-semibold tracking-widest text-foreground uppercase">
+        {children}
+      </h2>
+      <span aria-hidden="true" className="stitch h-px flex-1 text-accent/60" />
+    </div>
+  );
+}
+
 export default async function Home() {
   /* Three reads, all through the api seam. `Promise.all` because they are
      independent requests the moment any of them is a real fetch. */
@@ -63,9 +92,10 @@ export default async function Home() {
   return (
     <main id="main" className="flex-1">
       {/* ------------------------------------------------------------------
-          Hero. A brown band the width of the page, directly under the bar of
-          the same colour, so the two read as one block of leather rather than
-          a nav and then a banner.
+          Hero. A brown band the width of the page, under a navbar that is 2%
+          darker. The two used to be the identical brown and read as one
+          continuous block, so it was impossible to tell where the page began —
+          the fix is `--pedigree-brown-dark` on the bar, not a border here.
           ------------------------------------------------------------------ */}
       <section className="bg-primary text-background">
         <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
@@ -74,13 +104,24 @@ export default async function Home() {
               nav link, so the page opens by quoting the brand's own rule. */}
           <p className="stitch h-px w-12 text-accent" aria-hidden="true" />
 
+          {/* "Timeless leather goods, made by hand" over the other option.
+              "Premium leather, crafted to last a lifetime" claims a superlative
+              the shop cannot substantiate and runs long enough that
+              `text-balance` splits it into four ragged lines at 6xl, which
+              undercuts the confidence it is trying to sound. This is five words,
+              covers bags and shoes in the same breath, and puts "made by hand" —
+              the actual differentiator — last, where the eye lands. */}
           <h1 className="mt-6 max-w-3xl font-serif text-[2.25rem] leading-[1.06] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-            Single-hide leather, hand-stitched in Nairobi
+            Timeless leather goods, made by hand
           </h1>
 
+          {/* Names both categories explicitly. The old copy said "every bag",
+              which read as a bag shop with a shoes page bolted on — and the
+              second CTA goes to /shoes, so the copy contradicted the buttons
+              under it. */}
           <p className="mt-5 max-w-xl text-pretty leading-relaxed text-background/75">
-            Every bag is cut from one hide and sewn by hand in our workshop — no
-            bonded panels, no lining that hides the seams.
+            Bags and shoes cut from high-quality hides, hand-stitched in our
+            Nairobi workshop.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -107,9 +148,7 @@ export default async function Home() {
           up.
           ------------------------------------------------------------------ */}
       <section className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <h2 className="font-sans text-xs font-semibold tracking-[0.16em] text-muted uppercase">
-          Featured
-        </h2>
+        <SectionHeading>Featured</SectionHeading>
 
         {featured.length > 0 ? (
           <ul
@@ -142,9 +181,7 @@ export default async function Home() {
           New arrivals. Automatic: newest by `createdAt`, no curation.
           ------------------------------------------------------------------ */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">
-        <h2 className="font-sans text-xs font-semibold tracking-[0.16em] text-muted uppercase">
-          New arrivals
-        </h2>
+        <SectionHeading>New arrivals</SectionHeading>
 
         <div className="mt-6">
           <ProductGrid
@@ -189,9 +226,7 @@ export default async function Home() {
               same baseline, and `items-stretch` (the grid default) gives both
               columns the full row height to distribute. */}
           <div className="flex h-full flex-col">
-            <h2 className="font-sans text-xs font-semibold tracking-[0.16em] text-muted uppercase">
-              Bags
-            </h2>
+            <SectionHeading>Bags</SectionHeading>
 
             <div className="mt-6 flex-1">
               {/* Pinned to two: this grid already sits in half a page, and the
@@ -217,9 +252,7 @@ export default async function Home() {
           </div>
 
           <div className="flex h-full flex-col">
-            <h2 className="font-sans text-xs font-semibold tracking-[0.16em] text-muted uppercase">
-              Shoes
-            </h2>
+            <SectionHeading>Shoes</SectionHeading>
 
             {/* Was a "not on sale yet" panel while shoes were still on the bench.
                 It is now the same real grid as bags, because shoes *are* on sale

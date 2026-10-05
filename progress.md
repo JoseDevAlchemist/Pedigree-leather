@@ -422,3 +422,79 @@ and verifying the roll.
 reads, and `getFeaturedProducts()` / `getNewArrivals()` are already shaped for them. Before that,
 replace the placeholders in `lib/contact.ts` with the real workshop details; they are invented, and
 `254700000000` is well-formed enough that it will not fail loudly.
+
+---
+
+### Session 5 — 2026-10-05 — Navbar separation, hero copy, heading polish, footer trim
+
+**Status:** code complete, building, and **verified in a real browser**. Session 4's 87-check suite
+re-run green (87/87) plus targeted checks for this session's four blocks.
+
+Small, focused session as briefed. Nothing was rebuilt. Desktop browser tool disconnected again
+(fourth session running), so headless Chromium again from `/tmp/opencode/verify/` — this session
+added `navbar.js`, `shadow.js`, `headings.js`, `fmeasure.js`, `fparts.js`, `shots5.js`,
+`regressions.js`.
+
+**What changed**
+
+- `app/globals.css` — `--pedigree-brown-dark: #4a332b`, bridged as `--color-primary-dark`. The only
+  colour token added, as briefed.
+- `components/layout/Navbar.tsx` — `bg-primary` → `bg-primary-dark`, `border-b border-black/10`, and
+  the bar tightens 4px once scrolled (`h-16 md:h-20` → `h-[3.75rem] md:h-[4.75rem]`) alongside the
+  existing `shadow-bar`. The scroll listener and the shadow were already there from session 1; only
+  the height change is new.
+- `app/page.tsx` — hero headline and subheadline rewritten; four section headings replaced by a
+  `SectionHeading` component.
+- `components/layout/Footer.tsx` — trimmed 318px → 244px on desktop.
+
+**Verified**
+
+- Navbar `rgb(74,51,43)` against hero `rgb(93,64,55)` — distinct at both 1440 and 375. Nav bottom
+  and hero top are both 81px at 1440 (65px at 375): flush, so the 1px border is the only edge and
+  there is no seam. Sticky at `top: 0` after a 400px scroll; height 81→77 desktop, 65→61 mobile;
+  `shadow-bar` present when scrolled and gone at the top; returns to rest on scroll-back.
+- Cream wordmark and links on the darker brown are 9.75:1, up from 7.78:1. The gold stitch under the
+  active nav item improves from 4.43:1 to 5.55:1 — the darker bar makes the gold *more* legible, so
+  no link colours needed changing.
+- Hamburger visible at 375 and hidden at 1440; mobile drawer opens and closes on Escape.
+- Section headings: 14px / 600 / `rgb(43,43,43)` / 1.4px letter-spacing, with the stitch rule filling
+  the remaining width at every size (990px of 1088 at 1440, 245px of 343 at 375). Contrast went from
+  5.37:1 to 11.83:1.
+- Footer 318px → 244px at 1440 and 1024 (34% → 27% of a 900px viewport), 637px → 555px at 375.
+- No regressions: cart adds and persists across a reload, the hybrid hover roll still resolves
+  left/right/leave-to-front, no console errors.
+
+**Decisions worth arguing with**
+
+- **Headline: "Timeless leather goods, made by hand", not "Premium leather, crafted to last a
+  lifetime".** The alternative claims a superlative the shop cannot substantiate, and at `lg:text-6xl`
+  with `text-balance` it splits into four ragged lines, which undercuts the confidence it is trying to
+  sound. Five words, covers both categories, and puts "made by hand" — the real differentiator — last.
+- **The navbar's 4px height change is `h-*`, not `py-*`.** The brief asked for `py-3 → py-2.5`, but the
+  bar is a flex row of fixed-height children, so changing vertical padding would not change its height
+  at all. Silently doing nothing would have been worse than picking the property that works.
+- **The section headings got the `stitch` rule rather than an accent dot or a plain hairline.** That
+  dashed mark already appears under the active nav item and is quoted at the top of the hero, so it is
+  the brand's existing divider. `tracking-widest` is what turned out to matter most visually; the rule
+  is what makes it read as a section marker rather than a label.
+- **No footer type was shrunk.** The 318 → 244 trim came entirely from padding, from folding the
+  WhatsApp button into the contact column so it stopped being its own row, and from the address going
+  comma-joined on one line above `sm`. Shrinking text to save space is how a footer starts reading as
+  fine print. Mobile is still tall (555px) because a stacked footer carries three times the vertical
+  spacing of a side-by-side one; making that shorter would mean hiding content or going two-column at
+  375px, neither of which was asked for.
+- The darker navbar is *better* for accessibility than the one it replaced — cream on it is 9.75:1
+  rather than 7.78:1, and the gold accent crosses from 4.43:1 to 5.55:1. This was not the goal, but
+  it means the separation is free rather than traded against legibility.
+
+**Not verified**
+
+- The navbar/hero edge was judged from screenshots at 1440 and 375 and from computed colours. There is
+  no way to assert "subtle enough not to jar" programmatically; that is a judgement call, and the
+  1.25:1 contrast between the two browns is deliberate.
+- Between 768 and 1024 the navbar sits directly over the cream grid rather than over the hero, so the
+  darker bar is the only brown on screen in that region. Correct, but not screenshotted at every
+  breakpoint.
+
+**Next session, first job:** admin — `featured` and `createdAt` are the two columns the home page
+reads. Before that, replace the invented placeholders in `lib/contact.ts`.

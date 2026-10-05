@@ -117,12 +117,30 @@ export function Navbar() {
         Skip to content
       </a>
 
+      {/* `bg-primary-dark`, not `bg-primary`: the hero is the same brown, and at 2%
+         darker the bar still reads as the same leather family while gaining a
+         visible edge. The border does the separating at rest, and the shadow
+         takes over once the page moves underneath it.
+
+         The border is on the header rather than a child so it spans the full
+         width of the viewport at every breakpoint, with no seam where an inner
+         container's padding would otherwise begin. */}
       <header
-        className={`sticky top-0 z-50 bg-primary transition-shadow duration-200 ease-out ${
+        className={`sticky top-0 z-50 border-b border-black/10 bg-primary-dark transition-shadow duration-200 ease-out ${
           isScrolled ? "shadow-bar" : "shadow-none"
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:h-20 md:px-8">
+        {/* Height tightens by 4px once scrolled (80 -> 76 at `md`). Enough to feel
+            like the bar is getting out of the way, small enough that nothing
+            reflows and the transition reads as part of the shadow rather than as
+            a separate animation. `h-*` rather than `py-*` because the bar is a
+            flex row of fixed-height children; changing vertical padding here would
+            not change its height at all. */}
+        <div
+          className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-[height] duration-200 ease-out md:px-8 ${
+            isScrolled ? "h-[3.75rem] md:h-[4.75rem]" : "h-16 md:h-20"
+          }`}
+        >
           <Link
             href="/"
             className="-m-1 flex items-center gap-3 rounded-full p-1 transition-transform duration-150 ease-out active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
