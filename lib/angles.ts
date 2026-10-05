@@ -11,6 +11,27 @@ import type { Angle } from "@/lib/types";
  */
 
 /**
+ * The views each category is photographed from, in roll order.
+ *
+ * This is the single source of truth for "which views does a product of this kind
+ * have", and three things read it: the shop's read path (to build the image slots
+ * for a product row), the admin's form (to decide which upload slots to draw), and
+ * the mock data (which asserts against it).
+ *
+ * It is deliberately a function rather than a stored column. A bag's two flanks
+ * are different shapes, so a bag gets `side-left` and `side-right`; a shoe has one
+ * visible side per photograph, so it gets a single `side` and spends the slot on
+ * `laces` and the `bottom` welt instead. Storing that list per product would mean
+ * every row carries a value that has to agree with its category, and nothing could
+ * ever be added to the shoot list without a migration.
+ */
+export function categoryAngles(category: "bag" | "shoe"): Angle[] {
+  return category === "shoe"
+    ? ["front", "laces", "side", "back", "bottom"]
+    : ["front", "side-left", "side-right", "top", "back"];
+}
+
+/**
  * Short display labels. These are stamped onto the placeholder and shown in the
  * card's corner, where horizontal space is scarce — hence "Side L" rather than
  * "Side left". Use `angleSpoken` for anything a screen reader will read.

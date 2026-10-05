@@ -30,8 +30,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — every real one is ignored, and the only exception is the template.
+#
+# `.env*` on its own is *too* broad: it swallows `.env.example` too, which is the
+# one file in this project that is supposed to be committed, because it is how a
+# new developer learns which variables exist. The negation below puts it back.
 .env*
+!.env.example
 
 # vercel
 .vercel

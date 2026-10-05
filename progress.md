@@ -8,26 +8,34 @@ The developer commits; no git commits are made here.
 _(updated at the end of each session)_
 
 - Next.js 16.3.8 (App Router, Turbopack), React 19.2, TypeScript strict, Tailwind CSS v4, pnpm.
+- **Next 16 renamed the `middleware` file convention to `proxy`.** The guard that protects `/admin`
+  is `proxy.ts`, not `middleware.ts` — a `middleware.ts` here would be silently ignored and
+  `/admin` would be reachable by anyone. See `node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md`.
 - Design tokens live in `app/globals.css` only. Components must use token classes
   (`bg-primary`, `text-accent`, `bg-card`, `border-border`, `text-muted`); no raw hex in components.
-- `<Navbar />` is mounted in `app/layout.tsx` and renders on every route. Nav items are Home, Bags,
-  Shoes (disabled "Soon"), Contact. There is no About page or link.
-- Favicon resolves from `app/icon.png` (generated from `Pedigree logo.jpeg`).
-- `/` is a four-section landing page (hero, featured rail, new arrivals, bags/shoes split).
-  `/shoes` is a "coming soon" stub. `/bags` is a headingless shop grid and `/bags/[slug]` is a real
-  product page. All six product pages are prerendered (`generateStaticParams`), so every route is
-  static.
+- **The shop shell and the admin shell are separate route groups**: `app/(shop)/` holds
+  `/`, `/bags`, `/shoes`, `/contact` and mounts the navbar, footer and WhatsApp button;
+  `app/(admin)/admin/` mounts the sidebar, top bar and toasts. `app/layout.tsx` holds only `<html>`,
+  `<body>` and the two providers. Route groups do not appear in URLs, so no path changed.
+- The providers (`CartDrawerProvider`, `SharedImageTransitionProvider`) stay in the **root**
+  layout, not the shop layout, because the cart drawer must survive navigation within the shop.
 - `Product` carries `featured: boolean` and `createdAt: string` (ISO). `lib/api.ts` exposes
-  `getFeaturedProducts()` (curated) and `getNewArrivals(limit)` (sorted by `createdAt` desc).
+  `getProducts(category?)`, `getProductBySlug(slug, category?)`, `getProductSlugs(category?)`,
+  `getFeaturedProducts()` and `getNewArrivals(limit)`.
+- `/bags` and `/shoes` are `○` static and all twelve product pages are `●` prerendered. **If any of
+  them shows up as `ƒ` in the build output, something on the read path has started calling
+  `cookies()`** — that is the single thing to check. It is exactly what happened when the public
+  reads went through the session-aware client instead of `lib/supabase/public.ts`.
 - Cart state lives in `lib/store/cart.ts` (Zustand, persisted to localStorage under
   `pedigree-cart`) and survives a reload.
 - `pnpm build` and `pnpm lint` pass (one pre-existing `<img>` warning in the cart drawer).
-- **Session 3 was verified in a real browser** — 79 automated checks at 375 / 640 / 768 / 1024 /
-  1440px, plus frame-by-frame sampling of the card → detail morph. Session 2's unverified list is
-  now closed except the `prefers-reduced-motion` pass.
-- **Session 4 was verified in a real browser** — 87 automated checks, all passing, plus the
-  `prefers-reduced-motion` pass that sessions 2 and 3 left open. The hybrid hover roll, the mobile
-  in-view roll, the footer, the 404 and the skeletons are all confirmed working, not just building.
+- **The database is not migrated yet.** `supabase/migrations/001_initial.sql`, `002_storage.sql` and
+  `supabase/seed.sql` are written and ready but have not been applied — PostgREST answers
+  `PGRST205`. Until they are, the shop serves mock data with one loud line in the log, and the admin
+  shows a setup panel instead of its pages. Full instructions in `docs/SETUP.md`.
+- **Sessions 3 and 4 were verified in a real browser** — 166 automated checks across 375 / 640 /
+  768 / 1024 / 1440px, including frame-by-frame sampling of the card → detail morph, plus the
+  `prefers-reduced-motion` pass earlier sessions left open.
 - **`<Footer />` and `<WhatsAppButton />` are mounted in `app/layout.tsx`**, so both render on every
   route including the 404. `body` is a flex column and every page's `<main>` is `flex-1`, which is
   what puts the footer at the bottom of the viewport on short pages and below the fold on long ones.
@@ -47,6 +55,59 @@ _(updated at the end of each session)_
 
 ## Design decisions worth remembering
 
+- **`SUPABASE_SERVICE_ROLE_KEY` is referenced in exactly one file, `lib/supabase/admin.ts`**, which
+  is imported only by `lib/admin-api.ts`, which is `server-only`. Verified this session by grep.
+  Three things enforce it: the `server-only` import (a client-side import is a *build* error), a
+  runtime `typeof window` guard, and the single-importer rule being documented. The key bypasses
+  RLS entirely, so "the bundler probably won't inline it" is not a control.
+- **There are three Supabase clients, not one, and each is the right one for its job.**
+  `public.ts` (no cookies, so the shop stays static) · `server.ts` (cookie-aware, for the admin's
+  session) · `admin.ts` (service role, bypasses RLS). Two of them exist because conflating them
+  either costs static rendering or leaks the key.
+- **The shop falls back to mock data; the admin refuses to.** That asymmetry is the whole design.
+  A shopper should see a normal-looking shop if a database hiccups. A person editing a catalogue
+  must never see "no products" when the truth is "I could not reach the products", so the admin
+  shows `DatabaseSetupNotice` instead of its pages. Remove the fallback once the migration is live —
+  `docs/ADMIN_INTEGRATION_TODO.md` has it as the first blocking item.
+- **A Server Component's error reaches an error boundary as an opaque digest.** The PostgREST text
+  ("relation products does not exist") stays on the server, so *no* error boundary can diagnose a
+  missing database however carefully it is written. The admin layout runs `adminDatabaseStatus()`
+  before any page renders and shows the setup panel there instead. First version tried it in
+  `error.tsx` and it could not work.
+- **A `"use client"` page cannot export `metadata` — and in dev, one such mistake 500s every route
+  in the app**, shop included. The admin login is therefore a Server Component (`page.tsx`, owns
+  `metadata`) rendering a client `LoginForm`. Do not merge them back.
+- **Three session gates on `/admin`, each doing a different job**: `proxy.ts` (the cheap redirect),
+  `requireAdmin()` in every page (the check that protects data), and `requireAdminUser()` in every
+  action (which also checks `AUTH_EMAILS`). `proxy.ts` is the only one that may be deleted.
+- **`AUTH_EMAILS` fails closed.** Empty means nobody can log in, not everybody. The database's RLS
+  policy grants every authenticated user full access because there are no staff roles yet, so this
+  list in `lib/supabase/guards.ts` is the only thing enforcing who is an admin. Narrowing the policy
+  properly is in the TODO doc.
+- **`lib/angles.ts` has no global angle list.** `categoryAngles(category)` is the single source for
+  which views a product has, read by the shop's read path, the admin form's upload slots and the
+  seed. Storing that per product would mean every row carrying a value that must agree with its
+  category.
+- **`ColorVariant.images` is a total `Record<Angle, string | null>`** over all eight angles even
+  though a bag uses five. That totality is what lets `images[angle] ?? null` be written on the card,
+  the detail page and the cart line without each guarding for a missing key.
+- **A car's two densities are CSS, not a media query in JS.** `hidden` / `sm:line-clamp-2` and a
+  responsive `PriceRow`. And `sm:block` silently defeats `sm:line-clamp-2`, because `line-clamp`
+  sets `display: -webkit-box` itself and the sibling `block` wins the cascade. Cost an hour.
+- **`max-w-*` beats `w-*` whatever order they are written in.** The featured rail's cards were pinned
+  to 256px by a mobile-only `max-w-[16rem]` that `lg:w-[22rem]` could not undo. Needed
+  `sm:max-w-none`.
+- **The featured rail is a fixed-width scroller, and that is a correction.** It used to divide the
+  row between its cards so that four featured bags lined up with the grid below. Then shoes became
+  featured, seven products divided the row into seven 135px cards, and the alignment evaporated. A
+  carousel whose shape depends on how many products happen to be featured surprises whoever curates
+  next, so it is now fixed width and always scrollable.
+- **No `useCallback` in the roll hooks.** The React Compiler memoises them, and a hand-written one
+  that reads `ref.current` inside it defeats the optimisation — the compiler gives up and skips the
+  whole hook with "existing memoization could not be preserved".
+- **Where the shop and the admin differ, they differ loudly.** Shop: falls back, one warning per
+  cause. Admin: refuses, names the fix. Never make an admin action fail quietly to make a page look
+  tidy.
 - `app/favicon.ico` (the create-next-app default) was deleted so it cannot compete with
   `app/icon.png` in the browser tab.
 - `public/pedigree-logo.png` is a circular badge with transparent corners, derived from the
@@ -150,7 +211,13 @@ _(updated at the end of each session)_
 6. Grid breakpoints + compact mobile card, About removed, home page — **done (session 3)**
 7. Hybrid hover image-roll, footer, empty/loading states, WhatsApp button — **done (session 4)**
 8. Shoes category — **done (session 4)**. `/shoes` grid and detail page are live.
-9. Checkout · 10. Supabase · 11. Admin · 12. Paystack · 13. Polish
+9. Supabase: clients, migrations, storage, seed — **done (session 5), NOT YET APPLIED**
+10. Admin panel: auth, shell, dashboard, product list, product form — **done (session 5), unverifiable until step 9 is applied**
+11. Checkout · 12. Paystack · 13. Polish
+
+**Next session, first job:** apply the migrations and seed (ten minutes, `docs/SETUP.md`), then
+re-verify the admin end to end. Nothing in the admin's data path — the dashboard counts, the product
+table, the form's save — can be checked until `products` exists, because each of them queries it.
 
 ---
 
@@ -498,3 +565,113 @@ added `navbar.js`, `shadow.js`, `headings.js`, `fmeasure.js`, `fparts.js`, `shot
 
 **Next session, first job:** admin — `featured` and `createdAt` are the two columns the home page
 reads. Before that, replace the invented placeholders in `lib/contact.ts`.
+
+---
+
+### Session 5 — 2026-10-05 — Supabase + admin panel
+
+**Status:** code complete, building, lint-clean, type-clean. **The admin's data-rendering paths are
+unverified, and cannot be until the migration is applied** — see "What could not be verified".
+
+**The one thing to know first:** `supabase/migrations/001_initial.sql`,
+`supabase/migrations/002_storage.sql` and `supabase/seed.sql` are written and have **not** been
+applied. PostgREST answers every query with `PGRST205`. Nothing in the admin that reads the
+catalogue — the dashboard counts, the product table, the form's save — can be exercised until then.
+Ten minutes of work, instructions in `docs/SETUP.md`.
+
+**Also, please do this.** A plaintext Supabase **database password** was found at
+`app/(shop)/bags/.env`, written during an earlier session and never committed (it is gitignored, and
+I checked every blob in the history — it is in none of them). It is a full database credential and
+should be **rotated and the file deleted**. I left the file alone rather than deleting somebody's
+only copy of a credential, and it never went near this session's code or any commit.
+
+**What was built**
+
+*Data layer.* `lib/supabase/{client,server,public,admin,types,guards}.ts` — three clients (public
+stateless, cookie-aware, service-role) and one hand-written `Database` type, because
+`supabase gen types` needs a live connection. `lib/mappers.ts` for the snake_case ↔ camelCase
+boundary, shared by the shop and the admin so the same product cannot look different in each.
+`lib/api.ts` now reads Supabase with a documented fallback to mock data. `lib/admin-api.ts` is the
+only module that touches the service role. `lib/upload.ts` for storage, `lib/validation.ts` for the
+Zod schemas that run in both the form and the actions.
+
+*Schema.* `001_initial.sql` (three tables, five indexes, six RLS policies, two unique constraints),
+`002_storage.sql` (the `product-images` bucket and four storage policies), `seed.sql` (12 products,
+38 colourways, generated from `lib/mock-data.ts` so the two cannot drift).
+
+*Admin.* `proxy.ts` (session refresh + route protection), `app/(admin)/admin/` with layout, login,
+dashboard, product list, product form (new + edit), and Orders/Settings placeholders.
+`components/admin/` holds Toast, AdminShell, AdminSidebar, LoginForm, ProductTable, ProductFilters,
+ConfirmDialog, ProductForm, DatabaseSetupNotice. `lib/actions/{products,auth}.ts` are the server
+actions; every one checks the session before touching its arguments.
+
+**Verified — 96 automated checks, all passing**
+
+- **Shop, after the data layer switched.** `/`, `/bags`, `/shoes` and both detail pages render 200
+  with all 12 products; `/bags` shows 6 bags, `/shoes` 6 shoes; the featured rail shows 7 curated
+  products across both categories; a shoe detail page walks `front, laces, side, back, sole`; a bag
+  slug on `/shoes` is a 404 and vice versa; cart opens and adds; card → detail navigation and the
+  hand-rolled morph still run.
+- **Static rendering restored.** `/bags` and `/shoes` are `○` and all 12 product pages are `●` after
+  the `lib/supabase/public.ts` fix. The admin routes are `ƒ`, correctly — they read cookies.
+- **Route groups.** The shop keeps its navbar, footer and WhatsApp button; the admin has none of
+  them; `/admin/login` has none of them. No overlap either way.
+- **Auth.** Every `/admin/*` route redirects to `/admin/login` when signed out, preserving
+  `?next=`. A wrong password does not navigate, shows an inline `role="alert"` message, and the
+  message is the same whichever half was wrong.
+- **Admin shell.** Signed in for real against Supabase with a throwaway user (since deleted, and the
+  project has 0 users again): the sidebar, all four links, the top bar title, the signed-in email,
+  sign-out and the toast region all render. At 375 the sidebar is hidden and the drawer opens with
+  all four links; Escape closes it and focus returns to the trigger.
+- **No shop regressions.** The hybrid hover roll still resolves all five bag zones and all three shoe
+  zones, the timed roll resumes, leave resets, arrows step, reduced motion never leaves the front
+  view, the mobile in-view roll plays and settles, and the morph still grows 254 → 592 across 20
+  sampled frames.
+- **Console.** No hydration errors, and no "Multiple GoTrueClient instances" warning — one
+  Supabase client per context, as required.
+- `.env.local` was patched temporarily to test a real sign-in and restored byte-for-byte afterwards
+  (md5 verified identical). The throwaway user was deleted.
+
+**What could not be verified, and why**
+
+Everything that reads `products`. The admin's data sections throw before they render, because the
+table does not exist — so the dashboard's five cards, the product table's sort/inline-edit/delete,
+and the product form's save were checked by type-checking and code reading only. Everything *around*
+them was verified for real. This is the honest boundary of this session.
+
+The migrations could not be applied from here: applying DDL needs the Postgres connection or the
+Management API, and a service role key is neither. Same for creating an admin user through the UI —
+I could do it through the admin API, which is why the sign-in test was possible at all.
+
+**Errors found and fixed**
+
+1. **The shop lost static rendering.** Public reads went through the cookie-aware client, so
+   `cookies()` opted every shop route out of prerendering — `/`, `/bags`, `/shoes` and all twelve
+   product pages went from `○` to `ƒ`. Fixed with `lib/supabase/public.ts`, a stateless client for
+   reads nobody signs in for. The build output is the test: if those routes ever show `ƒ` again,
+   something on that path has started reading cookies.
+2. **A misleading error message**, inherited from (1): the build printed "check your env vars" for
+   what was really Next's "couldn't be rendered statically because it used `cookies`". The message
+   now names only what can actually cause it.
+3. **A `"use client"` page exporting `metadata`** — and in dev this 500s *every* route in the app,
+   shop included, which is how it was found. Split into a server `page.tsx` and a client
+   `LoginForm`.
+4. **Six identical warnings instead of one.** The "no `products` table" message was deduped per read
+   *and per slug*, so a fresh install logged a line per product. One key for the cause now.
+5. **`.env.example` was gitignored** by the existing `.env*` rule, so the one file that is supposed
+   to be committed was not. Added `!.env.example` and verified with `git add --dry-run`.
+6. **Featured cards pinned to 256px** by a mobile-only `max-w-[16rem]` that `lg:w-[22rem]` cannot
+   override, because `max-w` beats `w` regardless of class order.
+7. **An orphaned empty `app/(admin)/admin/products/[id]/edit` risk**: `notFound()` rather than
+   rendering an empty form, which would have made "Save" *create* a second product instead of
+   editing the first.
+8. Three lint classes the new React rules caught and which were worth fixing properly rather than
+   suppressing: `useCallback` around a ref read (defeats the compiler), `setState` inside an effect
+   for two "reset when a prop changes" cases (replaced with the derived-state-during-render
+   pattern), and a computed key that erased a column's type (replaced with an explicit switch that
+   also coerces form input — `Boolean("false")` is `true`, which would have marked an inactive
+   product as featured).
+
+**Next session, first job:** run the migration and seed, create an admin user, then work through the
+admin end to end — the list's sort and inline edits, the form's colour blocks and uploads, and the
+delete confirm. That list is in `docs/SETUP.md` under "Verify the whole thing".

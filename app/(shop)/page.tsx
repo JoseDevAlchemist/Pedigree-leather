@@ -142,10 +142,22 @@ export default async function Home() {
       </section>
 
       {/* ------------------------------------------------------------------
-          Featured rail. Scrolls horizontally everywhere; from `lg` the four
-          cards are exactly as wide as the grid above, so the rail and the
-          grid below it share a column grid without anyone having to line them
-          up.
+          Featured rail. A horizontal scroller at every width.
+
+          The cards are a fixed comfortable width rather than dividing the
+          row, and that is a change from the four-card version of this
+          section. When exactly four bags were featured, dividing the row
+          between them lined the cards up with the grid below, which looked
+          deliberate. Then the rail gained shoes, seven featured products
+          divided the same row into seven 135px cards, and the alignment was
+          gone — along with any reason to think it would survive the next
+          person to feature a fifth product.
+
+          A carousel whose shape depends on how many products happen to be
+          featured is a carousel that surprises whoever curates next. So:
+          fixed width, always scrollable, and the cut-off card is the
+          affordance. Two and a half cards at 1024px, three and a bit at
+          1440px.
           ------------------------------------------------------------------ */}
       <section className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <SectionHeading>Featured</SectionHeading>
@@ -157,7 +169,7 @@ export default async function Home() {
                than the same card at rest. */
             className="scrollbar-none -mx-4 mt-6 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:gap-4 sm:scroll-pl-6 sm:px-6 lg:mx-0 lg:gap-6 lg:scroll-pl-0 lg:px-0"
             /* The rail is its own tab stop so a keyboard shopper can scroll it
-               without tabbing through all four cards first. */
+               without tabbing through every card first. */
             tabIndex={0}
             aria-label="Featured products"
           >
@@ -165,10 +177,13 @@ export default async function Home() {
               <ProductCard
                 key={product.id}
                 product={product}
-                /* Fixed width and `shrink-0` so the rail overflows and scrolls
-                   on a phone; `grow` + `basis-0` from `lg` so the four cards
-                   divide the row evenly and line up with the grid below. */
-                className="w-[68vw] max-w-[15rem] shrink-0 snap-start sm:w-[19rem] lg:w-auto lg:max-w-none lg:grow lg:basis-0"
+                /* Wider than a grid card at every width, which is what makes this a
+                   carousel rather than a second grid. The `max-w` is the
+                   mobile-only cap on `72vw`, so it has to be undone at
+                   `sm` — `max-w` beats `w` whatever order they are written
+                   in, and leaving it there silently pinned every card to
+                   256px. */
+                className="w-[72vw] max-w-[16rem] shrink-0 snap-start sm:w-[20rem] sm:max-w-none lg:w-[22rem]"
               />
             ))}
           </ul>

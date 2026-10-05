@@ -49,12 +49,14 @@ export default function NotFound() {
       </h1>
 
       <p className="mt-4 max-w-md text-pretty leading-relaxed text-muted">
-        The link may be out of date, or the piece may have been retired. The bags
-        and shoes are all still here.
+        The link may be out of date, or the piece may have been retired. The bags and
+        shoes are all still here.
       </p>
 
       {/* Primary is Bags, not Home. Somebody who followed a dead product link was
-          shopping; they want the shop, not the front door. */}
+          shopping; they want the shop, not the front door. Shoes is third because it
+          is the newer category, and three buttons is the most that still reads as a
+          row on a 375px screen. */}
       <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
         <Link
           href="/bags"
@@ -63,8 +65,14 @@ export default function NotFound() {
           Browse bags
         </Link>
         <Link
-          href="/"
+          href="/shoes"
           className="inline-flex h-12 w-full items-center justify-center rounded-full border border-primary px-8 text-sm font-semibold text-primary transition-colors duration-200 ease-out hover:bg-primary hover:text-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-auto"
+        >
+          Browse shoes
+        </Link>
+        <Link
+          href="/"
+          className="inline-flex h-12 w-full items-center justify-center rounded-full px-6 text-sm font-semibold text-muted transition-colors duration-200 ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-auto"
         >
           Back home
         </Link>

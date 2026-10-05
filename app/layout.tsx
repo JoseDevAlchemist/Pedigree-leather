@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
-import { Footer } from "@/components/layout/Footer";
-import { Navbar } from "@/components/layout/Navbar";
-import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
+
 import { CartDrawerProvider } from "@/components/cart/CartDrawerProvider";
 import { SharedImageTransitionProvider } from "@/components/motion/SharedImageTransition";
 import "./globals.css";
@@ -27,6 +25,26 @@ export const metadata: Metadata = {
     "Handmade leather bags in Nairobi. Luxury, style and comfort, stitched to last.",
 };
 
+/**
+ * The root layout: `<html>`, `<body>`, and the two providers that must outlive a
+ * route change.
+ *
+ * Deliberately **no chrome** — no navbar, no footer, no floating button. They live
+ * in `app/(shop)/layout.tsx` instead, so that `/admin` cannot inherit them. Doing it
+ * with a `pathname.startsWith("/admin")` check inside this file would work, and it
+ * would also mean every customer-facing component is imported into every admin
+ * page's bundle: the cart drawer, the shared image transition, the WhatsApp button,
+ * all of it dead weight on a back-of-house surface.
+ *
+ * A route group gives the split structurally. `(shop)` and `(admin)` do not appear
+ * in any URL, so both keep their own layout and neither can reach the other's.
+ *
+ * Both providers still live *here*, not in the shop layout, and that is not an
+ * accident: the cart drawer must stay mounted while a shopper navigates the shop,
+ * and the image transition has to outlive the grid page it starts from. Putting
+ * them in `(shop)` would remount them on every navigation within the shop and break
+ * the card → detail morph.
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -34,22 +52,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${cormorant.variable} ${manrope.variable} h-full font-sans antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        {/* Both providers live up here so their state survives navigation: the
-            drawer must stay mounted across routes, and the image transition has
-            to outlive the grid page it starts from. */}
         <SharedImageTransitionProvider>
-          <CartDrawerProvider>
-            <Navbar />
-            {children}
-            {/* Below the page, above nothing. `body` is a flex column and every
-                page's `<main>` is `flex-1`, so the footer sits at the bottom of
-                the viewport on short pages and below the fold on long ones
-                instead of floating mid-page. */}
-            <Footer />
-            {/* Outside the providers: it needs neither the cart nor the image
-                transition, and it must render even if a page above it throws. */}
-            <WhatsAppButton />
-          </CartDrawerProvider>
+          <CartDrawerProvider>{children}</CartDrawerProvider>
         </SharedImageTransitionProvider>
       </body>
     </html>
