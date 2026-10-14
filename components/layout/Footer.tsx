@@ -84,7 +84,7 @@ export function Footer() {
               <Wordmark className="text-xl" />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-pretty text-background/70">
-              Luxury leather goods, handcrafted in Nairobi.
+              High-quality leather goods, crafted in Nairobi.
             </p>
           </div>
 

@@ -10,7 +10,7 @@ import twilio from "twilio";
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const fromNumber = process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
-const shopWhatsAppNumber = process.env.SHOP_WHATSAPP_NUMBER || "254143354741";
+const shopWhatsAppNumber = process.env.SHOP_WHATSAPP_NUMBER || "254791004004";
 
 const isConfigured = accountSid && authToken;
 

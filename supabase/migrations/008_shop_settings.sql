@@ -9,8 +9,8 @@
 CREATE TABLE IF NOT EXISTS shop_settings (
   id text PRIMARY KEY DEFAULT 'default',
   shop_name text NOT NULL DEFAULT 'Pedigree Leather',
-  phone text NOT NULL DEFAULT '+254143354741',
-  whatsapp text NOT NULL DEFAULT '254143354741',
+  phone text NOT NULL DEFAULT '+254 791 004 004',
+  whatsapp text NOT NULL DEFAULT '254791004004',
   email text,
   address text NOT NULL DEFAULT 'Rosslyn Luxury Mall, Annex 2, Shop RLM 48, Nairobi, Kenya',
   google_maps_url text,

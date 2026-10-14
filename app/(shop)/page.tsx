@@ -97,14 +97,14 @@ export default async function Home() {
           continuous block, so it was impossible to tell where the page began —
           the fix is `--pedigree-brown-dark` on the bar, not a border here.
           ------------------------------------------------------------------ */}
-      <section className="bg-primary text-background">
-        <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      <section className="bg-primary text-background min-h-[calc(100vh-72px)]">
+        <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24 flex h-full items-center">
           {/* The saddle-stitch rule, used here as a structural marker rather
               than decoration: it is the same mark that sits under the active
               nav link, so the page opens by quoting the brand's own rule. */}
           <p className="stitch h-px w-12 text-accent" aria-hidden="true" />
 
-          {/* "Timeless leather goods, made by hand" over the other option.
+          {/* "Quality leather goods, crafted in detail" over the other option.
               "Premium leather, crafted to last a lifetime" claims a superlative
               the shop cannot substantiate and runs long enough that
               `text-balance` splits it into four ragged lines at 6xl, which
@@ -112,7 +112,7 @@ export default async function Home() {
               covers bags and shoes in the same breath, and puts "made by hand" —
               the actual differentiator — last, where the eye lands. */}
           <h1 className="mt-6 max-w-3xl font-serif text-[2.25rem] leading-[1.06] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-            Timeless leather goods, made by hand
+            Quality leather goods, crafted in detail
           </h1>
 
           {/* Names both categories explicitly. The old copy said "every bag",
@@ -120,7 +120,7 @@ export default async function Home() {
               second CTA goes to /shoes, so the copy contradicted the buttons
               under it. */}
           <p className="mt-5 max-w-xl text-pretty leading-relaxed text-background/75">
-            Bags and shoes cut from high-quality hides, hand-stitched in our
+            Bags and shoes cut from premium hides, hand-finished in our
             Nairobi workshop.
           </p>
 

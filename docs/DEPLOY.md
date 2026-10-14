@@ -82,7 +82,7 @@ Add **all** variables from `.env.example`:
 | `TWILIO_ACCOUNT_SID` | ⚠️ | For WhatsApp (Twilio Console) |
 | `TWILIO_AUTH_TOKEN` | ⚠️ | For WhatsApp (Twilio Console) |
 | `TWILIO_WHATSAPP_FROM` | ⚠️ | `whatsapp:+14155238886` (Twilio sandbox) |
-| `SHOP_WHATSAPP_NUMBER` | ⚠️ | `254143354741` (shop's WhatsApp) |
+| `SHOP_WHATSAPP_NUMBER` | ⚠️ | `+254791004004` (shop's WhatsApp) |
 | `NEXT_PUBLIC_SENTRY_DSN` | ⚠️ | From Sentry project settings |
 | `SENTRY_AUTH_TOKEN` | ⚠️ | From Sentry (for source maps) |
 | `SENTRY_ORG` | ⚠️ | From Sentry |

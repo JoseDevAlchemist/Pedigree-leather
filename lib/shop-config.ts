@@ -11,8 +11,8 @@
 
 export const SHOP = {
   name: "Pedigree Leather",
-  phone: "+254143354741",
-  whatsapp: "254143354741",
+  phone: "+254 791 004 004",
+  whatsapp: "254791004004",
   email: "hello@pedigree.co.ke",
   address: "Rosslyn Luxury Mall, Annex 2, Shop RLM 48, Nairobi, Kenya",
   googleMapsUrl: "#",
