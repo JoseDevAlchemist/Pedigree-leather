@@ -68,13 +68,21 @@ export default function ContactPage() {
                 aria-hidden="true"
                 className="mt-0.5 size-4 shrink-0 text-primary"
               />
-              <span>
+              <div className="flex flex-col gap-1">
                 {addressLines.map((line) => (
                   <span key={line} className="block">
                     {line}
                   </span>
                 ))}
-              </span>
+                <a
+                  href="#"
+                  className="text-sm text-muted underline underline-offset-2 hover:text-primary transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  aria-label="Get directions to the shop"
+                >
+                  Get directions
+                  {/* TODO: Replace with Google Maps link once client sets up Google Business Profile */}
+                </a>
+              </div>
             </li>
           </ul>
 

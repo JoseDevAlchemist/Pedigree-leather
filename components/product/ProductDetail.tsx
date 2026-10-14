@@ -127,6 +127,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
     colorName: color.name,
     colorHex: color.hex,
     unitPrice: effectivePrice(product.basePrice, product.discountPercent),
+    basePrice: product.basePrice,
     quantity,
     /* `angleAt` clamps, so a stale index from a previous product can never
        address an angle this product does not have. */

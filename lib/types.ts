@@ -104,6 +104,8 @@ export interface CartItem {
   colorHex: string;
   /** Price in KES for one unit, discount already applied. */
   unitPrice: number;
+  /** Base price before discount (for discount display at checkout). */
+  basePrice: number;
   quantity: number;
   image: string | null;
 }

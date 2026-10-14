@@ -28,8 +28,7 @@ export const email = "hello@pedigreeleather.co";
 
 /** Workshop address. Shown as written; no map link until there is a map. */
 export const addressLines = [
-  "Ngong Road, Nairobi",
-  "Kenya",
+  "Rosslyn Luxury Mall, Annex 2, Shop RLM 48, Nairobi, Kenya",
 ] as const;
 
 /** The sentence WhatsApp opens with. Pre-filled so nobody has to type "hi". */

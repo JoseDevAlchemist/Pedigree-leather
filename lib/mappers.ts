@@ -16,9 +16,9 @@ import type { Angle, ColorVariant, Product } from "@/lib/types";
  * product would look different in the shop and in the admin.
  */
 
-type ProductRow = Tables<"products">["Row"];
-type ColorRow = Tables<"product_colors">["Row"];
-type ImageRow = Tables<"product_images">["Row"];
+type ProductRow = Tables<"products">;
+type ColorRow = Tables<"product_colors">;
+type ImageRow = Tables<"product_images">;
 
 /** The nested shape one PostgREST select produces, with the joins typed. */
 export type ProductWithRelations = ProductRow & {
@@ -142,6 +142,7 @@ export interface AdminProduct extends Product {
 /** The row shape `lib/admin-api.ts` reads. Same relation nesting as above. */
 export type AdminProductRow = ProductRow & {
   product_colors: (ColorRow & { product_images: ImageRow[] })[];
+  active: boolean;
 };
 
 /** An admin row plus its flags. */

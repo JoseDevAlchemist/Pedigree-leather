@@ -70,51 +70,91 @@ export async function requireAdmin(): Promise<User> {
 }
 
 /**
- * Whether this email may use the admin at all.
+ * Whether this email is an admin user (exists in admin_users table).
  *
- * An explicit list, because "any authenticated user is an admin" is the wrong default
- * for a shop: the moment signup exists, anyone who creates an account inherits write
- * access to the catalogue. `AUTH_EMAILS` in .env.local is the allow-list; empty
- * means "no allow-list configured", which denies everything and says so, rather than
- * quietly allowing everyone.
- *
- * This is belt-and-braces against the RLS policy in 001_initial.sql, which grants
- * `authenticated` full access because the database has no concept of a staff role
- * yet. The narrowing belongs here, where it can be changed without a migration.
+ * Replaces the old AUTH_EMAILS env var approach. The database is the source
+ * of truth for who can access admin.
  */
-export function isAllowedAdmin(email: string | undefined): boolean {
+export async function isAllowedAdmin(email: string | undefined): Promise<boolean> {
   if (!email) return false;
 
-  const allowList = (process.env.AUTH_EMAILS ?? "")
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("admin_users")
+      .select("email")
+      .eq("email", email)
+      .single();
 
-  /* No allow-list means nobody. Failing closed is the whole point: the alternative
-     is a missing env var quietly turning every Supabase user into an admin. */
-  if (allowList.length === 0) return false;
-
-  return allowList.includes(email.toLowerCase());
+    if (error || !data) return false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * `requireAdmin` plus the allow-list. The check every admin action uses.
+ * Get the admin user's role.
+ */
+export async function getAdminRole(
+  email: string
+): Promise<"owner" | "worker" | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("admin_users")
+      .select("role")
+      .eq("email", email)
+      .single();
+
+    if (error || !data) return null;
+    return data.role as "owner" | "worker";
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `requireAdmin` plus the admin_users check. The check every admin action uses.
  *
- * Throws rather than returning null, because a caller that forgot to handle a null
- * here would silently proceed unauthenticated — the exact failure the function
- * exists to prevent.
+ * Redirects to login with error if not in admin_users.
  */
 export async function requireAdminUser(): Promise<User> {
   const user = await requireAdmin();
 
-  if (!isAllowedAdmin(user.email)) {
-    /* Signed in with Supabase, but not on the list. Deliberately does not redirect
-       — it throws, so the action returns an error and the person sees why instead of
-       being bounced to the dashboard and bounced back. */
-    throw new Error(
-      `${user.email ?? "That account"} is signed in but is not on the admin allow-list. ` +
-        "Add it to AUTH_EMAILS in .env.local.",
-    );
+  if (!await isAllowedAdmin(user.email)) {
+    /* Signed in with Supabase, but not in admin_users. Redirect to login with error. */
+    redirect("/admin/login?error=not_authorized");
+  }
+
+  return user;
+}
+
+/**
+ * Require a specific role. Owner can access worker routes; worker cannot access owner routes.
+ */
+export async function requireAdminRole(
+  requiredRole: "owner" | "worker"
+): Promise<User> {
+  const user = await requireAdminUser();
+
+  if (!user.email) {
+    redirect("/admin/login?error=not_authorized");
+  }
+
+  const role = await getAdminRole(user.email);
+
+  if (!role) {
+    redirect("/admin/login?error=not_authorized");
+  }
+
+  const roleHierarchy: Record<"owner" | "worker", number> = {
+    owner: 2,
+    worker: 1,
+  };
+
+  if (roleHierarchy[role] < roleHierarchy[requiredRole]) {
+    redirect("/admin?error=insufficient_role");
   }
 
   return user;

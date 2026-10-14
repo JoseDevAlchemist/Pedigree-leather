@@ -23,9 +23,31 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   if (!product) return { title: "Not found" };
 
+  const firstImage = product.colors[0]?.images?.front;
+  const imageUrl = firstImage ? `https://${new URL(firstImage).host}${firstImage}` : "/icon.png";
+
   return {
     title: product.name,
-    description: product.description,
+    description: product.description.slice(0, 160),
+    openGraph: {
+      title: product.name,
+      description: product.description.slice(0, 160),
+      type: "website",
+      images: [
+        {
+          url: imageUrl,
+          width: 800,
+          height: 800,
+          alt: product.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.name,
+      description: product.description.slice(0, 160),
+      images: [imageUrl],
+    },
   };
 }
 

@@ -24,9 +24,11 @@ import {
  */
 export function AdminShell({
   email,
+  role,
   children,
 }: {
   email: string | undefined;
+  role: "owner" | "worker" | null | undefined;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -84,6 +86,7 @@ export function AdminShell({
       {isLogin ? null : (
         <AdminSidebar
           email={email}
+          role={role ?? undefined}
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           triggerRef={triggerRef}

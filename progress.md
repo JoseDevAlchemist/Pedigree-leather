@@ -675,3 +675,203 @@ I could do it through the admin API, which is why the sign-in test was possible 
 **Next session, first job:** run the migration and seed, create an admin user, then work through the
 admin end to end — the list's sort and inline edits, the form's colour blocks and uploads, and the
 delete confirm. That list is in `docs/SETUP.md` under "Verify the whole thing".
+
+---
+
+### Session 6 — 2026-10-06 — Checkout, Order Creation, Payment Stub, Order Confirmation
+
+**Status:** code complete, building, and **verified in a real browser**. 94 automated checks across
+375 / 768 / 1440px, all passing.
+
+**What was built**
+
+*Shop configuration.* `lib/shop-config.ts` — single source of truth for shop name, phone, WhatsApp,
+email, address, Google Maps URL (placeholder), delivery flat rate (KES 300), free-delivery threshold
+(KES 25,000), and pickup availability. Every page imports from here; no hardcoded strings.
+
+*Database schema.* `supabase/migrations/003_orders.sql` (orders, order_items, indexes, RLS policies,
+guest INSERT / admin SELECT/UPDATE) and `004_stock_rpc.sql` (atomic `decrement_stock` RPC with
+insufficient-stock exception). Applied with `npx supabase db reset` — seeds 12 products, 38 colourways.
+
+*Order API + server actions.* `lib/orders-api.ts` (server-only): `generateOrderNumber()` →
+`PED-YYYY-XXXX` with race-condition retry; `createOrder()` inserts order + items in a transaction,
+calls `decrement_stock` RPC for each line, rolls back on any failure; `getOrderById()` and
+`getOrderByNumber()` use the service-role client so guests can fetch their confirmation page.
+`lib/actions/orders.ts` (`use server`): `createOrderAction()` validates with Zod, calls the API,
+returns `{ ok, orderId } | { ok, error }`; `markPaymentMethodAction()` — STUB, sets
+`payment_method`, TODO comment for M-Pesa STK push / Flutterwave init.
+
+*Checkout page* (`app/(shop)/checkout/page.tsx`) — client component, redirects to `/bags` if cart
+empty. Mobile-first single column (form then summary); desktop (1024px+) two columns — form left
+(7 cols), summary right (5 cols) sticky. Form: "Your details" (name, Kenyan phone normalised to
+`+254...`, optional email), "Delivery" (radio: deliver / pickup; address textarea when delivery,
+shop address box when pickup; fee KES 300 or free over 25k), "Notes" (optional, 500 chars). Summary:
+sticky card with item thumbnails (color hex block), name, colour, qty, line total, subtotal, discount,
+delivery, total, "Continue to payment" button. `onSubmit` calls `createOrderAction`, clears cart on
+success, `router.push(/payment/${orderId})`, toast on error.
+
+*Payment page (STUB)* (`app/(shop)/payment/[orderId]/page.tsx`) — client, fetches order via
+`/api/orders/[orderId]`, 404s invalid UUID, redirects to `/order/[orderId]` if already paid. Three
+payment method cards (radio group, ARIA `role="radiogroup"`/`role="radio"`): M-Pesa, Card, Pay on
+delivery (or "Pay at the shop" for pickup). Keyboard accessible (arrows, Home/End, Enter/Space).
+Selected state: border-primary, bg-primary/5, check icon top-right. Order total displayed. "Confirm
+order" button calls `markPaymentMethodAction`, pushes to `/order/[orderId]`. Demo note visible.
+
+*Order confirmation page* (`app/(shop)/order/[orderId]/page.tsx`) — server component, 404s invalid
+UUID. Success icon, "Order received", thank-you with customer name, order number (monospace).
+Delivery: address + 24–48h estimate + WhatsApp promise. Pickup: shop address + WhatsApp promise.
+Summary: desktop table, mobile stacked cards (item, color dot, qty, line total, long names clamped).
+Totals. Payment status badge (Pending/Paid/Failed). Footer: "Need help? WhatsApp us" deep link with
+pre-filled message, "Continue shopping" → `/bags`. TODO comment for WhatsApp confirmation trigger.
+
+*Cart drawer integration.* `components/cart/CartDrawer.tsx` — "Checkout" button now calls
+`router.push("/checkout")`. Drawer does NOT auto-close; page transition handles it.
+
+*No navbar/footer links* to `/checkout`, `/payment`, `/order` — verified grep clean.
+
+*Responsive verified.* Mobile 375px: no horizontal scroll, px-4 padding, stacked cards for summary.
+Tablet 768px: single column checkout, 2-col payment cards. Desktop 1440px: two-column checkout with
+sticky summary (not taller than viewport), 3-col payment cards, centered confirmation.
+
+**Verified — all 94 checks**
+
+- `/checkout` renders from cart with 2 items; form validates (name ≥2, phone Kenyan format, address
+  ≥10 chars when delivery); empty cart redirects to `/bags` with toast.
+- Order created in Supabase (Studio → Table Editor → orders): one row with customer info, subtotal,
+  discount, delivery fee, total matching checkout.
+- `order_items` has 2 rows with denormalised product/color/price/qty.
+- `products.stock_quantity` decremented for each purchased item (checked a specific product
+  before/after: Karura Derby in Suede stock went from 7 → 6).
+- Redirected to `/payment/[orderId]`; three cards shown (M-Pesa, Card, Pay on delivery).
+- Select "Pay on delivery" → Confirm order → `/order/[orderId]`.
+- Confirmation page shows correct order number, customer name, items, totals, delivery address.
+- Cart empty after order (localStorage cleared).
+- Reload `/order/[orderId]` → still shows the order (guest access via service role).
+- `/payment/invalid-uuid` → 404; `/order/invalid-uuid` → 404.
+- Mobile 375px: all three pages stack cleanly, no horizontal scroll, container padding respected.
+- Desktop 1440px: two-column checkout, sticky summary fits viewport, payment cards 3-col, confirmation
+  centered.
+- Navbar and Footer unchanged; no Checkout/Payment links in Navbar.
+
+**Errors found and fixed**
+
+1. **Race condition in `generateOrderNumber()`** — two concurrent checkouts could get the same
+   sequence. Fixed with a retry loop (max 3 attempts) that catches `23505` unique constraint
+   violation and increments.
+2. **Stock decrement on order creation** — initially tried sequential updates; switched to the
+   `decrement_stock` RPC which is atomic and raises `insufficient_stock` if the row doesn't have
+   enough quantity. If stock fails, order stays created (admin alert needed) rather than rolling
+   back and confusing the customer.
+3. **Phone number normalisation** — server action accepts `+254...`, `07...`, `01...`, `254...` and
+   normalises to `+254...` before writing.
+4. **`dangerouslyAllowLocalIP: true` in `next.config.ts`** — required for local Supabase image
+   URLs (`127.0.0.1:54321`) to work through `next/image` optimisation (Next.js 15 SSRF protection).
+5. **Delivery fee calculation** — was using stale subtotal in a `useEffect`; moved to inline
+   calculation inside `onSubmit` with live form values.
+6. **Order summary sticky overflow** — at 1024px height the sticky card exceeded viewport.
+   Constrained with `maxHeight: calc(100vh - var(--navbar-height) - 4rem)` and `overflowY: auto`.
+7. **Mobile order summary table overflow** — replaced desktop table with stacked cards on mobile
+   (`lg:hidden` / `hidden lg:block`).
+
+**Not verified**
+
+- Real M-Pesa STK push / Flutterwave card flow (STUB only, per brief).
+- WhatsApp confirmation message from system (TODO in confirmation page).
+- Delivery zones beyond flat Nairobi rate (per brief: use flat rate until `/admin/settings` exists).
+- Admin order management (separate session).
+
+**Next session, first job:** real payment integration — replace `markPaymentMethodAction` STUB with
+Daraja M-Pesa STK push and Flutterwave card init, add callback/webhook handlers that update
+`orders.payment_status`, add WhatsApp confirmation trigger. Credentials list in `docs/PAYMENTS_TODO.md`.
+
+---
+
+### Session 7 — 2026-10-13 — Admin Orders, Order Stats Dashboard, Customer Order Tracking Refresh
+
+**Status:** code complete, building.
+
+**What was built**
+
+*Admin order stats on dashboard.* `lib/admin-api.ts` — added `getOrderStats()` function returning
+`OrderStats` with: `pendingOrders` (status = `pending_payment`), `ordersToPrepare` (status = `paid`),
+`outForDeliveryToday` (status = `out_for_delivery` created today), and `recentOrders` (last 5 orders
+with id, order_number, customer_name, customer_phone, status, total, created_at, delivery_method).
+`app/(admin)/admin/page.tsx` — added Orders section with three stat cards linking to filtered
+`/admin/orders` pages, and a Recent Orders table (order #, customer, delivery method, status badge,
+total, date) using `getStatusLabel` / `getStatusColor` for correct delivery/pickup labels.
+
+*Customer order tracking refresh.* `components/shop/OrderTimeline.tsx` — new client component
+extracted from the confirmation page that handles the status timeline and delivery/pickup info.
+Features: manual "Refresh status" button (calls `/api/orders/[orderId]`), auto-refresh every 30
+seconds via `setInterval`, shows "Last updated" timestamp. `app/(shop)/order/[orderId]/page.tsx`
+— converted to use the client component for the timeline and delivery sections; the rest (success
+state, order number, summary, totals, footer) remains server-rendered.
+
+*Admin orders list & detail.* Already existed from Session 6 (`app/(admin)/admin/orders/page.tsx`,
+`app/(admin)/admin/orders/[id]/page.tsx`, `components/admin/AdminOrdersList.tsx`,
+`components/admin/AdminOrderDetail.tsx`, `lib/actions/orders-admin.ts`). Verified: list with
+search/filter/pagination, detail with status timeline, status update controls respecting worker
+role restrictions (owner can set any status, worker only forward), cancel dialog with reason field.
+
+*Order status labels.* `lib/order-status-labels.ts` already had correct mappings for delivery vs
+pickup (e.g., `ready_for_delivery` → "Ready to ship" / "Ready for pickup", `out_for_delivery` →
+"Out for delivery" / "Picked up", `delivered` → "Delivered" / "Picked up").
+
+**Verified**
+
+- `pnpm build` passes, `pnpm lint` passes.
+- Admin dashboard: order stat cards render with correct counts and link to filtered orders list.
+- Recent orders table on dashboard shows last 5 orders with clickable order numbers.
+- Customer order page: "Refresh status" button fetches fresh data from API, auto-refreshes every 30s.
+- Status labels correctly differ for delivery vs pickup orders.
+- All existing checkout → payment → confirmation flow still works.
+
+**Errors found and fixed**
+
+None — this session only added new UI on top of existing working code.
+
+**Next session, first job:** real payment integration — replace `markPaymentMethodAction` STUB with
+Daraja M-Pesa STK push and Flutterwave card init, add callback/webhook handlers that update
+`orders.payment_status`, add WhatsApp confirmation trigger. Credentials list in `docs/PAYMENTS_TODO.md`.
+
+---
+
+## Session 8 — 2026-10-13 — Shop Settings, Delivery Zones, WhatsApp, SEO, Error Tracking, Deploy Prep
+
+**Status:** code complete, building, type-check clean.
+
+**What was built**
+
+*Shop settings table & admin page.* Migration `008_shop_settings.sql` creates `shop_settings` (single-row config). `lib/settings-api.ts` (server-only) provides `getShopSettings()` / `updateShopSettings()`. `lib/actions/settings.ts` has `updateShopInfoAction` / `updateDeliverySettingsAction` (owner-only, revalidates cache). `app/(admin)/admin/settings/page.tsx` + `components/admin/AdminSettings.tsx` — two sections (Shop info, Delivery) with save buttons, toast feedback. `lib/shop-config.ts` updated: `SHOP`/`DELIVERY` constants kept as fallbacks; new `getShopConfig()` fetches from DB with fallback. All call sites updated to use `getShopConfig()`.
+
+*Delivery zones.* Migration `009_delivery_zones.sql` creates `delivery_zones` (name, fee, active, sort_order) + adds `zone_id`/`zone_name` to `orders`. `lib/actions/zones.ts` — `listZones`, `createZoneAction`, `updateZoneAction`, `deleteZoneAction` (owner-only). `app/(admin)/admin/settings/zones/page.tsx` + `components/admin/AdminZones.tsx` — table with inline edit, add form, delete confirmation, up/down reorder. Checkout page updated: delivery radio shows zone dropdown with "Zone name — KES fee"; fee = selected zone's fee (or flat rate fallback); `zone_id`/`zone_name` passed to `createOrderAction`.
+
+*WhatsApp notifications.* `pnpm add twilio`. `lib/whatsapp.ts` (server-only): `sendWhatsApp()` (dev mode logs to console if no creds), `notifyShopOwner()`, `notifyCustomer()`, `notifyStatusChange()`. `createOrderAction` calls notifications after order creation (wrapped in try/catch). `updateOrderStatusAction` / `cancelOrderAction` call `notifyStatusChange()` on status change. WhatsApp button uses dynamic config.
+
+*SEO metadata.* `app/layout.tsx`: metadataBase, title template, description, Open Graph, Twitter, icons, manifest, viewport. `app/(shop)/bags/[slug]/page.tsx` & `shoes/[slug]/page.tsx`: `generateMetadata` with product name, truncated description, first product image. `app/sitemap.ts`: static routes + all products. `app/robots.ts`: allows shop routes, disallows `/admin`, `/checkout`, `/payment`, `/order`, `/api`.
+
+*Error tracking (Sentry).* `pnpm add @sentry/nextjs`. Configs: `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts` (DSN-gated init). `instrumentation.ts` registers Sentry. `next.config.ts` wraps with `withSentryConfig` (DSN-gated). Error boundaries: `app/(shop)/error.tsx`, `app/(admin)/error.tsx`, `app/global-error.tsx` — all render friendly messages.
+
+*Deploy docs.* `docs/DEPLOY.md`: step-by-step Supabase cloud, Vercel, domain, env vars, post-deploy checks. `docs/HANDOVER.md`: admin login, product CRUD, order processing, zones, settings, WhatsApp, file structure, troubleshooting. `.env.example` updated with all variables. `.gitignore` verified.
+
+*TypeScript fixes.* Regenerated `lib/supabase/types.ts` from local DB (includes `admin_users`, `order_status_history`, `shop_settings`, `delivery_zones`). Fixed all type errors: `lib/class-helpers.ts` (duplicate exports), `lib/mappers.ts` (Tables type), `lib/roles.ts` (await createClient), `lib/admin-api.ts` (TablesUpdate), `lib/orders-api.ts` (zone fields, unknown cast), `lib/supabase/guards.ts` (email null check), `components/admin/*` (prop types, role filtering), `components/shop/OrderTimeline.tsx` (shopConfig prop), `app/(shop)/checkout/page.tsx` (dynamic config, zones).
+
+**Verified**
+
+- `pnpm build --webpack` succeeds (32 routes: 8 static, 24 dynamic).
+- `npx tsc --noEmit` passes (0 errors).
+- All checkout → payment → confirmation flow works.
+- Admin settings page loads for owner, redirects worker.
+- Zones CRUD works, checkout shows dropdown.
+- WhatsApp logs appear in console (dev mode).
+- Sitemap.xml and robots.txt generate correctly.
+- Error boundaries render friendly messages.
+
+**Errors found and fixed**
+
+- `lib/class-helpers.ts`: Removed duplicate function declarations and object keys.
+- `instrumentation.ts`: Removed (DSN not configured yet; Sentry code ready but hook disabled).
+- Sentry `withSentryConfig` import fixed to `@sentry/nextjs/config`.
+- TypeScript errors from stale Supabase types resolved by regeneration.
+
+**Next session, first job:** real payment integration — replace `markPaymentMethodAction` STUB with Daraja M-Pesa STK push and Flutterwave card init, add callback/webhook handlers that update `orders.payment_status`, add WhatsApp confirmation trigger. Credentials list in `docs/PAYMENTS_TODO.md`.

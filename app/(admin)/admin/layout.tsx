@@ -2,7 +2,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { DatabaseSetupNotice } from "@/components/admin/DatabaseSetupNotice";
 import { ToastProvider } from "@/components/admin/Toast";
 import { adminDatabaseStatus } from "@/lib/admin-api";
-import { getCurrentAdmin, isAllowedAdmin } from "@/lib/supabase/guards";
+import { getCurrentAdmin, isAllowedAdmin, getAdminRole } from "@/lib/supabase/guards";
 
 /**
  * The admin shell.
@@ -35,7 +35,7 @@ import { getCurrentAdmin, isAllowedAdmin } from "@/lib/supabase/guards";
  * removed, and the other two are unaffected when it is.
  *
  * ---------------------------------------------------------------------------
- * The allow-list
+ * The allow-list (now from admin_users table)
  * ---------------------------------------------------------------------------
  * `isAllowedAdmin` is checked here too. It is not redundant with the check in every
  * page: the RLS policy in 001_initial.sql grants *every* authenticated user full
@@ -46,27 +46,29 @@ import { getCurrentAdmin, isAllowedAdmin } from "@/lib/supabase/guards";
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const user = await getCurrentAdmin();
 
-  /* Signed in, but not on the list. Refused here rather than per page, because it
-     applies to the entire tree and there is no reason to render the frame first. */
-  if (user && !isAllowedAdmin(user.email)) {
+  /* No session: render the bare children so the login page can be shown. Every
+     other page in this tree calls `requireAdmin()` and redirects on its own. */
+  if (!user) return <>{children}</>;
+
+  /* Signed in, but not in admin_users table. Refused here rather than per page. */
+  const allowed = await isAllowedAdmin(user.email);
+  if (!allowed) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-6">
         <div className="max-w-md text-center">
           <h1 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
-            Not on the list
+            Not authorized
           </h1>
           <p className="mt-3 text-pretty leading-relaxed text-muted">
-            {user.email} is signed in, but it is not on the admin allow-list. Add it to
-            AUTH_EMAILS in .env.local and reload.
+            {user.email} is signed in but is not an admin user. Contact the owner to be added.
           </p>
         </div>
       </div>
     );
   }
 
-  /* No session: render the bare children so the login page can be shown. Every
-     other page in this tree calls `requireAdmin()` and redirects on its own. */
-  if (!user) return <>{children}</>;
+  /* Get user's role for sidebar navigation */
+  const role = user.email ? await getAdminRole(user.email) : null;
 
   /* -------------------------------------------------------------------------
      Is the database there at all?
@@ -85,7 +87,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
 
   return (
     <ToastProvider>
-      <AdminShell email={user.email}>
+      <AdminShell email={user.email} role={role}>
         {database.ready ? children : <DatabaseSetupNotice problem={database.problem} />}
       </AdminShell>
     </ToastProvider>

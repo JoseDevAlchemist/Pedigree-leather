@@ -152,19 +152,29 @@ export function Footer() {
                 {/* Comma-joined from `sm` up. The contact column is the tallest
                     of the three and sets the whole footer's height, so the
                     second address line was 20px of the total for no gain — a
-                    full column is wide enough for "Ngong Road, Nairobi, Kenya"
-                    on one line, and it reads as an address rather than as a
-                    list. Stacked below `sm`, where one line would wrap anyway. */}
-                <span className="hidden sm:inline">
-                  {addressLines.join(", ")}
-                </span>
-                <span className="sm:hidden">
-                  {addressLines.map((line) => (
-                    <span key={line} className="block">
-                      {line}
-                    </span>
-                  ))}
-                </span>
+                    full column is wide enough for the full address on one line,
+                    and it reads as an address rather than as a list. Stacked below
+                    `sm`, where one line would wrap anyway. */}
+                <div className="flex flex-col gap-1">
+                  <span className="hidden sm:inline">
+                    {addressLines.join(", ")}
+                  </span>
+                  <span className="sm:hidden">
+                    {addressLines.map((line) => (
+                      <span key={line} className="block">
+                        {line}
+                      </span>
+                    ))}
+                  </span>
+                  <a
+                    href="#"
+                    className="text-sm text-background/60 underline underline-offset-2 hover:text-accent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    aria-label="Get directions to the shop"
+                  >
+                    Get directions
+                    {/* TODO: Replace with Google Maps link once client sets up Google Business Profile */}
+                  </a>
+                </div>
               </li>
             {/* Last item in the contact column rather than a row of its own. WhatsApp is a
                 way to reach the shop, so it belongs with the phone and the email;

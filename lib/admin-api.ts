@@ -25,7 +25,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { anglesForCategory, toAdminProduct } from "@/lib/mappers";
 import type { AdminProduct, AdminProductRow } from "@/lib/mappers";
-import type { Tables } from "@/lib/supabase/types";
+import type { Tables, TablesUpdate } from "@/lib/supabase/types";
 import type { Angle, ColorVariant, Product } from "@/lib/types";
 
 /**
@@ -427,7 +427,7 @@ export async function updateProductField(
      input arrives as a string whether the column is a number or a boolean. The
      coercion is the point — `"5"` must become `5`, and `"true"` must not become a
      truthy string that Postgres rejects. */
-  const updates: Tables<"products">["Update"] =
+  const updates: TablesUpdate<"products"> =
     field === "stock_quantity"
       ? { stock_quantity: toInteger(value) }
       : field === "discount_percent"
@@ -517,3 +517,76 @@ export function anglesForProduct(category: string): Angle[] {
 
 /** Not used by the admin UI, but the type belongs next to the functions above. */
 export type { ColorVariant };
+
+/**
+ * Order stats for the admin dashboard.
+ */
+export interface OrderStats {
+  pendingOrders: number;
+  ordersToPrepare: number;
+  outForDeliveryToday: number;
+  recentOrders: AdminOrder[];
+}
+
+export interface AdminOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_phone: string;
+  status: string;
+  total: number;
+  created_at: string;
+  delivery_method: "delivery" | "pickup";
+}
+
+/**
+ * Fetch order stats for the admin dashboard.
+ * Includes counts for pending payment, paid (to prepare), out for delivery today,
+ * and the 5 most recent orders.
+ */
+export async function getOrderStats(): Promise<OrderStats> {
+  const supabase = createAdminClient();
+
+  // Pending orders (awaiting payment)
+  const { count: pendingOrders, error: pendingError } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending_payment");
+
+  if (pendingError) rethrow(pendingError, "count pending orders");
+
+  // Orders to prepare (paid, not yet preparing)
+  const { count: ordersToPrepare, error: prepareError } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "paid");
+
+  if (prepareError) rethrow(prepareError, "count orders to prepare");
+
+  // Out for delivery today (status = out_for_delivery, created today)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { count: outForDeliveryToday, error: outError } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "out_for_delivery")
+    .gte("created_at", today.toISOString());
+
+  if (outError) rethrow(outError, "count out for delivery today");
+
+  // Recent orders (last 5)
+  const { data: recentOrders, error: recentError } = await supabase
+    .from("orders")
+    .select("id, order_number, customer_name, customer_phone, status, total, created_at, delivery_method")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (recentError) rethrow(recentError, "fetch recent orders");
+
+  return {
+    pendingOrders: pendingOrders || 0,
+    ordersToPrepare: ordersToPrepare || 0,
+    outForDeliveryToday: outForDeliveryToday || 0,
+    recentOrders: (recentOrders || []) as AdminOrder[],
+  };
+}

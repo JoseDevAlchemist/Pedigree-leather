@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 import { formatPrice } from "@/lib/format";
 import { MAX_QUANTITY_PER_ITEM, useCartStore, useCartCount, useCartSubtotal } from "@/lib/store/cart";
@@ -17,6 +18,7 @@ const EXIT = { duration: 0.22, ease: "easeOut" } as const;
 
 export function CartDrawer() {
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
   const { isCartOpen, closeCart } = useCartDrawer();
 
   const items = useCartStore((state) => state.items);
@@ -28,6 +30,11 @@ export function CartDrawer() {
 
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+
+  const handleCheckout = () => {
+    router.push("/checkout");
+    // Do NOT auto-close the drawer — let the page transition handle it naturally
+  };
 
   /* While the drawer is open: lock the page behind it, move focus in, keep Tab
      inside it, and close on Escape. Without the scroll lock the page behind
@@ -214,17 +221,12 @@ export function CartDrawer() {
 
                   <button
                     type="button"
-                    onClick={() =>
-                      console.log("[checkout] not built yet", { items, subtotal })
-                    }
+                    onClick={handleCheckout}
                     className="mt-3 flex h-12 w-full cursor-pointer items-center justify-center rounded-full bg-primary text-sm font-semibold tracking-wide text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:pointer-events-none disabled:bg-muted/50 disabled:text-background"
                     disabled={items.length === 0}
                   >
                     Checkout
                   </button>
-                  <p className="mt-2 text-center text-xs text-muted">
-                    Checkout opens in the next build. For now this just logs the order.
-                  </p>
                 </footer>
               </>
             )}

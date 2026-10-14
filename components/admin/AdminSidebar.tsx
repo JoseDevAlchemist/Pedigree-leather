@@ -7,6 +7,8 @@ import {
   Package,
   ScrollText,
   Settings,
+  Shield,
+  UserCog,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -44,20 +46,29 @@ import { useToast } from "@/components/admin/Toast";
  * every admin page, and the dashboard would be permanently highlighted.
  */
 
-const LINKS = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/products", label: "Products", icon: Package, exact: false },
-  { href: "/admin/orders", label: "Orders", icon: ScrollText, exact: false },
-  { href: "/admin/settings", label: "Settings", icon: Settings, exact: false },
+const ALL_LINKS = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, roles: ["owner", "worker"] as const },
+  { href: "/admin/orders", label: "Orders", icon: ScrollText, exact: false, roles: ["owner", "worker"] as const },
+  { href: "/admin/products", label: "Products", icon: Package, exact: false, roles: ["owner"] as const },
+  { href: "/admin/staff", label: "Staff", icon: UserCog, exact: false, roles: ["owner"] as const },
+  { href: "/admin/settings", label: "Settings", icon: Settings, exact: false, roles: ["owner"] as const },
 ] as const;
+
+type Role = "owner" | "worker";
+
+function filterLinksByRole(role: Role) {
+  return ALL_LINKS.filter((link) => (link.roles as readonly Role[]).includes(role));
+}
 
 export function AdminSidebar({
   email,
+  role,
   open,
   onClose,
   triggerRef,
 }: {
   email: string | undefined;
+  role: Role | undefined;
   /** Drawer open. Ignored by the desktop rail, which is always visible. */
   open: boolean;
   onClose: () => void;
@@ -70,6 +81,8 @@ export function AdminSidebar({
   const toast = useToast();
 
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const links = role ? filterLinksByRole(role) : [];
 
   const isActive = (href: string, exact: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
@@ -108,6 +121,8 @@ export function AdminSidebar({
     toast.error("Could not sign out", result.error);
   }, [router, toast]);
 
+  const roleLabel = role === "owner" ? "Owner" : role === "worker" ? "Worker" : "";
+
   const nav = (
     <>
       <div className="flex h-16 shrink-0 items-center gap-3 px-5">
@@ -117,7 +132,7 @@ export function AdminSidebar({
 
       <nav aria-label="Admin" className="flex-1 overflow-y-auto px-3 py-2">
         <ul className="flex flex-col gap-1">
-          {LINKS.map((link) => {
+          {links.map((link) => {
             const active = isActive(link.href, link.exact);
             const Icon = link.icon;
 
@@ -144,9 +159,21 @@ export function AdminSidebar({
 
       <div className="shrink-0 border-t border-background/10 p-3">
         {email ? (
-          <p className="mb-2 truncate px-3 text-xs text-background/50" title={email}>
-            {email}
-          </p>
+          <>
+            <p className="mb-2 truncate px-3 text-xs text-background/50" title={email}>
+              {email}
+            </p>
+            {role && (
+              <div className="mb-2 flex items-center gap-2 px-3">
+                {role === "owner" ? (
+                  <Shield size={12} strokeWidth={2} className="text-accent" aria-hidden="true" />
+                ) : role === "worker" ? (
+                  <Package size={12} strokeWidth={2} className="text-accent" aria-hidden="true" />
+                ) : null}
+                <span className="text-xs font-medium text-background/70 capitalize">{roleLabel}</span>
+              </div>
+            )}
+          </>
         ) : null}
 
         <button

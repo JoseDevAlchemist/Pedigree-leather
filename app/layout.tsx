@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 
 import { CartDrawerProvider } from "@/components/cart/CartDrawerProvider";
@@ -16,13 +16,61 @@ const manrope = Manrope({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "Pedigree Leather",
+    default: "Pedigree Leather — Handcrafted Bags & Shoes in Nairobi",
     template: "%s | Pedigree Leather",
   },
   description:
-    "Handmade leather bags in Nairobi. Luxury, style and comfort, stitched to last.",
+    "Premium leather bags and shoes, hand-stitched in our Nairobi workshop. Shop totes, satchels, weekenders, and more.",
+  keywords: ["leather bags", "handcrafted shoes", "Nairobi leather", "Kenya leather goods", "totes", "satchels", "weekenders"],
+  authors: [{ name: "Pedigree Leather" }],
+  creator: "Pedigree Leather",
+  publisher: "Pedigree Leather",
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_KE",
+    url: siteUrl,
+    siteName: "Pedigree Leather",
+    title: "Pedigree Leather — Handcrafted Bags & Shoes in Nairobi",
+    description:
+      "Premium leather bags and shoes, hand-stitched in our Nairobi workshop. Shop totes, satchels, weekenders, and more.",
+    images: [
+      {
+        url: "/icon.png",
+        width: 512,
+        height: 512,
+        alt: "Pedigree Leather",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pedigree Leather — Handcrafted Bags & Shoes in Nairobi",
+    description:
+      "Premium leather bags and shoes, hand-stitched in our Nairobi workshop. Shop totes, satchels, weekenders, and more.",
+    images: ["/icon.png"],
+  },
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
+  manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#5D4037",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 /**
