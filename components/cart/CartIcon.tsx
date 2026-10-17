@@ -50,7 +50,7 @@ export function CartIcon() {
       onClick={openCart}
       aria-expanded={isCartOpen}
       aria-label={count === 0 ? "Cart, empty" : `Cart, ${count} ${count === 1 ? "item" : "items"}`}
-      className="relative -mr-1 flex size-11 cursor-pointer items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="relative flex size-11 cursor-pointer items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       <ShoppingBag size={22} strokeWidth={2} aria-hidden="true" />
 

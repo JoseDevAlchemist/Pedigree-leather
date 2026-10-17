@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Menu, X } from "lucide-react";
+import { Menu, MessageCircle, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -117,10 +117,11 @@ export function Navbar() {
         Skip to content
       </a>
 
-      {/* `bg-primary-dark`, not `bg-primary`: the hero is the same brown, and at 2%
-         darker the bar still reads as the same leather family while gaining a
-         visible edge. The border does the separating at rest, and the shadow
-         takes over once the page moves underneath it.
+      {/* `bg-primary-dark`, not `bg-primary`: the bar keeps the brand's leather
+         brown while sitting a shade darker than the rest of the chrome, so it
+         reads as the same family and still gains a visible edge. The border does
+         the separating at rest, and the shadow takes over once the page moves
+         underneath it.
 
          The border is on the header rather than a child so it spans the full
          width of the viewport at every breakpoint, with no seam where an inner
@@ -199,10 +200,26 @@ export function Navbar() {
             </ul>
           </nav>
 
-          {/* Actions. The cart sits above the menu trigger on a phone, so it is
-              reachable without opening the drawer first. */}
+          {/* Actions. Cart and contact both sit above the menu trigger on a
+              phone, so the two things a mobile shopper is most likely to want —
+              their basket and a way to reach us — are one tap away without
+              opening the drawer first. */}
           <div className="flex items-center gap-1">
             <CartIcon />
+
+            {/* A Link, not a widget trigger: it lands on `/contact`, which is a
+                real page with every channel on it, works without client state,
+                and is the same destination on desktop and mobile. The floating
+                `ContactWidget` stays mounted independently; wiring the two
+                together would mean shared state for a button that already has
+                a page to go to. */}
+            <Link
+              href="/contact"
+              aria-label="Contact us"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 hover:text-accent active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <MessageCircle size={22} strokeWidth={2} aria-hidden="true" />
+            </Link>
 
             {/* Mobile trigger */}
             <button
