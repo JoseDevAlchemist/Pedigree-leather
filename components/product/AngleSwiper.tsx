@@ -7,7 +7,7 @@ import { angleAt, angleSpoken, isFirstIndex, isLastIndex, stepIndex } from "@/li
 import type { Angle, ColorVariant } from "@/lib/types";
 
 import { AngleDots } from "@/components/product/AngleDots";
-import { ProductImage } from "@/components/product/ProductImage";
+import { DETAIL_IMAGE_SIZES, ProductImage } from "@/components/product/ProductImage";
 
 /* A swipe has to clear one of these to count. Both matter: a slow long drag and
    a short fast flick are both intentional, and neither distance nor velocity
@@ -100,6 +100,7 @@ export function AngleSwiper({
               colorName={color.name}
               productName={productName}
               angle={angle}
+              sizes={DETAIL_IMAGE_SIZES}
               priority
             />
           </motion.div>

@@ -48,6 +48,50 @@ import { useToast } from "@/components/admin/Toast";
  * follow-up, and it is a cron job, not a correctness problem.
  */
 
+/**
+ * What the file picker will accept.
+ *
+ * Deliberately narrower than the storage bucket's allow-list, which also takes
+ * AVIF: JPEG, PNG and WebP are what a camera, a phone and the workshop's
+ * exports actually produce, and a surprise container is far more likely to be a
+ * mistake than an intention. The bucket's own check remains the backstop for
+ * anything that gets past this.
+ */
+const ACCEPTED_IMAGE_TYPES: readonly string[] = ["image/jpeg", "image/png", "image/webp"];
+
+/** 5 MB, below the bucket's 8 MB ceiling, so the person is told before the wait. */
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
+/** A sentence describing why a file is unusable, or `null` when it is fine. */
+function fileProblem(file: File): string | null {
+  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    return `${file.name || "That file"} is not a JPEG, PNG or WebP image.`;
+  }
+  if (file.size === 0) return `${file.name} is empty.`;
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 5 MB.`;
+  }
+  return null;
+}
+
+/**
+ * Stamp a URL so a replaced photograph is not served from a stale cache.
+ *
+ * A slot always writes to the same storage path (see `imagePath` in
+ * `lib/upload.ts`), and storage serves that path with a one-year cache. With an
+ * unchanged URL, replacing a photo leaves the old bytes in the browser and in
+ * the Next image optimiser no matter how many times the admin saves. The `?v=`
+ * seed makes the URL new, so both layers fetch the file that is actually there.
+ */
+function withCacheBuster(url: string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+}
+
+/** The basename of a stored URL, for slots filled in an earlier session. */
+function fileNameFromUrl(url: string): string {
+  return decodeURIComponent(url.split("?")[0].split("/").pop() ?? "");
+}
+
 type ColorDraft = {
   /** Stable key for React. The database id is unknown for a colour being created. */
   key: string;
@@ -55,6 +99,14 @@ type ColorDraft = {
   hex: string;
   /** Slot -> public URL. Missing means "no photograph", which is not an error. */
   images: Partial<Record<Angle, string>>;
+  /**
+   * Slot -> object URL of a file still uploading. Shown in place of the stored
+   * photograph so the person sees the exact file they picked while the round
+   * trip is in flight, then discarded.
+   */
+  previews?: Partial<Record<Angle, string>>;
+  /** Slot -> the name of the file in that slot, so a pick can be verified. */
+  fileNames?: Partial<Record<Angle, string>>;
   /** Slot currently uploading. One at a time, so the grid does not flicker. */
   uploading?: Angle;
   error?: string;
@@ -160,24 +212,57 @@ export function ProductForm({
     const color = colors.find((entry) => entry.key === colorKey);
     if (!color) return;
 
-    updateColor(colorKey, { uploading: angle, error: undefined });
+    /* Reject the wrong file here, before it reaches the bucket, so the person
+       gets a sentence rather than a storage error. The input is cleared by its
+       own handler either way, so a rejected file can still be chosen again. */
+    const problem = fileProblem(file);
+    if (problem) {
+      toast.error("That file cannot be used", problem);
+      return;
+    }
+
+    /* Show the pick immediately — a blob preview and its name — so the file can
+       be confirmed before the upload has even finished. */
+    const previewUrl = URL.createObjectURL(file);
+    updateColor(colorKey, {
+      uploading: angle,
+      error: undefined,
+      previews: { ...color.previews, [angle]: previewUrl },
+      fileNames: { ...color.fileNames, [angle]: file.name },
+    });
 
     try {
       /* The slug is the storage path's first segment, so the folder is predictable
          before the product even has an id. */
       const url = await uploadProductImage(file, slug || "unassigned", color.name || "colour", angle);
       setColors((current) =>
-        current.map((entry) =>
-          entry.key === colorKey
-            ? { ...entry, images: { ...entry.images, [angle]: url } }
-            : entry,
-        ),
+        current.map((entry) => {
+          if (entry.key !== colorKey) return entry;
+          const previews = { ...entry.previews };
+          delete previews[angle];
+          return {
+            ...entry,
+            images: { ...entry.images, [angle]: withCacheBuster(url) },
+            previews,
+          };
+        }),
       );
     } catch (error) {
-      updateColor(colorKey, {
-        error: error instanceof Error ? error.message : "That upload failed.",
-      });
+      setColors((current) =>
+        current.map((entry) => {
+          if (entry.key !== colorKey) return entry;
+          const previews = { ...entry.previews };
+          delete previews[angle];
+          return {
+            ...entry,
+            previews,
+            error: error instanceof Error ? error.message : "That upload failed.",
+          };
+        }),
+      );
     } finally {
+      /* The stored URL takes over from the blob once the upload resolves. */
+      URL.revokeObjectURL(previewUrl);
       setColors((current) =>
         current.map((entry) =>
           entry.key === colorKey ? { ...entry, uploading: undefined } : entry,
@@ -187,17 +272,28 @@ export function ProductForm({
   };
 
   const removeImage = (colorKey: string, angle: Angle) => {
+    /* A blob still pending for this slot is ours to release. */
+    const pending = colors.find((entry) => entry.key === colorKey)?.previews?.[angle];
+    if (pending) URL.revokeObjectURL(pending);
+
     setColors((current) =>
-      current.map((entry) =>
-        entry.key === colorKey
-          ? {
-              ...entry,
-              images: Object.fromEntries(
-                Object.entries(entry.images).filter(([key]) => key !== angle),
-              ) as Partial<Record<Angle, string>>,
-            }
-          : entry,
-      ),
+      current.map((entry) => {
+        if (entry.key !== colorKey) return entry;
+
+        const previews = { ...entry.previews };
+        delete previews[angle];
+        const fileNames = { ...entry.fileNames };
+        delete fileNames[angle];
+
+        return {
+          ...entry,
+          images: Object.fromEntries(
+            Object.entries(entry.images).filter(([key]) => key !== angle),
+          ) as Partial<Record<Angle, string>>,
+          previews,
+          fileNames,
+        };
+      }),
     );
   };
 
@@ -604,6 +700,12 @@ function ColorBlock({
       <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {angles.map((angle) => {
           const url = color.images[angle];
+          const preview = color.previews?.[angle];
+          /* The blob wins while an upload is in flight: it is the file just
+             chosen, which is the whole reason to show a preview at all. */
+          const shown = preview ?? url;
+          const fileName =
+            color.fileNames?.[angle] ?? (url ? fileNameFromUrl(url) : undefined);
           const isUploading = color.uploading === angle;
 
           return (
@@ -617,7 +719,7 @@ function ColorBlock({
                 onDrop={(event) => onDrop(event, angle)}
                 className="relative mt-1 aspect-square overflow-hidden rounded-lg border border-border bg-background"
               >
-                {url ? (
+                {shown ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element --
                         A blob from the browser's own storage cache, and the point of
@@ -626,19 +728,34 @@ function ColorBlock({
                         image the person is looking at once, to confirm they picked the
                         right one. The customer's page uses `next/image`. */}
                     <img
-                      src={url}
+                      src={shown}
                       alt={`${color.name || "Colour"} ${angleLabel(angle)}`}
                       className="size-full object-cover"
                     />
 
-                    <button
-                      type="button"
-                      onClick={() => onRemoveImage(angle)}
-                      aria-label={`Remove the ${angleLabel(angle)} photograph`}
-                      className="absolute top-1 right-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-full bg-charcoal/75 text-background transition-colors duration-150 ease-out hover:bg-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                    >
-                      <X size={14} strokeWidth={2} aria-hidden="true" />
-                    </button>
+                    {isUploading ? (
+                      /* No clear button mid-flight: the file is already on its way,
+                         and clearing the preview would only diverge from the upload. */
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-0 flex items-center justify-center bg-charcoal/40"
+                      >
+                        <Loader2
+                          size={18}
+                          strokeWidth={2}
+                          className="animate-spin text-background"
+                        />
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onRemoveImage(angle)}
+                        aria-label={`Clear the ${angleLabel(angle)} photograph`}
+                        className="absolute top-1 right-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-full bg-charcoal/75 text-background transition-colors duration-150 ease-out hover:bg-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      >
+                        <X size={14} strokeWidth={2} aria-hidden="true" />
+                      </button>
+                    )}
                   </>
                 ) : (
                   <button
@@ -666,7 +783,7 @@ function ColorBlock({
                     fileInputs.current[angle] = node;
                   }}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  accept={ACCEPTED_IMAGE_TYPES.join(",")}
                   className="hidden"
                   aria-label={`Choose a file for ${angleLabel(angle)}`}
                   onChange={(event) => {
@@ -674,11 +791,20 @@ function ColorBlock({
                     if (file) onUpload(angle, file);
                     /* Cleared so choosing the *same* file twice fires `change` again.
                        Without this, replacing a photograph with an identical one does
-                       nothing and looks like a bug. */
+                       nothing and looks like a bug — and a rejected file, which
+                       changes nothing else, could never be re-picked. */
                     event.target.value = "";
                   }}
                 />
               </div>
+
+              {/* The name, so a pick can be verified at a glance. Truncated to the
+                  slot width; `title` keeps the full name reachable. */}
+              {fileName ? (
+                <p className="mt-1 truncate text-[0.6875rem] text-muted" title={fileName}>
+                  {fileName}
+                </p>
+              ) : null}
             </li>
           );
         })}

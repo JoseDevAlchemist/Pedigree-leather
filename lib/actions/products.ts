@@ -145,6 +145,11 @@ export async function updateProductAction(
 
     const updated = await updateProductRow(id, parsed.data as ProductInput);
     revalidateShop();
+    /* The product's own page is prerendered at build, so an edited photograph —
+       or price, or description — would otherwise sit stale there until the next
+       build. `/bags` and `/shoes` revalidate the grids; this is the page itself,
+       which is what makes a new upload show on the product page without one. */
+    revalidateProductPage(parsed.data.category, parsed.data.slug);
     return updated;
   });
 }
@@ -234,9 +239,14 @@ class ValidationError extends Error {
 
 function revalidateShop() {
   /* The shop's static pages: home, and both category grids. The detail pages are
-     not revalidated because their slugs are unknown here, and they do not need to
-     be — a changed product's own page is fetched on demand. */
+     reached separately by `revalidateProductPage`, because a product's own slug
+     is only known at the call site that has the input. */
   revalidatePath("/");
   revalidatePath("/bags");
   revalidatePath("/shoes");
+}
+
+/** The shop path a product lives at, from its category and slug. */
+function revalidateProductPage(category: "bag" | "shoe", slug: string) {
+  revalidatePath(`/${category === "shoe" ? "shoes" : "bags"}/${slug}`);
 }

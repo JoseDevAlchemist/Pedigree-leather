@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
     ],
     unoptimized: false,
     dangerouslyAllowLocalIP: true,
+    /*
+     * Next 16 allows only the qualities listed here and silently coerces any
+     * other `quality` prop to the nearest entry — the default allowlist is
+     * `[75]` alone. Product photography asks for `quality={90}`, so without
+     * this the crispness fix would compile, ship, and do nothing: every image
+     * would quietly drop back to 75. See `ProductImage.tsx`.
+     */
+    qualities: [75, 90],
   },
 };
 

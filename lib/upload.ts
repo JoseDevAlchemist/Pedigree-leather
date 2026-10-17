@@ -151,7 +151,10 @@ export async function deleteProductImage(publicUrl: string): Promise<void> {
   const index = publicUrl.indexOf(base);
   if (index === -1) return;
 
-  const path = decodeURIComponent(publicUrl.slice(index + base.length));
+  /* Stored URLs may carry a `?v=` cache-buster (the admin appends one when a
+     photograph is replaced). The query is not part of the object's path, so it
+     has to come off here or the remove targets a key that does not exist. */
+  const path = decodeURIComponent(publicUrl.slice(index + base.length).split("?")[0]);
   const supabase = createClient();
 
   const { error } = await supabase.storage.from(BUCKET).remove([path]);
