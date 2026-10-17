@@ -112,6 +112,7 @@ export function toProduct(row: ProductWithRelations): Product {
     slug: row.slug,
     description: row.description,
     basePrice: row.base_price,
+    basePriceUsd: row.base_price_usd ?? null,
     discountPercent: row.discount_percent,
     stockQuantity: row.stock_quantity,
     featured: row.featured,

@@ -80,6 +80,9 @@ export function ProductForm({
   const [basePrice, setBasePrice] = useState(
     initialData ? String(initialData.basePrice) : "",
   );
+  const [basePriceUsd, setBasePriceUsd] = useState(
+    initialData?.basePriceUsd != null ? String(initialData.basePriceUsd) : "",
+  );
   const [discountPercent, setDiscountPercent] = useState(
     initialData ? String(initialData.discountPercent) : "",
   );
@@ -220,6 +223,7 @@ export function ProductForm({
       description,
       category,
       basePrice,
+      basePriceUsd: basePriceUsd ? Number(basePriceUsd) : null,
       discountPercent,
       stockQuantity,
       featured,
@@ -359,6 +363,23 @@ export function ProductForm({
                 value={basePrice}
                 onChange={(event) => setBasePrice(event.target.value)}
                 className={inputClass(Boolean(errors.basePrice))}
+              />
+            </Field>
+
+            <Field
+              label="Price in USD (optional)"
+              htmlFor="basePriceUsd"
+              error={errors.basePriceUsd}
+              hint="Leave blank if this product is only sold in KES."
+            >
+              <input
+                id="basePriceUsd"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={basePriceUsd}
+                onChange={(event) => setBasePriceUsd(event.target.value)}
+                className={inputClass(Boolean(errors.basePriceUsd))}
               />
             </Field>
 

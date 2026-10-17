@@ -82,6 +82,7 @@ export const productInputSchema = z.object({
   category: z.enum(["bag", "shoe"], { message: "Choose a category" }),
 
   basePrice: shillings,
+  basePriceUsd: z.coerce.number().int().min(1, "USD price must be positive").max(1_000_000, "That looks too large for a USD price").optional().nullable(),
   discountPercent: percent,
   stockQuantity: stockCount,
 

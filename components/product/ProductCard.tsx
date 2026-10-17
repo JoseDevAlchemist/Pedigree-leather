@@ -274,6 +274,7 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
             discountPercent={product.discountPercent}
             muted={isSoldOut}
             stacked
+            basePriceUsd={product.basePriceUsd}
           />
 
           {/* Above the stretched link, so it stays clickable and focusable. */}

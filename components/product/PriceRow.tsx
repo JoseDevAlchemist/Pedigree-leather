@@ -1,6 +1,6 @@
 "use client";
 
-import { hasDiscount, formatPrice, calculateDiscountedPrice } from "@/lib/format";
+import { hasDiscount, formatPrice, formatUsd, calculateDiscountedPrice, getDisplayPrices } from "@/lib/format";
 
 type PriceRowProps = {
   basePrice: number;
@@ -22,6 +22,8 @@ type PriceRowProps = {
   /** Sold-out products still show their price — they just cannot be bought. */
   muted?: boolean;
   className?: string;
+  /** Optional USD price for dual-currency display. */
+  basePriceUsd?: number | null;
 };
 
 /**
@@ -41,12 +43,15 @@ export function PriceRow({
   muted = false,
   stacked = false,
   className = "",
+  basePriceUsd,
 }: PriceRowProps) {
+  const display = getDisplayPrices({ basePrice, basePriceUsd, discountPercent });
   const discounted = hasDiscount(discountPercent);
-  const price = discounted ? calculateDiscountedPrice(basePrice, discountPercent) : basePrice;
 
   const priceSize = size === "detail" ? "text-3xl md:text-4xl" : "text-sm sm:text-base";
   const baseSize = size === "detail" ? "text-lg" : "text-xs sm:text-sm";
+  const usdPriceSize = size === "detail" ? "text-2xl md:text-3xl" : "text-sm sm:text-base";
+  const usdBaseSize = size === "detail" ? "text-base" : "text-xs sm:text-sm";
 
   const layout = stacked
     ? "flex-col items-start gap-y-0"
@@ -55,25 +60,44 @@ export function PriceRow({
   return (
     <div
       className={`flex ${layout} ${className}`}
-      /* Read out as one phrase: "12500 shillings, reduced from 14000". */
       aria-label={
         discounted
-          ? `${formatPrice(price)}, reduced from ${formatPrice(basePrice)}`
-          : formatPrice(basePrice)
+          ? `${display.kes}, reduced from ${display.kesOriginal}${display.usd ? `, ${display.usd}, reduced from ${display.usdOriginal}` : ""}`
+          : `${display.kes}${display.usd ? `, ${display.usd}` : ""}`
       }
     >
-      <span
-        className={`${priceSize} font-semibold tabular-nums ${
-          discounted ? "text-accent" : muted ? "text-muted" : "text-foreground"
-        }`}
-      >
-        {formatPrice(price)}
-      </span>
+      <div className="flex flex-col gap-y-0.5 min-w-0">
+        <span
+          className={`${priceSize} font-semibold tabular-nums ${
+            discounted ? "text-accent" : muted ? "text-muted" : "text-foreground"
+          }`}
+        >
+          {display.kes}
+        </span>
+
+        {display.usd && (
+          <span
+            className={`${usdPriceSize} font-semibold tabular-nums ${
+              discounted ? "text-accent" : muted ? "text-muted" : "text-foreground"
+            }`}
+          >
+            {display.usd}
+          </span>
+        )}
+      </div>
 
       {discounted ? (
-        <span className={`${baseSize} text-muted line-through tabular-nums`}>
-          {formatPrice(basePrice)}
-        </span>
+        <div className="flex flex-col gap-y-0.5 min-w-0">
+          <span className={`${baseSize} text-muted line-through tabular-nums`}>
+            {display.kesOriginal}
+          </span>
+
+          {display.usdOriginal && (
+            <span className={`${usdBaseSize} text-muted line-through tabular-nums`}>
+              {display.usdOriginal}
+            </span>
+          )}
+        </div>
       ) : null}
     </div>
   );

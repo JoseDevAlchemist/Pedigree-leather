@@ -56,7 +56,9 @@ export interface Product {
   description: string;
   /** Price in KES before any discount. */
   basePrice: number;
-  /** 0 for no discount. Otherwise 1–99. Applied to `basePrice`. */
+  /** Optional price in USD before any discount. When null/undefined, only KES is shown. */
+  basePriceUsd?: number | null;
+  /** 0 for no discount. Otherwise 1–99. Applied to `basePrice` and `basePriceUsd` proportionally. */
   discountPercent: number;
   /** Units across all colours. 0 means the product is sold out. */
   stockQuantity: number;

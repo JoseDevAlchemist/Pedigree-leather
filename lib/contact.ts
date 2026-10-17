@@ -19,10 +19,10 @@
  * workshop's line in this file and every consumer updates at once.
  */
 
-export const phoneDigits = "254700000000";
+export const phoneDigits = "254791004004";
 
 /** How the number is printed. Kenyan convention: +254 then the local number. */
-export const displayPhone = "+254 700 000 000";
+export const displayPhone = "+254 791 004 004";
 
 export const email = "hello@pedigreeleather.co";
 

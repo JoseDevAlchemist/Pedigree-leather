@@ -48,6 +48,8 @@ export interface ShopSettings {
   delivery_flat_rate: number;
   free_delivery_threshold: number;
   pickup_available: boolean;
+  instagram_handle: string | null;
+  instagram_url: string | null;
   updated_at: string | null;
 }
 
@@ -74,6 +76,8 @@ export async function getShopSettings(): Promise<ShopSettings> {
         delivery_flat_rate: 300,
         free_delivery_threshold: 25000,
         pickup_available: true,
+        instagram_handle: null,
+        instagram_url: null,
         updated_at: null,
       };
     }

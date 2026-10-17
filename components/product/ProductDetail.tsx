@@ -197,6 +197,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 discountPercent={product.discountPercent}
                 size="detail"
                 muted={isSoldOut}
+                basePriceUsd={product.basePriceUsd}
                 className="mt-3"
               />
             </header>

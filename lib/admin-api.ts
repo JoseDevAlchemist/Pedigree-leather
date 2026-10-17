@@ -161,6 +161,7 @@ export interface ProductInput {
   description: string;
   category: Product["category"];
   basePrice: number;
+  basePriceUsd: number | null;
   discountPercent: number;
   stockQuantity: number;
   featured: boolean;
@@ -263,6 +264,7 @@ export async function createProduct(input: ProductInput): Promise<AdminProduct> 
       description: input.description,
       category: input.category,
       base_price: input.basePrice,
+      base_price_usd: input.basePriceUsd,
       discount_percent: input.discountPercent,
       stock_quantity: input.stockQuantity,
       featured: input.featured,
@@ -342,6 +344,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ad
       description: input.description,
       category: input.category,
       base_price: input.basePrice,
+      base_price_usd: input.basePriceUsd,
       discount_percent: input.discountPercent,
       stock_quantity: input.stockQuantity,
       featured: input.featured,

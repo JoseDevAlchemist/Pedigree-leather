@@ -1,6 +1,6 @@
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
-import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
+import { ContactWidgetWrapper } from "@/components/layout/ContactWidgetWrapper";
 
 /**
  * The shop shell — everything a customer sees around the page.
@@ -35,7 +35,7 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
       <Footer />
       {/* Outside the providers: it needs neither the cart nor the image
           transition, and it must render even if a page above it throws. */}
-      <WhatsAppButton />
+      <ContactWidgetWrapper />
     </>
   );
 }

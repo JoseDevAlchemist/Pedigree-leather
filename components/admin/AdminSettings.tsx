@@ -15,6 +15,8 @@ interface ShopSettings {
   delivery_flat_rate: number;
   free_delivery_threshold: number;
   pickup_available: boolean;
+  instagram_handle: string | null;
+  instagram_url: string | null;
 }
 
 interface AdminSettingsProps {
@@ -31,6 +33,8 @@ export function AdminSettings({ settings: initialSettings }: AdminSettingsProps)
     email: initialSettings.email || "",
     address: initialSettings.address,
     google_maps_url: initialSettings.google_maps_url || "",
+    instagram_handle: initialSettings.instagram_handle || "",
+    instagram_url: initialSettings.instagram_url || "",
   });
   const [deliveryForm, setDeliveryForm] = useState({
     delivery_flat_rate: initialSettings.delivery_flat_rate,
@@ -195,6 +199,38 @@ export function AdminSettings({ settings: initialSettings }: AdminSettingsProps)
               className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             <p className="mt-1 text-xs text-muted">Link for the 'Get directions' button on contact page</p>
+          </div>
+
+          <div>
+            <label htmlFor="instagram_handle" className="block text-sm font-medium text-foreground">
+              Instagram Handle
+            </label>
+            <input
+              type="text"
+              id="instagram_handle"
+              name="instagram_handle"
+              value={infoForm.instagram_handle}
+              onChange={handleInfoChange}
+              placeholder="@pedigreeleather"
+              className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="mt-1 text-xs text-muted">Without @ symbol (e.g. pedigreeleather)</p>
+          </div>
+
+          <div>
+            <label htmlFor="instagram_url" className="block text-sm font-medium text-foreground">
+              Instagram URL
+            </label>
+            <input
+              type="url"
+              id="instagram_url"
+              name="instagram_url"
+              value={infoForm.instagram_url}
+              onChange={handleInfoChange}
+              placeholder="https://instagram.com/pedigreeleather"
+              className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="mt-1 text-xs text-muted">Full profile URL for the contact widget</p>
           </div>
 
           <button

@@ -34,6 +34,8 @@ export interface ShopConfig {
   deliveryFlatRate: number;
   freeDeliveryThreshold: number;
   pickupAvailable: boolean;
+  instagramHandle: string | null;
+  instagramUrl: string | null;
 }
 
 /**
@@ -57,6 +59,8 @@ export async function getShopConfig(): Promise<ShopConfig> {
       deliveryFlatRate: settings.delivery_flat_rate,
       freeDeliveryThreshold: settings.free_delivery_threshold,
       pickupAvailable: settings.pickup_available,
+      instagramHandle: settings.instagram_handle,
+      instagramUrl: settings.instagram_url,
     };
   } catch {
     // Fallback to constants
@@ -70,6 +74,8 @@ export async function getShopConfig(): Promise<ShopConfig> {
       deliveryFlatRate: DELIVERY.flatRateNairobi,
       freeDeliveryThreshold: DELIVERY.freeDeliveryThreshold,
       pickupAvailable: DELIVERY.pickupAvailable,
+      instagramHandle: "@pedigreeleather",
+      instagramUrl: "https://instagram.com/pedigreeleather",
     };
   }
 }

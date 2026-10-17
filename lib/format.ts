@@ -23,6 +23,19 @@ export function formatPrice(amount: number): string {
 }
 
 /**
+ * Group a USD amount. No decimals, comma thousands separator, dollar prefix.
+ * e.g. "$95" or "$1,250"
+ */
+const USD_GROUPED = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+  useGrouping: true,
+});
+
+export function formatUsd(amount: number): string {
+  return `$${USD_GROUPED.format(Math.round(amount))}`;
+}
+
+/**
  * Price after a percentage discount. Exact — no rounding to the nearest 50 or
  * 100, so the figure shown always reconciles with the "-15%" badge.
  */
@@ -50,4 +63,38 @@ export function effectivePrice(basePrice: number, discountPercent: number): numb
   return hasDiscount(discountPercent)
     ? calculateDiscountedPrice(basePrice, discountPercent)
     : basePrice;
+}
+
+/**
+ * Get display prices for a product, handling both KES and optional USD.
+ * Returns formatted strings ready for display.
+ */
+export function getDisplayPrices(product: {
+  basePrice: number;
+  basePriceUsd?: number | null;
+  discountPercent: number;
+}): {
+  kes: string;
+  usd: string | null;
+  kesOriginal?: string;
+  usdOriginal?: string | null;
+} {
+  const { basePrice, basePriceUsd, discountPercent } = product;
+  const hasDiscountFlag = hasDiscount(discountPercent);
+
+  const kes = formatPrice(hasDiscountFlag ? calculateDiscountedPrice(basePrice, discountPercent) : basePrice);
+  const usd = basePriceUsd != null
+    ? formatUsd(hasDiscountFlag ? Math.round(basePriceUsd * (1 - discountPercent / 100)) : basePriceUsd)
+    : null;
+
+  if (hasDiscountFlag) {
+    return {
+      kes,
+      usd,
+      kesOriginal: formatPrice(basePrice),
+      usdOriginal: basePriceUsd != null ? formatUsd(basePriceUsd) : null,
+    };
+  }
+
+  return { kes, usd };
 }
