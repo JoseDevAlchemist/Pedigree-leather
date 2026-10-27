@@ -37,11 +37,11 @@ export const DETAIL_IMAGE_SIZES =
 /**
  * The quality every product photograph is optimised at.
  *
- * 75 is the size/quality point for this catalogue: at 800px it produces roughly
- * 130 KB from a 2 MB original, while 90 was over 300 KB for the same frame. This
- * value must also appear in `images.qualities` in `next.config.ts` — Next 16
- * coerces an unlisted quality back down without warning, so the two move
- * together.
+ * 75 is the size/quality point for this catalogue. The loader also requests the
+ * square crop the layout actually displays, which keeps an 800px phone image
+ * around 40–90 KB across the current catalogue. This value must also appear in
+ * `images.qualities` in `next.config.ts` — Next 16 coerces an unlisted quality
+ * back down without warning, so the two move together.
  */
 const IMAGE_QUALITY = 75;
 

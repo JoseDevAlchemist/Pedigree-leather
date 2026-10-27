@@ -14,6 +14,10 @@
  *     are not Supabase storage URLs unchanged.
  *   - Extracts the storage path from a Supabase public URL and rewrites it to the
  *     render endpoint with `width`, `quality` and `format=webp`.
+ *   - Requests a square derivative (`height` equal to `width`, `resize=cover`).
+ *     Every product frame is square and already uses `object-cover`, so cropping
+ *     at the renderer discards the off-frame area before it is downloaded
+ *     instead of sending a tall original and letting the browser throw it away.
  *   - Caps the render width: phone-sized requests become 800px and desktop-sized
  *     requests become 1200px. Fixed thumbnails (cart, admin table) keep their
  *     requested 64–256px width instead of being upscaled.
@@ -78,6 +82,11 @@ function renderUrl(
   });
 
   url.searchParams.set("width", String(width));
+  /* The layout always displays product photography in a square well with
+     `object-cover`; crop server-side so the browser never downloads the parts
+     of a tall original that the frame would hide. */
+  url.searchParams.set("height", String(width));
+  url.searchParams.set("resize", "cover");
   url.searchParams.set("quality", String(quality));
   /* Supabase also honours the browser's Accept header. Setting this explicitly
      keeps the result WebP even when a proxy strips or rewrites Accept. */
