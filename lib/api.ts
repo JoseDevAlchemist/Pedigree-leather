@@ -1,6 +1,11 @@
 import { anglesForCategory, toProduct } from "@/lib/mappers";
 import type { ProductWithRelations } from "@/lib/mappers";
 import { MOCK_PRODUCTS } from "@/lib/mock-data";
+import {
+  buildProductFilterQuery,
+  type CategoryColorOption,
+  type ProductFilters,
+} from "@/lib/product-filters";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { Product } from "@/lib/types";
 
@@ -43,15 +48,16 @@ import type { Product } from "@/lib/types";
  * ---------------------------------------------------------------------------
  * Caching
  * ---------------------------------------------------------------------------
- * These reads are static-page reads, so they happen at build time and are baked
- * into the prerendered HTML — the route list should show `○` for `/`, `/bags`,
- * `/shoes` and the product pages. A product added in the admin gets its page on
- * request (`dynamicParams` defaults to true) but does not appear in an already built
- * grid until the next build. That is the right trade for a shop whose catalogue changes
- * a few times a month, and the wrong one the moment it changes hourly — the fix is a
- * `revalidateTag` call, and `lib/actions/products.ts` already calls `revalidatePath`
- * for the three shop routes after every write, so a `next build` is not the only way
- * they update.
+ * These reads are mostly static-page reads, so they happen at build time and are
+ * baked into the prerendered HTML — the route list should show `○` for `/`,
+ * `/bags`, `/shoes` and the product pages. The filtered `/category/[slug]` reads
+ * are request-time because the filter state lives in the URL. A product added in
+ * the admin gets its page on request (`dynamicParams` defaults to true) but does
+ * not appear in an already built grid until the next build. That is the right trade
+ * for a shop whose catalogue changes a few times a month, and the wrong one the
+ * moment it changes hourly — the fix is a `revalidateTag` call, and
+ * `lib/actions/products.ts` already calls `revalidatePath` for the shop routes after
+ * every write, so a `next build` is not the only way they update.
  *
  * If any of those routes ever shows up as `ƒ` in the build output, something on this
  * path has started calling `cookies()`. That is what happened when these reads used
@@ -83,6 +89,166 @@ function searchMockProducts(query: string): Product[] {
     );
   });
 }
+
+/** Apply the category page's filters to the mock catalogue, for DB-down reads. */
+function filterMockProducts(products: Product[], filters: ProductFilters): Product[] {
+  const colors = new Set(filters.colors.map((color) => color.toLowerCase()));
+
+  const filtered = products.filter((product) => {
+    if (filters.minPrice !== undefined && product.basePrice < filters.minPrice) {
+      return false;
+    }
+    if (filters.maxPrice !== undefined && product.basePrice > filters.maxPrice) {
+      return false;
+    }
+    if (
+      colors.size > 0 &&
+      !product.colors.some((color) => colors.has(color.name.toLowerCase()))
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  const sorted = [...filtered];
+
+  if (filters.sort === "price_asc") {
+    sorted.sort(
+      (a, b) => a.basePrice - b.basePrice || byCreatedAtDesc(a, b),
+    );
+  } else if (filters.sort === "price_desc") {
+    sorted.sort(
+      (a, b) => b.basePrice - a.basePrice || byCreatedAtDesc(a, b),
+    );
+  } else {
+    sorted.sort(byCreatedAtDesc);
+  }
+
+  return sorted;
+}
+
+/** The shop's old bag/shoe column, for the DB-down mock fallback only. */
+function legacyCategoryForSlug(slug: string): Product["category"] | null {
+  if (slug === "bags" || slug.includes("bag")) return "bag";
+  if (
+    slug === "shoes" ||
+    slug.includes("shoe") ||
+    slug.includes("sneaker")
+  ) {
+    return "shoe";
+  }
+  return null;
+}
+
+function colorKey(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function colorLabel(name: string): string {
+  return colorKey(name).replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function addColorOption(
+  options: Map<string, CategoryColorOption>,
+  name: string,
+  hex: string,
+) {
+  const key = colorKey(name);
+  if (!key) return;
+
+  const existing = options.get(key);
+  if (existing) {
+    if (!existing.values.includes(name)) existing.values.push(name);
+    return;
+  }
+
+  options.set(key, {
+    value: key,
+    label: colorLabel(name),
+    hex,
+    values: [name],
+  });
+}
+
+function sortColorOptions(
+  options: Map<string, CategoryColorOption>,
+): CategoryColorOption[] {
+  return [...options.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function colorOptionsFromMock(products: Product[]): CategoryColorOption[] {
+  const options = new Map<string, CategoryColorOption>();
+
+  for (const product of products) {
+    for (const color of product.colors) {
+      addColorOption(options, color.name, color.hex);
+    }
+  }
+
+  return sortColorOptions(options);
+}
+
+type CategoryColorRow = {
+  product_colors: { color_name: string; color_hex: string }[] | null;
+};
+
+/**
+ * Resolve a category slug to the ids the product query should cover — the
+ * category itself plus its children. `null` means "fall back to mock data";
+ * an empty result genuinely means the category page has no products.
+ */
+async function resolveCategoryScope(
+  supabase: ReturnType<typeof createPublicClient>,
+  categorySlug: string,
+): Promise<string[] | null> {
+  const { data: category, error: categoryError } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", categorySlug)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (categoryError) {
+    if (isMissingSchema(categoryError)) {
+      reportOnce(
+        MISSING_SCHEMA_KEY,
+        "Supabase has no `categories` table yet, so category pages are falling back to mock data. Run supabase/migrations/021_categories_reconcile.sql, then the shop will read from Supabase.",
+      );
+    } else {
+      reportOnce(
+        `error:resolveCategoryScope:${categoryError.code ?? categoryError.message ?? "unknown"}`,
+        `Supabase read failed (${categoryError.code ?? "no code"}: ${categoryError.message}). Falling back to mock data.`,
+      );
+    }
+    return null;
+  }
+
+  if (!category) return null;
+
+  const categoryId = (category as { id: string }).id;
+
+  /* One level of children, which is the shape the categories table models. If
+     this read fails we still show the parent's own products: an incomplete grid
+     beats no grid, and the cause is logged once. */
+  const { data: children, error: childrenError } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("parent_id", categoryId);
+
+  if (childrenError) {
+    reportOnce(
+      `error:resolveCategoryScope:children:${childrenError.code ?? childrenError.message ?? "unknown"}`,
+      `Could not read child categories (${childrenError.code ?? "no code"}: ${childrenError.message}). Showing only products assigned directly to the parent.`,
+    );
+  }
+
+  return [
+    categoryId,
+    ...((children ?? []) as { id: string }[]).map((child) => child.id),
+  ];
+}
+
 
 /* Reasons already reported, so a broken database produces one line per *cause*
    rather than one line per render or per slug. A `Set` of strings, module scope:
@@ -420,88 +586,174 @@ export async function getProductSlugs(category?: Product["category"]): Promise<s
 }
 
 /**
- * All products in a category, newest first. Looks up the category by slug,
- * then joins products on `category_id`. A parent category also includes the
- * products filed under its children, so `/category/bags` is "everything in
- * Bags" rather than only the products assigned to the parent row itself.
+ * All products in a category, optionally filtered by colour and price. Looks up
+ * the category by slug, then joins products on `category_id`. A parent category
+ * also includes the products filed under its children, so `/category/bags` is
+ * "everything in Bags" rather than only the products assigned to the parent row.
+ *
+ * Colour filtering is deliberately two reads: PostgREST's embedded-resource
+ * filter does not select parent rows without `!inner`, and `!inner` would then
+ * return only the matching colourways. Reading the matching product ids first
+ * keeps every card's full swatch set intact.
  *
  * Falls back to mock data filtered by the legacy `category` column when the
  * schema is not yet available.
  */
 export async function getProductsByCategory(
   categorySlug: string,
+  filters: ProductFilters = { colors: [], sort: "newest" },
 ): Promise<Product[]> {
-  const supabase = createPublicClient();
-
-  const { data: category, error: categoryError } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("slug", categorySlug)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (categoryError) {
-    if (isMissingSchema(categoryError)) {
-      reportOnce(
-        MISSING_SCHEMA_KEY,
-        "Supabase has no `categories` table yet, so category pages are falling back to mock data. Run supabase/migrations/021_categories_reconcile.sql, then the shop will read from Supabase.",
-      );
-    } else {
-      reportOnce(
-        `error:getProductsByCategory:${categoryError.code ?? categoryError.message ?? "unknown"}`,
-        `Supabase read failed (${categoryError.code ?? "no code"}: ${categoryError.message}). Falling back to mock data.`,
-      );
-    }
-    const legacyCategory = categorySlug === "bags" ? "bag" : "shoe";
-    return mockProducts(legacyCategory);
-  }
-
-  if (!category) {
-    const legacyCategory = categorySlug === "bags" ? "bag" : "shoe";
-    return mockProducts(legacyCategory);
-  }
-
-  const categoryId = (category as { id: string }).id;
-
-  /* One level of children, which is the shape the categories table models. If
-     this read fails we still show the parent's own products: an incomplete grid
-     beats no grid, and the cause is logged once. */
-  const { data: children, error: childrenError } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("parent_id", categoryId);
-
-  if (childrenError) {
-    reportOnce(
-      `error:getProductsByCategory:children:${childrenError.code ?? childrenError.message ?? "unknown"}`,
-      `Could not read child categories (${childrenError.code ?? "no code"}: ${childrenError.message}). Showing only products assigned directly to the parent.`,
+  const fallback = () => {
+    const legacyCategory = legacyCategoryForSlug(categorySlug);
+    return filterMockProducts(
+      legacyCategory ? mockProducts(legacyCategory) : [],
+      filters,
     );
+  };
+
+  let supabase: ReturnType<typeof createPublicClient>;
+  try {
+    supabase = createPublicClient();
+  } catch (error) {
+    reportOnce(
+      "category:client",
+      `Could not create the Supabase client for category products: ${
+        error instanceof Error ? error.message : "unknown error"
+      }. Falling back to mock data.`,
+    );
+    return fallback();
   }
 
-  const categoryIds = [
-    categoryId,
-    ...((children ?? []) as { id: string }[]).map((child) => child.id),
-  ];
+  const categoryIds = await resolveCategoryScope(supabase, categorySlug);
+  if (categoryIds === null) return fallback();
+
+  let colorProductIds: string[] | null = null;
+
+  if (filters.colors.length > 0) {
+    const { data: colorRows, error: colorError } = await supabase
+      .from("product_colors")
+      .select("product_id")
+      .in("color_name", filters.colors);
+
+    if (colorError) {
+      reportOnce(
+        `error:getProductsByCategory:colors:${colorError.code ?? colorError.message ?? "unknown"}`,
+        `Could not read colour filters (${colorError.code ?? "no code"}: ${colorError.message}). Falling back to mock data.`,
+      );
+      return fallback();
+    }
+
+    colorProductIds = [
+      ...new Set(
+        ((colorRows ?? []) as { product_id: string }[]).map(
+          (row) => row.product_id,
+        ),
+      ),
+    ];
+
+    /* No product has the selected colours: skip the products query entirely. */
+    if (colorProductIds.length === 0) return [];
+  }
+
+  const filterKey = buildProductFilterQuery(filters);
 
   const rows = await readFromSupabase(
-    `getProductsByCategory:${categorySlug}`,
+    `getProductsByCategory:${categorySlug}:${filterKey}`,
     (supabase) => {
-      return supabase
+      let query = supabase
         .from("products")
         .select(PRODUCT_SELECT)
         .in("category_id", categoryIds)
-        .eq("active", true)
-        .order("created_at", { ascending: false });
+        .eq("active", true);
+
+      if (colorProductIds) {
+        query = query.in("id", colorProductIds);
+      }
+
+      if (filters.minPrice !== undefined) {
+        query = query.gte("base_price", filters.minPrice);
+      }
+      if (filters.maxPrice !== undefined) {
+        query = query.lte("base_price", filters.maxPrice);
+      }
+
+      if (filters.sort === "price_asc") {
+        return query
+          .order("base_price", { ascending: true })
+          .order("created_at", { ascending: false });
+      }
+
+      if (filters.sort === "price_desc") {
+        return query
+          .order("base_price", { ascending: false })
+          .order("created_at", { ascending: false });
+      }
+
+      return query.order("created_at", { ascending: false });
     },
   );
 
-  if (rows === null) {
-    const legacyCategory = categorySlug === "bags" ? "bag" : "shoe";
-    return mockProducts(legacyCategory);
+  if (rows === null) return fallback();
+
+  /* Keep the database order: it already reflects the requested sort. */
+  return rows.map((row) => toProduct(row));
+}
+
+/**
+ * The colour checkboxes for a category page, scoped to that category and its
+ * children. Grouping is case-insensitive because the live catalogue contains
+ * both `Brown` and `brown`; the returned `values` carry every stored spelling so
+ * selecting one checkbox still filters both.
+ */
+export async function getCategoryColorOptions(
+  categorySlug: string,
+): Promise<CategoryColorOption[]> {
+  const fallback = () => {
+    const legacyCategory = legacyCategoryForSlug(categorySlug);
+    return colorOptionsFromMock(
+      legacyCategory ? mockProducts(legacyCategory) : [],
+    );
+  };
+
+  let supabase: ReturnType<typeof createPublicClient>;
+  try {
+    supabase = createPublicClient();
+  } catch (error) {
+    reportOnce(
+      "category-colors:client",
+      `Could not create the Supabase client for category colours: ${
+        error instanceof Error ? error.message : "unknown error"
+      }. Falling back to mock data.`,
+    );
+    return fallback();
   }
 
-  return rows.map((row) => toProduct(row)).sort((a, b) => byCreatedAtDesc(a, b));
+  const categoryIds = await resolveCategoryScope(supabase, categorySlug);
+  if (categoryIds === null) return fallback();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("product_colors(color_name, color_hex)")
+    .in("category_id", categoryIds)
+    .eq("active", true);
+
+  if (error) {
+    reportOnce(
+      `error:getCategoryColorOptions:${error.code ?? error.message ?? "unknown"}`,
+      `Could not read category colours (${error.code ?? "no code"}: ${error.message}). Falling back to mock data.`,
+    );
+    return fallback();
+  }
+
+  const options = new Map<string, CategoryColorOption>();
+
+  for (const product of (data ?? []) as CategoryColorRow[]) {
+    for (const color of product.product_colors ?? []) {
+      addColorOption(options, color.color_name, color.color_hex);
+    }
+  }
+
+  return sortColorOptions(options);
 }
 
 /**

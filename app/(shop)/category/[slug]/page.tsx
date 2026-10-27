@@ -5,8 +5,15 @@ import { Suspense } from "react";
 
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { ProductGridSkeleton } from "@/components/product/ProductCardSkeleton";
+import { FilterBar } from "@/components/shop/FilterBar";
 import { getCategories, getCategoryBySlug } from "@/lib/categories-api";
-import { getProductsByCategory } from "@/lib/api";
+import { getCategoryColorOptions, getProductsByCategory } from "@/lib/api";
+import {
+  countActiveFilters,
+  parseProductFilters,
+  resolveColorNames,
+  type ProductFilters,
+} from "@/lib/product-filters";
 
 export async function generateMetadata({
   params,
@@ -33,20 +40,29 @@ export async function generateStaticParams() {
 
 export default async function CategoryPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { slug } = await params;
+  const [{ slug }, rawSearchParams] = await Promise.all([params, searchParams]);
+  const filters = parseProductFilters(rawSearchParams);
 
-  const [category, categories] = await Promise.all([
+  const [category, categories, colorOptions] = await Promise.all([
     getCategoryBySlug(slug),
     getCategories(),
+    getCategoryColorOptions(slug),
   ]);
   if (!category) {
     notFound();
   }
 
   const children = categories.filter((entry) => entry.parentId === category.id);
+  const activeFilterCount = countActiveFilters(filters);
+  const dataFilters: ProductFilters = {
+    ...filters,
+    colors: resolveColorNames(filters.colors, colorOptions),
+  };
 
   return (
     <main id="main" className="flex-1">
@@ -72,9 +88,20 @@ export default async function CategoryPage({
           </nav>
         ) : null}
 
-        <Suspense fallback={<ProductGridSkeleton count={8} />}>
-          <CategoryGrid slug={slug} categoryName={category.name} />
-        </Suspense>
+        <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-10">
+          <FilterBar availableColors={colorOptions} filters={filters} />
+
+          <div className="min-w-0">
+            <Suspense fallback={<ProductGridSkeleton count={8} />}>
+              <CategoryGrid
+                slug={slug}
+                categoryName={category.name}
+                filters={dataFilters}
+                filtered={activeFilterCount > 0}
+              />
+            </Suspense>
+          </div>
+        </div>
       </div>
     </main>
   );
@@ -83,16 +110,25 @@ export default async function CategoryPage({
 async function CategoryGrid({
   slug,
   categoryName,
+  filters,
+  filtered,
 }: {
   slug: string;
   categoryName: string;
+  filters: ProductFilters;
+  filtered: boolean;
 }) {
-  const products = await getProductsByCategory(slug);
+  const products = await getProductsByCategory(slug, filters);
+  const name = categoryName.toLowerCase();
 
   return (
     <ProductGrid
       products={products}
-      emptyMessage={`No ${categoryName.toLowerCase()} are listed right now. Please check back soon.`}
+      emptyMessage={
+        filtered
+          ? `No ${name} match these filters. Try clearing a colour or price range.`
+          : `No ${name} are listed right now. Please check back soon.`
+      }
     />
   );
 }
