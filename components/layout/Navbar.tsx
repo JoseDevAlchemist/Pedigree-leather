@@ -304,16 +304,16 @@ export function Navbar({ categories }: NavbarProps = {}) {
         }`}
       >
         <div
-          className={`mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 transition-[height] duration-200 ease-out md:px-8 ${
+          className={`mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 transition-[height] duration-200 ease-out sm:gap-4 md:px-8 ${
             isScrolled ? "h-[3.75rem] md:h-[4.75rem]" : "h-16 md:h-20"
           }`}
         >
           <Link
             href="/"
-            className="-m-1 flex items-center gap-3 rounded-full p-1 transition-transform duration-150 ease-out active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+            className="-m-1 flex items-center gap-2 rounded-full p-1 transition-transform duration-150 ease-out active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent sm:gap-3"
           >
             <BrandMark priority />
-            <Wordmark className="text-xl md:text-2xl" />
+            <Wordmark className="text-lg sm:text-xl md:text-2xl" />
           </Link>
 
           {/* Desktop navigation */}
@@ -405,11 +405,10 @@ export function Navbar({ categories }: NavbarProps = {}) {
             </ul>
           </nav>
 
-          {/* Actions. Cart and contact both sit above the menu trigger on a
-              phone, so the two things a mobile shopper is most likely to want —
-              their basket and a way to reach us — are one tap away without
-              opening the drawer first. */}
-          <div className="flex items-center gap-1">
+          {/* Actions. Cart, search and the menu trigger fit on a phone; the
+              contact shortcut joins them from `sm` up. Contact is still in the
+              drawer, so nothing is lost on the smallest screens. */}
+          <div className="flex items-center gap-0.5 sm:gap-1">
             {/* Search: an expanding field on desktop, a full-screen overlay on
                 mobile. The trigger disappears while the field is open so the
                 two never compete for the same space. */}
@@ -465,7 +464,7 @@ export function Navbar({ categories }: NavbarProps = {}) {
             <Link
               href="/contact"
               aria-label="Contact us"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 hover:text-accent active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="hidden size-11 shrink-0 items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 hover:text-accent active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:flex"
             >
               <MessageCircle size={22} strokeWidth={2} aria-hidden="true" />
             </Link>
