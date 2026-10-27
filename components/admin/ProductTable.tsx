@@ -557,7 +557,7 @@ function ProductThumb({ product }: { product: AdminProduct }) {
       alt=""
       width={44}
       height={44}
-      sizes="44px"
+      sizes="32px"
       className="size-11 rounded-lg object-cover"
       style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.08)" }}
     />

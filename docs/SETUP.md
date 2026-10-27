@@ -196,7 +196,8 @@ everyone.
 again.
 
 **Uploads fail with a 400 and a Postgres message**
-The file is over 8 MB or is not a JPEG, PNG, WebP or AVIF. The message says which.
+The file is over 8 MB, or is not a JPEG, PNG, WebP or AVIF. The admin form rejects
+files over 4 MB before they leave the browser; the bucket's own ceiling is 8 MB.
 
 **A product does not appear on the shop after adding it**
 It is probably not `active`, or it is not `featured` if you expected it in the rail.

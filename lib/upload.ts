@@ -22,8 +22,12 @@ import type { Angle } from "@/lib/types";
 /** The bucket created by supabase/migrations/002_storage.sql. */
 export const BUCKET = "product-images";
 
-/** Set by `002_storage.sql` to 8 MB. Checked here so the message can be specific. */
-const MAX_BYTES = 8 * 1024 * 1024;
+/**
+ * The admin form rejects over 4 MB before this runs. Keep the same ceiling here
+ * so another caller cannot bypass the form and fill the bucket with sources the
+ * image renderer has to work harder on.
+ */
+const MAX_BYTES = 4 * 1024 * 1024;
 
 /** The same list the bucket's `allowed_mime_types` accepts. */
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
@@ -115,7 +119,7 @@ export async function uploadProductImage(
 
   if (file.size > MAX_BYTES) {
     throw new Error(
-      `${file.name} is ${Math.round(file.size / 1024 / 1024)} MB. The limit is 8 MB — resize it before uploading.`,
+      "This image is too large. Please resize it to under 4MB before uploading.",
     );
   }
 

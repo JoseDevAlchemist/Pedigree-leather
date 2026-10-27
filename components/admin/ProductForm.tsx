@@ -59,8 +59,12 @@ import { useToast } from "@/components/admin/Toast";
  */
 const ACCEPTED_IMAGE_TYPES: readonly string[] = ["image/jpeg", "image/png", "image/webp"];
 
-/** 5 MB, below the bucket's 8 MB ceiling, so the person is told before the wait. */
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+/**
+ * 4 MB, below the bucket's 8 MB ceiling. The renderer's output quality and size
+ * are driven by the original, so rejecting an oversized source here is cheaper
+ * than letting it into storage and paying for it on every storefront request.
+ */
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 /** A sentence describing why a file is unusable, or `null` when it is fine. */
 function fileProblem(file: File): string | null {
@@ -69,7 +73,7 @@ function fileProblem(file: File): string | null {
   }
   if (file.size === 0) return `${file.name} is empty.`;
   if (file.size > MAX_UPLOAD_BYTES) {
-    return `${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 5 MB.`;
+    return "This image is too large. Please resize it to under 4MB before uploading.";
   }
   return null;
 }
@@ -703,6 +707,8 @@ export function ProductForm({
           <legend className="font-serif text-lg font-semibold tracking-tight text-foreground">
             Colours
           </legend>
+
+          <p className="-mt-2 text-xs text-muted">JPEG, PNG or WebP, up to 4 MB each.</p>
 
           {colors.map((color, index) => (
             <ColorBlock

@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
+import { useState } from "react";
 
 import { angleLabel, angleSpoken } from "@/lib/angles";
 import { onColorOpacity, readableTextClass, shade } from "@/lib/color";
@@ -22,21 +23,27 @@ export const CARD_IMAGE_SIZES = "(min-width: 1024px) 22vw, (min-width: 768px) 30
  * `sizes` for the product detail page's main image.
  *
  * The detail image sits either full width (stacked, below `lg`) or in the wider
- * of two columns — roughly 48–54vw between 1024px and 1280px. Falling back to
- * `100vw` under `lg` is deliberate: over-asking only wastes a little bandwidth,
- * while under-asking (inheriting the card's hint) is what made it blurry.
+ * of two columns — roughly 48–54vw between 1024px and 1280px.
+ *
+ * Below `lg` the hint is deliberately smaller than the rendered width: a `100vw`
+ * hint on a 3x phone asked for a 1440px source. `52vw` keeps the candidate under
+ * the loader's 800px phone bucket at 1x, 2x and 3x, which is still sharp on a
+ * phone without the desktop-sized download. Tablets get the larger 66vw step,
+ * where there is room to spare.
  */
-export const DETAIL_IMAGE_SIZES = "(min-width: 1024px) 50vw, 100vw";
+export const DETAIL_IMAGE_SIZES =
+  "(min-width: 1024px) 50vw, (min-width: 768px) 66vw, 52vw";
 
 /**
  * The quality every product photograph is optimised at.
  *
- * The Next default is 75, which is fine for decoration and thin for the grain
- * and stitching this shop is selling. This value must also appear in
- * `images.qualities` in `next.config.ts` — Next 16 coerces an unlisted quality
- * back down without warning, so the two move together.
+ * 75 is the size/quality point for this catalogue: at 800px it produces roughly
+ * 130 KB from a 2 MB original, while 90 was over 300 KB for the same frame. This
+ * value must also appear in `images.qualities` in `next.config.ts` — Next 16
+ * coerces an unlisted quality back down without warning, so the two move
+ * together.
  */
-const IMAGE_QUALITY = 90;
+const IMAGE_QUALITY = 75;
 
 type ProductImageProps = {
   /** Image URL for this angle of this colour, or `null` while photography is pending. */
@@ -84,8 +91,6 @@ export function ProductImage({
   animateIn = false,
   priority = false,
 }: ProductImageProps) {
-  const reduceMotion = useReducedMotion();
-
   /* Alt text reads as a sentence, so it uses the spoken label ("left side")
    * rather than the stamped one ("Side L"). */
   const alt = `${productName} in ${colorName}, ${angleSpoken(angle)} view`;
@@ -93,31 +98,123 @@ export function ProductImage({
   const frame = sizing === "square" ? "relative aspect-square w-full" : "relative size-full";
 
   if (src) {
+    /* Keyed on the source so a changed URL — including a replacement upload's
+       `?v=` cache-buster — remounts the photo and clears a previous error. */
     return (
-      <div className={`${frame} overflow-hidden ${className}`}>
-        <Image
-          /* Keyed on the source so a changed URL remounts the element. The
-             callers already remount this whole layer per angle and colour, so
-             this is belt-and-braces — but the case it guards is the one that
-             matters: a photo re-uploaded to the same storage path, where the
-             cache-buster is the only thing that differs. */
-          key={src}
-          src={src}
-          alt={alt}
-          fill
-          priority={priority}
-          quality={IMAGE_QUALITY}
-          sizes={sizes}
-          className="object-cover"
-          style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.1)" }}
-        />
-      </div>
+      <ProductPhoto
+        key={src}
+        src={src}
+        alt={alt}
+        hex={hex}
+        angle={angle}
+        frame={frame}
+        className={className}
+        sizes={sizes}
+        priority={priority}
+        animateIn={animateIn}
+      />
     );
   }
 
-  /* Placeholder. The three background layers are: a fine diagonal grain, a
-     sheen in the top-left, and a top-to-bottom tone shift — all derived from the
-     colour itself, so cream reads as pale leather and black reads as deep. */
+  return (
+    <ProductPlaceholder
+      alt={alt}
+      hex={hex}
+      angle={angle}
+      frame={frame}
+      className={className}
+      animateIn={animateIn}
+    />
+  );
+}
+
+type ProductPhotoProps = {
+  src: string;
+  alt: string;
+  hex: string;
+  angle: Angle;
+  frame: string;
+  className: string;
+  sizes: string;
+  priority: boolean;
+  animateIn: boolean;
+};
+
+/**
+ * The real photograph, with a fallback for sources Supabase cannot transform.
+ *
+ * Supabase's image renderer rejects originals over 5 MB, and a CDN/proxy failure
+ * produces the same `error` event. Falling back to the leather swatch keeps the
+ * grid intact instead of leaving a broken-image icon and a blank 4:5 frame.
+ */
+function ProductPhoto({
+  src,
+  alt,
+  hex,
+  angle,
+  frame,
+  className,
+  sizes,
+  priority,
+  animateIn,
+}: ProductPhotoProps) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <ProductPlaceholder
+        alt={alt}
+        hex={hex}
+        angle={angle}
+        frame={frame}
+        className={className}
+        animateIn={animateIn}
+      />
+    );
+  }
+
+  return (
+    <div className={`${frame} overflow-hidden ${className}`}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        priority={priority}
+        quality={IMAGE_QUALITY}
+        sizes={sizes}
+        className="object-cover"
+        style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.1)" }}
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
+type ProductPlaceholderProps = {
+  alt: string;
+  hex: string;
+  angle: Angle;
+  frame: string;
+  className: string;
+  animateIn: boolean;
+};
+
+/**
+ * The no-photograph state: a block of the colour's own hex, treated as a leather
+ * swatch rather than a missing image. The three background layers are a fine
+ * diagonal grain, a sheen in the top-left, and a top-to-bottom tone shift — all
+ * derived from the colour itself, so cream reads as pale leather and black reads
+ * as deep.
+ */
+function ProductPlaceholder({
+  alt,
+  hex,
+  angle,
+  frame,
+  className,
+  animateIn,
+}: ProductPlaceholderProps) {
+  const reduceMotion = useReducedMotion();
   const grain = onColorOpacity(hex, 0.06, 0.045);
   const sheen = onColorOpacity(hex, 0.16, 0.26);
   const labelClass = readableTextClass(hex);

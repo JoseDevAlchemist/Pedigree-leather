@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ShoppingBag, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -250,28 +251,29 @@ function CartLineThumbnail({
   image: string | null;
   hex: string;
 }) {
-  if (image) {
-    return (
-      /* A plain <img>: these are 64px thumbnails and every one of them would
-         otherwise get its own optimized file plus a loader. Real photography
-         will arrive on a CDN, which is the point at which this changes. */
-      <img
-        src={image}
-        alt=""
-        width={64}
-        height={64}
-        className="size-16 shrink-0 rounded-lg object-cover"
-        style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.08)" }}
-      />
-    );
-  }
-
   return (
     <span
       aria-hidden="true"
-      className="size-16 shrink-0 rounded-lg"
+      className="block size-16 shrink-0 overflow-hidden rounded-lg"
       style={{ backgroundColor: hex, boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.08)" }}
-    />
+    >
+      {image ? (
+        <Image
+          src={image}
+          alt=""
+          width={64}
+          height={64}
+          sizes="32px"
+          quality={75}
+          className="size-16 object-cover"
+          /* If the renderer rejects the source, the colour block underneath is
+             the same fallback the product grid uses. */
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
+      ) : null}
+    </span>
   );
 }
 

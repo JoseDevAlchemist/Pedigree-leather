@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Truck, MapPin, Package, CheckCircle, Loader2 } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
@@ -601,12 +602,17 @@ export default function CheckoutPage() {
                       aria-hidden="true"
                     >
                       {item.image && (
-                        <img
+                        <Image
                           src={item.image}
                           alt=""
                           width={64}
                           height={64}
-                          className="w-full h-full object-cover"
+                          sizes="32px"
+                          quality={75}
+                          className="size-16 object-cover"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
                         />
                       )}
                     </div>

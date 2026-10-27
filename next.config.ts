@@ -31,12 +31,19 @@ const nextConfig: NextConfig = {
     dangerouslyAllowLocalIP: true,
     /*
      * Next 16 allows only the qualities listed here and silently coerces any
-     * other `quality` prop to the nearest entry — the default allowlist is
-     * `[75]` alone. Product photography asks for `quality={90}`, so without
-     * this the crispness fix would compile, ship, and do nothing: every image
-     * would quietly drop back to 75. See `ProductImage.tsx`.
+     * other `quality` prop to the nearest entry. Product photography uses 75:
+     * at 800px that is roughly 130 KB from a 2 MB original, where 90 was over
+     * 300 KB for the same frame. See `ProductImage.tsx`.
      */
-    qualities: [75, 90],
+    qualities: [75],
+    /*
+     * The loader normalises product photographs to 800px on phone-sized
+     * candidates and 1200px on desktop ones. Ending the srcset at 1200 avoids
+     * advertising 1440–3840px candidates that the loader would collapse anyway.
+     * 800 is included so a 480px phone at 3x can select the phone bucket
+     * directly instead of falling through to the desktop bucket.
+     */
+    deviceSizes: [640, 750, 800, 828, 1080, 1200],
   },
 };
 
