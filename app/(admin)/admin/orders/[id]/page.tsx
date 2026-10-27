@@ -9,10 +9,8 @@ export default async function AdminOrderDetailPage({
 }) {
   const { id } = await params;
 
-  try {
-    const order = await getOrderAdmin(id);
-    return <AdminOrderDetail order={order} />;
-  } catch {
-    notFound();
-  }
+  const order = await getOrderAdmin(id).catch(() => null);
+  if (!order) notFound();
+
+  return <AdminOrderDetail order={order} />;
 }

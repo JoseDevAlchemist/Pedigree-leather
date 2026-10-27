@@ -1,4 +1,4 @@
-import { categoryAngles } from "@/lib/angles";
+import { ALL_ANGLES, angleOrder, categoryAngles } from "@/lib/angles";
 import type { Tables } from "@/lib/supabase/types";
 import type { Angle, ColorVariant, Product } from "@/lib/types";
 
@@ -63,9 +63,8 @@ function isCategory(value: string): value is Product["category"] {
 /**
  * Build one colourway from its row and its image rows.
  *
- * The image record is built from *all eight* angles and then trimmed to the
- * product's own roll order. Every `ColorVariant.images` in the app is a total
- * `Record<Angle, string | null>`, which is what lets every consumer write
+ * The record is built for the product's own roll order: every angle in that list
+ * gets either the stored URL or `null`. That is what lets every consumer write
  * `images[angle] ?? null` without checking whether the key exists — that
  * expression appears on the card, the detail page and the cart line, and adding a
  * guard to each of them would be three chances to forget one.
@@ -93,18 +92,65 @@ function toColorVariant(row: ColorRow, images: ImageRow[], productAngles: Angle[
   };
 }
 
+/**
+ * The views this product actually has, in the order the admin arranged them.
+ *
+ * A product is no longer limited to the category's five default views. The
+ * admin can save three image slots, or eight, so the shop must derive the roll
+ * from the stored image rows rather than from the category alone. Rows written
+ * by the current form carry `sort_order`; legacy rows all carry zero and fall
+ * back to the category's preferred order, then the remaining known angles.
+ *
+ * If the product has no photography at all, it keeps the category's five
+ * placeholder views — that is what makes an unphotographed product browsable.
+ */
+function productAngles(
+  colors: (ColorRow & { product_images: ImageRow[] })[],
+  category: Product["category"],
+): Angle[] {
+  const preferred = angleOrder(category);
+  const orderOf = (angle: Angle) => {
+    const index = preferred.indexOf(angle);
+    return index === -1 ? preferred.length + ALL_ANGLES.indexOf(angle) : index;
+  };
+
+  const seen = new Set<Angle>();
+  const derived: Angle[] = [];
+
+  for (const color of colors) {
+    const images = [...(color.product_images ?? [])].sort(
+      (a, b) =>
+        a.sort_order - b.sort_order ||
+        (isAngle(a.angle) ? orderOf(a.angle) : 999) -
+          (isAngle(b.angle) ? orderOf(b.angle) : 999),
+    );
+
+    for (const image of images) {
+      if (!image.image_url || !isAngle(image.angle) || seen.has(image.angle)) continue;
+      seen.add(image.angle);
+      derived.push(image.angle);
+    }
+  }
+
+  return derived.length > 0 ? derived : categoryAngles(category);
+}
+
 /** A row plus its relations into the app's `Product`. */
 export function toProduct(row: ProductWithRelations): Product {
   const category = isCategory(row.category) ? row.category : "bag";
 
-  /* The views come from the category, not from the rows. This is what makes a
-     product with no photography at all still browsable: it has all five slots,
-     every one of them null, and the placeholder draws them. */
-  const angles = categoryAngles(category);
+  const sortedColors = [...(row.product_colors ?? [])].sort(
+    (a, b) => a.sort_order - b.sort_order || a.color_name.localeCompare(b.color_name),
+  );
 
-  const colors = [...(row.product_colors ?? [])]
-    .sort((a, b) => a.sort_order - b.sort_order || a.color_name.localeCompare(b.color_name))
-    .map((color) => toColorVariant(color, color.product_images ?? [], angles));
+  /* The admin can choose any subset of the eight views, so the product's roll
+     comes from its actual image rows. A product with no photography falls back
+     to the category's default five placeholders. */
+  const angles = productAngles(sortedColors, category);
+
+  const colors = sortedColors.map((color) =>
+    toColorVariant(color, color.product_images ?? [], angles),
+  );
 
   return {
     id: row.id,
@@ -122,6 +168,7 @@ export function toProduct(row: ProductWithRelations): Product {
        see `lib/admin-api.ts`. */
     colors,
     category,
+    categoryId: row.category_id ?? null,
     angles,
     createdAt: row.created_at,
   };
@@ -151,7 +198,7 @@ export function toAdminProduct(row: AdminProductRow): AdminProduct {
   return { ...toProduct(row), active: row.active };
 }
 
-/** `Angle[]` for a row, for the admin form's upload slots. */
+/** The default `Angle[]` for a category. Live products use their own `angles`. */
 export function anglesForCategory(category: string): Angle[] {
   return categoryAngles(isCategory(category) ? category : "bag");
 }

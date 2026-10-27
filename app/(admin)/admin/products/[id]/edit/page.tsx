@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/admin/ProductForm";
 import { getProduct } from "@/lib/admin-api";
 import { requireAdmin } from "@/lib/supabase/guards";
+import { listCategoriesAction } from "@/lib/actions/categories";
+import type { Category } from "@/lib/types";
 
 type PagePropsForEdit = PageProps<"/admin/products/[id]/edit">;
 
@@ -29,6 +31,16 @@ export default async function EditProductPage({ params }: PagePropsForEdit) {
 
   if (!product) notFound();
 
+  /* Categories for the category select. If the fetch fails the form still works —
+     the select is empty and the product can be saved without a category. */
+  let categories: Category[] = [];
+  try {
+    const result = await listCategoriesAction();
+    if (result.ok) categories = result.data as Category[];
+  } catch {
+    /* fall back to empty */
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <h2 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
@@ -43,7 +55,7 @@ export default async function EditProductPage({ params }: PagePropsForEdit) {
         {product.active ? "" : " · hidden from the shop"}
       </p>
 
-      <ProductForm mode="edit" initialData={product} />
+      <ProductForm mode="edit" initialData={product} categories={categories} />
     </div>
   );
 }

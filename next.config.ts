@@ -4,6 +4,8 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
+    loader: "custom",
+    loaderFile: "./supabase-image-loader.ts",
     remotePatterns: [
       {
         protocol: "http",
@@ -16,6 +18,13 @@ const nextConfig: NextConfig = {
         hostname: "*.supabase.co",
         port: "",
         pathname: "/storage/v1/object/public/**",
+      },
+      /* Supabase image transformation endpoint: /storage/v1/render/image/public/ */
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        port: "",
+        pathname: "/storage/v1/render/image/public/**",
       },
     ],
     unoptimized: false,

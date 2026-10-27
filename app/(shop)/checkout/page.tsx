@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Truck, MapPin, Package, CheckCircle, Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { useCartStore, useCartSubtotal } from "@/lib/store/cart";
 import { formatPrice } from "@/lib/format";
 import { createOrderAction } from "@/lib/actions/orders";
+import {
+  KENYAN_PHONE_PREFIX,
+  kenyanPhoneLocalDigits,
+  kenyanPhoneSchema,
+  normalizeKenyanPhone,
+} from "@/lib/validation";
 import { toast } from "sonner";
 
 interface ShopConfig {
@@ -51,12 +57,7 @@ const FALLBACK_CONFIG: ShopConfig = {
 const checkoutSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z
-    .string()
-    .min(10, "Phone number is required")
-    .refine((val) => /^(\+254|07|01)\d{8,9}$/.test(val.replace(/\s/g, "")), {
-      message: "Enter a valid Kenyan phone number (+254..., 07..., or 01...)",
-    }),
+  phone: kenyanPhoneSchema,
   deliveryMethod: z.enum(["delivery", "pickup"]),
   deliveryAddress: z.string().optional(),
   notes: z.string().max(500, "Notes must be 500 characters or less").optional(),
@@ -81,29 +82,29 @@ type CheckoutForm = z.infer<typeof checkoutSchema>;
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const items = useCartStore((state) => state.items);
   const subtotal = useCartSubtotal();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [discountTotal, setDiscountTotal] = useState(0);
-  const [isMounted, setIsMounted] = useState(false);
   const [shopConfig, setShopConfig] = useState<ShopConfig>(FALLBACK_CONFIG);
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string>("");
 
-  // Reset submitting state when navigation completes (pathname changes away from /checkout)
-  useEffect(() => {
-    if (pathname !== "/checkout") {
-      setIsSubmitting(false);
-    }
-  }, [pathname]);
+  /**
+   * Set the instant an order is created, before the cart is cleared.
+   *
+   * Clearing the cart re-runs the empty-cart guard below. Without this flag
+   * that guard wins the race against `router.push("/payment/...")` and sends
+   * the customer to /bags with an "empty cart" toast — which is exactly what
+   * looked like the payment page "reloading".
+   */
+  const orderPlacedRef = useRef(false);
 
-  // Redirect if cart is empty
+  // Redirect if the cart is genuinely empty (not because we just checked out).
   useEffect(() => {
-    setIsMounted(true);
-    if (items.length === 0) {
-      router.push("/bags");
+    if (items.length === 0 && !orderPlacedRef.current) {
+      router.replace("/bags");
       toast.info("Your cart is empty. Add something first.");
     }
   }, [items, router]);
@@ -140,6 +141,7 @@ export default function CheckoutPage() {
   }, [items]);
 
   const {
+    control,
     register,
     handleSubmit,
     watch,
@@ -177,39 +179,20 @@ export default function CheckoutPage() {
 
   const total = subtotal - discountTotal + deliveryFee;
 
-  // Custom submit handler that calls preventDefault() synchronously at the top
-  const handleCheckoutSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    console.log('[checkout] submit handler fired');
-    e.preventDefault(); // MUST be first synchronous line
-
-    if (isSubmitting) {
-      console.log('[checkout] already submitting, ignoring');
-      return;
-    }
+  /**
+   * Runs only after react-hook-form has validated the form.
+   *
+   * The old handler re-entered `handleSubmit` from inside `onSubmit` and raced
+   * it with a 100ms `setTimeout` to guess whether validation had failed. That
+   * is also the handler that stalled: on success it lost the navigation race
+   * to the empty-cart redirect. RHF's own `handleSubmit(onValid)` does the
+   * same job without either problem.
+   */
+  const onValid = async (data: CheckoutForm) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
-      // Trigger RHF validation manually
-      const data = await new Promise<CheckoutForm | null>((resolve) => {
-        handleSubmit((validData) => {
-          console.log('[checkout] validation passed, data:', validData);
-          resolve(validData);
-        })(e as React.FormEvent<HTMLFormElement>);
-        
-        // If validation fails, handleSubmit doesn't call the callback
-        // We need a fallback to detect validation failure
-        setTimeout(() => {
-          console.log('[checkout] validation timeout - likely failed');
-          resolve(null);
-        }, 100);
-      });
-
-      if (!data) {
-        console.log('[checkout] validation failed, not submitting');
-        setIsSubmitting(false);
-        return;
-      }
-
       // Prepare cart items for the server action
       const cartItemsForServer = items.map((item) => ({
         productId: item.productId,
@@ -227,7 +210,9 @@ export default function CheckoutPage() {
       const formData = new FormData();
       formData.append("name", data.name);
       formData.append("email", data.email || "");
-      formData.append("phone", data.phone);
+      /* The resolver has already transformed this, but normalising here makes
+         the contract explicit: the server always receives +2547XXXXXXXX. */
+      formData.append("phone", normalizeKenyanPhone(data.phone));
       formData.append("deliveryMethod", data.deliveryMethod);
       formData.append("deliveryAddress", data.deliveryAddress || "");
       formData.append("notes", data.notes || "");
@@ -242,37 +227,28 @@ export default function CheckoutPage() {
       formData.append("subtotal", subtotal.toString());
       formData.append("discountTotal", discountTotal.toString());
 
-      console.log('[checkout] calling createOrderAction');
       const result = await createOrderAction(formData);
-      console.log('[checkout] createOrderAction result:', result);
 
       if (result.ok) {
-        console.log('[checkout] about to push to /payment/', result.orderId);
-        // Clear cart and redirect to payment page
+        // Set the flag *before* clearing: the empty-cart effect runs on the
+        // next render and must not send us back to /bags.
+        orderPlacedRef.current = true;
         useCartStore.getState().clearCart();
-        console.log('[checkout] calling router.push');
-        router.push(`/payment/${result.orderId}`);
-        console.log('[checkout] router.push returned');
-        // Fallback for React 19 / Next.js 16 navigation issues:
-        // if router.push doesn't navigate within 100ms, force hard navigation
-        setTimeout(() => {
-          if (window.location.pathname === '/checkout') {
-            console.log('[checkout] router.push did not navigate, forcing window.location.href');
-            window.location.href = `/payment/${result.orderId}`;
-          }
-        }, 100);
         toast.success("Order created! Choose your payment method.");
-      } else {
-        console.log('[checkout] server action returned error:', result.error);
-        toast.error(result.error);
+        router.push(`/payment/${result.orderId}`);
+        return; // keep the button busy until the route changes
       }
+
+      toast.error(result.error);
     } catch (error) {
-      console.error('[checkout] submit error:', error);
+      console.error("[checkout] submit error:", error);
       toast.error("Something went wrong. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
+
+    setIsSubmitting(false);
   };
+
+  const handleCheckoutSubmit = handleSubmit(onValid);
 
   return (
     <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
@@ -320,24 +296,55 @@ export default function CheckoutPage() {
                   <label htmlFor="phone" className="block text-sm font-medium text-foreground">
                     Phone number <span className="text-primary" aria-hidden="true">*</span>
                   </label>
-                  <input
-                    {...register("phone")}
-                    id="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    placeholder="+254 7XX XXX XXX"
-                    className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted"
-                    disabled={isSubmitting}
-                    aria-invalid={errors.phone ? "true" : "false"}
-                    aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
-                  />
+                  <div className="relative mt-1.5">
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-muted"
+                    >
+                      {KENYAN_PHONE_PREFIX}
+                    </span>
+                    <Controller
+                      control={control}
+                      name="phone"
+                      render={({ field }) => (
+                        <input
+                          ref={field.ref}
+                          name={field.name}
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          onChange={(event) =>
+                            field.onChange(
+                              kenyanPhoneLocalDigits(event.target.value),
+                            )
+                          }
+                          id="phone"
+                          type="tel"
+                          inputMode="numeric"
+                          autoComplete="tel-national"
+                          placeholder="712345678"
+                          /* No `maxLength={9}`: pasting `0712345678` or
+                             `+254712345678` is longer than nine characters,
+                             and the browser would truncate it before the
+                             handler above could strip the prefix. The handler
+                             is what caps the stored value at nine digits. */
+                          className="w-full rounded-lg border border-border bg-background py-3 pr-4 pl-[4.6rem] text-sm tabular-nums tracking-wide focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted"
+                          disabled={isSubmitting}
+                          aria-invalid={errors.phone ? "true" : "false"}
+                          aria-describedby={
+                            errors.phone ? "phone-error" : "phone-hint"
+                          }
+                        />
+                      )}
+                    />
+                  </div>
                   {errors.phone ? (
                     <p id="phone-error" className="mt-1.5 text-sm text-destructive" role="alert">
                       {errors.phone.message}
                     </p>
                   ) : (
                     <p id="phone-hint" className="mt-1.5 text-sm text-muted">
-                      We&apos;ll WhatsApp you order updates
+                      Enter the 9 digits after +254. Pasting 07… or 01… is
+                      adjusted automatically. We&apos;ll send order updates here.
                     </p>
                   )}
                 </div>

@@ -1,13 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { angleSpoken, stepIndex } from "@/lib/angles";
 import { productHref } from "@/lib/category";
-import { formatPrice, hasDiscount } from "@/lib/format";
-import type { Product } from "@/lib/types";
+import { effectivePrice, formatPrice, hasDiscount } from "@/lib/format";
+import { useCartStore } from "@/lib/store/cart";
+import type { CartItem, Product } from "@/lib/types";
 
 import { useHoverAngleRoll, CROSSFADE_MS } from "@/hooks/useHoverAngleRoll";
 import { useInViewAutoRoll } from "@/hooks/useInViewAutoRoll";
@@ -70,7 +73,42 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
 
   const color = product.colors[colorIndex] ?? product.colors[0];
   const angleCount = product.angles.length;
-  const isSoldOut = product.stockQuantity === 0;
+  const isSoldOut = product.stockQuantity <= 0;
+
+  const addItem = useCartStore((state) => state.addItem);
+
+  const handleQuickAdd = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (isSoldOut) return;
+
+    /* Quick add is deliberately colour-blind: the card shows the first swatch as
+       the default, so the line that lands in the cart is the same one the shopper
+       would get by opening the product and pressing Add to Cart without touching
+       a swatch. */
+    const defaultColor = product.colors[0];
+    if (!defaultColor) return;
+
+    const firstAngle = product.angles[0];
+    const unitPrice = effectivePrice(product.basePrice, product.discountPercent);
+
+    const line: CartItem = {
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      colorId: defaultColor.id,
+      colorName: defaultColor.name,
+      colorHex: defaultColor.hex,
+      unitPrice,
+      basePrice: product.basePrice,
+      quantity: 1,
+      image: defaultColor.images[firstAngle] ?? null,
+    };
+
+    addItem(line);
+    toast.success("Added to cart");
+  };
 
   /* Two roll triggers, both always running, chosen by what the input device can
      do rather than by viewport width. A phone has no pointer to hover with, so
@@ -172,7 +210,7 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
           `ProductImage` gave this div a height of zero and collapsed the card. */}
       <div
         ref={imageRef}
-        className="relative aspect-square overflow-hidden rounded-2xl"
+        className="relative group aspect-square overflow-hidden rounded-2xl"
         style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.06)" }}
       >
         {/* One layer per view that has been shown, cross-faded. Keyed on colour
@@ -215,13 +253,34 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
           </motion.div>
         </AnimatePresence>
 
+        {/* Quick add-to-cart. Top right of the image well, as a sibling of the
+            AnimatePresence layer so it is not part of the rect that
+            `SharedImageTransition` measures for the card→detail morph. Always
+            visible on mobile (there is no hover to reveal it); hidden until
+            hover or keyboard focus on desktop, so it does not clutter a grid the
+            shopper is only browsing. The discount chip lives top-left so the two
+            never collide. */}
+        <button
+          type="button"
+          onClick={handleQuickAdd}
+          disabled={isSoldOut}
+          aria-disabled={isSoldOut}
+          aria-label={isSoldOut ? "Sold out" : `Add ${product.name} to cart`}
+          className="absolute top-2 right-2 z-10 grid size-10 cursor-pointer place-items-center rounded-full bg-white/90 p-2 text-foreground shadow-md transition-[opacity,background-color,transform] duration-200 ease-out opacity-100 hover:bg-white active:scale-95 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:pointer-events-none sm:top-3 sm:right-3"
+        >
+          <Plus size={18} strokeWidth={2} aria-hidden="true" />
+          <span className="sr-only">
+            {isSoldOut ? "Sold out" : `Add ${product.name} to cart`}
+          </span>
+        </button>
+
         {/* No discount badge on a sold-out product: the price is not something
             the shopper can act on, and under the sold-out scrim the badge
             renders as a muddy patch rather than as a number. */}
         {!isSoldOut && hasDiscount(product.discountPercent) ? (
           <DiscountBadge
             discountPercent={product.discountPercent}
-            className="absolute top-2 right-2 sm:top-3 sm:right-3"
+            className="absolute top-2 left-2 sm:top-3 sm:left-3"
           />
         ) : null}
 

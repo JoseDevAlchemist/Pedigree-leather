@@ -27,6 +27,7 @@
   --pedigree-cream-soft: #fcf6ee; /* cards sit a shade above the page */
   --pedigree-border: #e2d3bf; /* warm hairline, decorative only (1.2:1) */
   --pedigree-muted: #6e5b4c; /* secondary text on cream, 5.4:1 */
+  --pedigree-danger: #9c3323; /* deep oxblood, 6.1:1 on cream */
 
   /* Elevation. Brown and charcoal surfaces need more shadow than cream ones.
      Every value is warm rather than neutral grey: a grey shadow on a cream page
@@ -70,6 +71,8 @@
   --color-card: var(--pedigree-cream-soft);
   --color-border: var(--pedigree-border);
   --color-muted: var(--pedigree-muted);
+  /* Used by validation errors and destructive confirmations. */
+  --color-destructive: var(--pedigree-danger);
 
   /* Exposed as a token rather than reached for as `bg-[var(--whatsapp-green)]`,
      so the floating button's colour is still written down in exactly one place

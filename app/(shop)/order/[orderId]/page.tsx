@@ -46,7 +46,7 @@ export default async function OrderConfirmationPage({
             Order received
           </h1>
           <p className="mt-2 max-w-md mx-auto text-pretty leading-relaxed text-muted">
-            Thank you, {order.customer_name}. We've received your order and it's being processed.
+            Thank you, {order.customer_name}. We&apos;ve received your order and it&apos;s being processed.
           </p>
         </div>
       </div>

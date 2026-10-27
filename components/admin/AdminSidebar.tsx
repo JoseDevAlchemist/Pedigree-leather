@@ -50,6 +50,7 @@ const ALL_LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, roles: ["owner", "worker"] as const },
   { href: "/admin/orders", label: "Orders", icon: ScrollText, exact: false, roles: ["owner", "worker"] as const },
   { href: "/admin/products", label: "Products", icon: Package, exact: false, roles: ["owner"] as const },
+  { href: "/admin/categories", label: "Categories", icon: Package, exact: false, roles: ["owner"] as const },
   { href: "/admin/staff", label: "Staff", icon: UserCog, exact: false, roles: ["owner"] as const },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false, roles: ["owner"] as const },
 ] as const;

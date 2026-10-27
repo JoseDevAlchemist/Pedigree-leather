@@ -3,32 +3,64 @@ import type { Angle } from "@/lib/types";
 /**
  * Angle helpers.
  *
- * There is no global angle list any more. Every function that used to clamp
- * against `ANGLES.length` now takes the product's own `angles` array, because
- * the roll order, the dots and the "1 / 5" counter are all per product: a bag
- * rolls through five views and a shoe through five *different* views, and a
- * product with four photographs must not inherit five dots.
+ * `ALL_ANGLES` is the vocabulary the database can store. A product's own
+ * `angles` array is the subset and order it actually uses, and every positional
+ * helper below takes that array rather than a global count. The roll order, the
+ * dots and the "1 / 5" counter are therefore per product: a bag might ship with
+ * five views, three views, or all eight, and a product with four photographs
+ * must not inherit five dots.
  */
 
 /**
- * The views each category is photographed from, in roll order.
+ * Every view the database can store, in a stable display order.
  *
- * This is the single source of truth for "which views does a product of this kind
- * have", and three things read it: the shop's read path (to build the image slots
- * for a product row), the admin's form (to decide which upload slots to draw), and
- * the mock data (which asserts against it).
+ * This is the full vocabulary, not any one product's slot list. The admin may
+ * use any subset of these views, and may use as few as one — see
+ * `angleOrder()` and `categoryAngles()` for the preferred starting order.
+ */
+export const ALL_ANGLES: readonly Angle[] = [
+  "front",
+  "side-left",
+  "side-right",
+  "side",
+  "top",
+  "bottom",
+  "back",
+  "laces",
+];
+
+/**
+ * The default views for a category, in roll order.
+ *
+ * This is still the default *starting point* — a new bag form opens with these
+ * five slots, and a product with no photographs has these five placeholder
+ * slots. It is no longer a hard limit: the admin can remove any slot and add
+ * any unused view from `ALL_ANGLES`, so a product can ship with three
+ * photographs or all eight.
  *
  * It is deliberately a function rather than a stored column. A bag's two flanks
- * are different shapes, so a bag gets `side-left` and `side-right`; a shoe has one
- * visible side per photograph, so it gets a single `side` and spends the slot on
- * `laces` and the `bottom` welt instead. Storing that list per product would mean
- * every row carries a value that has to agree with its category, and nothing could
- * ever be added to the shoot list without a migration.
+ * are different shapes, so a bag starts with `side-left` and `side-right`; a
+ * shoe has one visible side per photograph, so it starts with a single `side`
+ * and spends the slot on `laces` and the `bottom` welt instead.
  */
 export function categoryAngles(category: "bag" | "shoe"): Angle[] {
   return category === "shoe"
     ? ["front", "laces", "side", "back", "bottom"]
     : ["front", "side-left", "side-right", "top", "back"];
+}
+
+/**
+ * Every angle in the order the admin should offer it for this category.
+ *
+ * Category defaults first, then the remaining views. Used by the form's "Add
+ * image slot" button and by the read path when legacy rows have no sort order.
+ */
+export function angleOrder(category: "bag" | "shoe"): Angle[] {
+  const preferred = categoryAngles(category);
+  return [
+    ...preferred,
+    ...ALL_ANGLES.filter((angle) => !preferred.includes(angle)),
+  ];
 }
 
 /**

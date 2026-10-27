@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { AdminOrdersList } from "@/components/admin/AdminOrdersList";
 import { getOrdersAdmin } from "@/lib/actions/orders-admin";
 
@@ -16,6 +15,7 @@ export default async function AdminOrdersPage({
 
   return (
     <AdminOrdersList
+      key={`${status}-${search}-${page}`}
       initialOrders={orders}
       initialTotal={total}
       initialStatus={status}

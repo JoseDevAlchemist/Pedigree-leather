@@ -23,7 +23,7 @@ export default function PaymentError({
             Something went wrong
           </h1>
           <p className="mt-2 max-w-md mx-auto text-pretty leading-relaxed text-muted">
-            We couldn't load the payment page. The order may not exist, or there was a server error.
+            We couldn&apos;t load the payment page. The order may not exist, or there was a server error.
           </p>
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">

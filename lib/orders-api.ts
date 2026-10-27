@@ -66,6 +66,9 @@ export interface OrderWithItems {
   status: string;
   payment_method: string | null;
   payment_status: string;
+  checkout_request_id?: string | null;
+  payment_reference?: string | null;
+  paid_at?: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

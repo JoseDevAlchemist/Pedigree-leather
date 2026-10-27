@@ -238,12 +238,21 @@ class ValidationError extends Error {
 }
 
 function revalidateShop() {
-  /* The shop's static pages: home, and both category grids. The detail pages are
-     reached separately by `revalidateProductPage`, because a product's own slug
-     is only known at the call site that has the input. */
+  /* The shop's static pages: home, the two legacy grids, and every dynamic
+     category grid. The dynamic route is revalidated as a whole because a product
+     save only knows its `category_id`; looking the slug up here would add another
+     query to every write, and this invalidates the few pages that exist. */
   revalidatePath("/");
   revalidatePath("/bags");
   revalidatePath("/shoes");
+  revalidatePath("/category/[slug]", "page");
+  revalidatePath("/sitemap.xml");
+
+  /* Deleting a product leaves its detail page stale, and a create/update may
+     change the slug. Revalidating the dynamic detail routes as a whole covers
+     every case without another read. */
+  revalidatePath("/bags/[slug]", "page");
+  revalidatePath("/shoes/[slug]", "page");
 }
 
 /** The shop path a product lives at, from its category and slug. */

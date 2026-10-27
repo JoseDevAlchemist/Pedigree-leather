@@ -1,15 +1,15 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { ImagePlus, Loader2, Plus, Save, X } from "lucide-react";
+import { ImagePlus, Loader2, Plus, Save, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
 import { createProductAction, updateProductAction } from "@/lib/actions/products";
-import { categoryAngles } from "@/lib/angles";
+import { ALL_ANGLES, angleOrder, categoryAngles } from "@/lib/angles";
 import { uploadProductImage } from "@/lib/upload";
 import type { AdminProduct } from "@/lib/mappers";
-import type { Angle, Product } from "@/lib/types";
+import type { Angle, Category, Product } from "@/lib/types";
 import { productInputSchema } from "@/lib/validation";
 
 import { useToast } from "@/components/admin/Toast";
@@ -26,9 +26,9 @@ import { useToast } from "@/components/admin/Toast";
  * What is client state and what is not
  * ---------------------------------------------------------------------------
  * Colours are **local state**, not fields in one form element. A colour has a name, a
- * hex and up to five uploads, and it needs to be added, removed and reordered as a
- * unit — which a flat `<FormData>` cannot express and which would make the server
- * action's schema depend on the order of an array of arrays.
+ * hex and an arbitrary subset of the eight available views, and it needs to be added,
+ * removed and reordered as a unit — which a flat `<FormData>` cannot express and which
+ * would make the server action's schema depend on the order of an array of arrays.
  *
  * Everything else is a controlled input validated by the shared Zod schema, and the
  * same schema runs again in the action. See `lib/validation.ts` for why it exists
@@ -97,6 +97,14 @@ type ColorDraft = {
   key: string;
   name: string;
   hex: string;
+  /**
+   * The views this colour currently has slots for, in display order.
+   *
+   * This is the admin's working set, not the database. An empty slot is still a
+   * slot here so the person can upload into it; only slots with a URL are sent
+   * to the server on save.
+   */
+  slots: Angle[];
   /** Slot -> public URL. Missing means "no photograph", which is not an error. */
   images: Partial<Record<Angle, string>>;
   /**
@@ -115,9 +123,12 @@ type ColorDraft = {
 export function ProductForm({
   mode,
   initialData,
+  categories = [],
 }: {
   mode: "create" | "edit";
   initialData?: AdminProduct;
+  /** Server-fetched active categories for the category select. */
+  categories?: readonly Category[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -129,6 +140,9 @@ export function ProductForm({
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
   const [description, setDescription] = useState(initialData?.description ?? "");
   const [category, setCategory] = useState<Product["category"]>(initialData?.category ?? "bag");
+  const [categoryId, setCategoryId] = useState<string | null>(
+    initialData?.categoryId ?? null,
+  );
   const [basePrice, setBasePrice] = useState(
     initialData ? String(initialData.basePrice) : "",
   );
@@ -146,36 +160,117 @@ export function ProductForm({
 
   const [colors, setColors] = useState<ColorDraft[]>(() => {
     if (!initialData) {
-      /* One empty colour to start. A form with no colour block is a form whose first
-         interaction is "Add colour", and the empty state there would be a list of one
-         empty colour anyway. */
-      return [{ key: "draft-0", name: "", hex: "#8B4513", images: {} }];
+      /* One colour with the category's default slots. The defaults are only a
+         starting point now: the admin can remove any of them and add any other
+         view, and only slots with a URL are written to the database. */
+      return [
+        {
+          key: "draft-0",
+          name: "",
+          hex: "#8B4513",
+          slots: categoryAngles("bag"),
+          images: {},
+        },
+      ];
     }
 
-    return initialData.colors.map((color) => ({
-      key: color.id,
-      name: color.name,
-      hex: color.hex,
-      /* `ColorVariant.images` is total — every angle exists, most holding `null`.
-         `ColorDraft.images` is partial, where absent *means* "no photograph". So the
-         nulls are dropped here rather than carried around as `undefined` lookups. */
-      images: Object.fromEntries(
+    const defaultAngles = categoryAngles(initialData.category);
+
+    return initialData.colors.map((color) => {
+      /* `ColorVariant.images` has a key for every angle in the product's roll,
+         most holding `null`. `ColorDraft.images` is partial, where absent *means*
+         "no photograph". So the nulls are dropped here rather than carried around
+         as `undefined` lookups. */
+      const images = Object.fromEntries(
         Object.entries(color.images).filter(
           (entry): entry is [string, string] => entry[1] !== null,
         ),
-      ) as Partial<Record<Angle, string>>,
-    }));
+      ) as Partial<Record<Angle, string>>;
+
+      /* Open with exactly the views this colour already has, in the product's
+         order. A legacy colour with no photographs still gets the category's
+         default slots so it can be photographed without an extra click. */
+      const used = initialData.angles.filter((angle) => images[angle]);
+      const extras = ALL_ANGLES.filter(
+        (angle) => images[angle] && !used.includes(angle),
+      );
+
+      return {
+        key: color.id,
+        name: color.name,
+        hex: color.hex,
+        slots: used.length > 0 ? [...used, ...extras] : defaultAngles,
+        images,
+      };
+    });
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const nextKey = useRef(colors.length);
 
-  /* The upload slots follow the category. Switching from bag to shoe swaps
-     `side-left` for `laces`, and any photograph already in a shared slot —
-     `front`, `side`, `back` — survives, because the slots are keyed by angle name
-     and not by position. */
-  const angles = useMemo(() => categoryAngles(category), [category]);
+  /**
+   * The category select is grouped by parent: a parent becomes an `<optgroup>`
+   * label and its children become the options inside it. Flattening here rather
+   * than in `getCategories` keeps the API layer able to serve the navbar, the
+   * sitemap and this form without each consumer re-deriving a tree.
+   */
+  const categoryGroups = useMemo(() => {
+    const childrenByParent = new Map<string, Category[]>();
+    for (const entry of categories) {
+      if (!entry.parentId) continue;
+      const siblings = childrenByParent.get(entry.parentId) ?? [];
+      siblings.push(entry);
+      childrenByParent.set(entry.parentId, siblings);
+    }
+
+    const groups = categories
+      .filter((entry) => !entry.parentId)
+      .map((parent) => ({
+        parent,
+        children: childrenByParent.get(parent.id) ?? [],
+      }));
+
+    const groupedIds = new Set<string>();
+    for (const group of groups) {
+      groupedIds.add(group.parent.id);
+      for (const child of group.children) groupedIds.add(child.id);
+    }
+
+    return {
+      groups,
+      orphans: categories.filter((entry) => !groupedIds.has(entry.id)),
+    };
+  }, [categories]);
+
+  /**
+   * The shop still routes on the legacy `bag`/`shoe` column, so picking a dynamic
+   * category has to keep that column in step. The root of the selected branch
+   * decides the detail route; image slots are independent of it and are never
+   * rebuilt here, so changing category cannot discard photographs.
+   */
+  const handleCategoryChange = (value: string) => {
+    setCategoryId(value || null);
+    if (!value) return;
+
+    const selected = categories.find((entry) => entry.id === value);
+    if (!selected) return;
+
+    const nextCategory = legacyCategoryFor(selected, categories);
+    setCategory(nextCategory);
+
+    /* An empty colour block is just a set of slots, so switching from Bags to
+       Shoes can swap the default views without losing anything. A colour that
+       already has a photograph keeps its slots exactly as the admin arranged
+       them — changing category must never silently hide a saved image. */
+    setColors((current) =>
+      current.map((color) =>
+        Object.values(color.images).some(Boolean) || color.uploading
+          ? color
+          : { ...color, slots: categoryAngles(nextCategory) },
+      ),
+    );
+  };
 
   const autoSlug = (value: string) =>
     value
@@ -193,7 +288,16 @@ export function ProductForm({
     /* Inherit nothing from the previous colour — a new colourway is a new idea, and
        defaulting its name to the last one produces a row of identical names that
        then fail the uniqueness constraint on save. */
-    setColors((current) => [...current, { key, name: "", hex: "#8B4513", images: {} }]);
+    setColors((current) => [
+      ...current,
+      {
+        key,
+        name: "",
+        hex: "#8B4513",
+        slots: categoryAngles(category),
+        images: {},
+      },
+    ]);
   };
 
   const removeColor = (key: string) => {
@@ -205,6 +309,68 @@ export function ProductForm({
   const updateColor = (key: string, patch: Partial<ColorDraft>) => {
     setColors((current) =>
       current.map((color) => (color.key === key ? { ...color, ...patch } : color)),
+    );
+  };
+
+  /**
+   * Add the next unused view to one colour.
+   *
+   * The category's own views are offered first (so a bag's sixth slot is the one
+   * that makes sense for a bag), then the remaining vocabulary. The DB's unique
+   * `(color_id, angle)` constraint means a view can only appear once per colour.
+   */
+  const addImageSlot = (colorKey: string) => {
+    const color = colors.find((entry) => entry.key === colorKey);
+    if (!color) return;
+
+    const next = angleOrder(category).find((angle) => !color.slots.includes(angle));
+    if (!next) {
+      toast.error(
+        "No views left",
+        "All eight views already have a slot. Remove one before adding another.",
+      );
+      return;
+    }
+
+    updateColor(colorKey, { slots: [...color.slots, next] });
+  };
+
+  /**
+   * Remove a slot and whatever photograph was in it.
+   *
+   * A pending blob is released here; the storage object itself is left alone
+   * because cancelling the form after this point must not break a saved product.
+   */
+  const removeImageSlot = (colorKey: string, angle: Angle) => {
+    const color = colors.find((entry) => entry.key === colorKey);
+    if (!color) return;
+    if (color.uploading === angle) {
+      toast.error("Upload still running", "Wait for this photograph to finish first.");
+      return;
+    }
+
+    const pending = color.previews?.[angle];
+    if (pending) URL.revokeObjectURL(pending);
+
+    setColors((current) =>
+      current.map((entry) => {
+        if (entry.key !== colorKey) return entry;
+
+        const images = { ...entry.images };
+        delete images[angle];
+        const previews = { ...entry.previews };
+        delete previews[angle];
+        const fileNames = { ...entry.fileNames };
+        delete fileNames[angle];
+
+        return {
+          ...entry,
+          slots: entry.slots.filter((slot) => slot !== angle),
+          images,
+          previews,
+          fileNames,
+        };
+      }),
     );
   };
 
@@ -304,12 +470,16 @@ export function ProductForm({
     setErrors({});
 
     /* Photos are keyed by the colour's *position*, because the colour ids do not
-       exist until the action has inserted them. The mapping happens in
-       `createProduct`, where the ids come back ordered by `sort_order`. */
+       exist until the action has inserted them. Only slots that actually hold a
+       URL are included: an empty slot is a UI convenience, not a database row.
+       The array order is preserved into `product_images.sort_order`. */
     const images = Object.fromEntries(
       colors.map((color, index) => [
         index,
-        Object.fromEntries(Object.entries(color.images).filter(([, url]) => url)),
+        color.slots.flatMap((angle) => {
+          const url = color.images[angle];
+          return url ? [{ angle, url }] : [];
+        }),
       ]),
     );
 
@@ -318,6 +488,7 @@ export function ProductForm({
       slug,
       description,
       category,
+      categoryId,
       basePrice,
       basePriceUsd: basePriceUsd ? Number(basePriceUsd) : null,
       discountPercent,
@@ -418,29 +589,52 @@ export function ProductForm({
             />
           </Field>
 
-          <Field label="Category" error={errors.category} required>
-            <div role="radiogroup" aria-label="Category" className="flex gap-2">
-              {(["bag", "shoe"] as const).map((option) => {
-                const selected = category === option;
+          <Field
+            label="Category"
+            htmlFor="categoryId"
+            error={errors.categoryId}
+            hint={
+              categories.length === 0
+                ? "No categories are available yet. Create them under Categories first; until then the product saves as a bag."
+                : "Choose the department and shelf this product belongs to. The parent group maps it onto /bags or /shoes."
+            }
+          >
+            <select
+              id="categoryId"
+              value={categoryId ?? ""}
+              onChange={(event) => handleCategoryChange(event.target.value)}
+              className={inputClass(Boolean(errors.categoryId))}
+            >
+              <option value="">None (uncategorised)</option>
 
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => setCategory(option)}
-                    className={`inline-flex h-10 cursor-pointer items-center rounded-full border px-4 text-sm font-medium capitalize transition-colors duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                      selected
-                        ? "border-primary bg-primary text-background"
-                        : "border-border bg-card text-muted hover:border-primary/40 hover:text-foreground"
-                    }`}
-                  >
-                    {option}
-                  </button>
-                );
-              })}
-            </div>
+              {categoryGroups.groups.map(({ parent, children }) => (
+                <optgroup key={parent.id} label={parent.name}>
+                  {/* The parent itself is selectable: the migration backfills
+                      every legacy 'bag'/'shoe' product onto its parent, and an
+                      edit form whose select has no matching option would silently
+                      reset that product to uncategorised. */}
+                  <option value={parent.id}>All {parent.name}</option>
+                  {children.map((child) => (
+                    <option key={child.id} value={child.id}>
+                      {child.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+
+              {/* An active child whose parent is inactive is not in any group
+                  above. It still has to be selectable, or opening an existing
+                  product would lose its category on save. */}
+              {categoryGroups.orphans.length > 0 ? (
+                <optgroup label="Other">
+                  {categoryGroups.orphans.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+            </select>
           </Field>
         </fieldset>
 
@@ -456,6 +650,7 @@ export function ProductForm({
                 type="number"
                 inputMode="numeric"
                 min={0}
+                required
                 value={basePrice}
                 onChange={(event) => setBasePrice(event.target.value)}
                 className={inputClass(Boolean(errors.basePrice))}
@@ -520,7 +715,6 @@ export function ProductForm({
             <ColorBlock
               key={color.key}
               color={color}
-              angles={angles}
               index={index}
               total={colors.length}
               errors={errors}
@@ -528,6 +722,8 @@ export function ProductForm({
               onRemove={() => removeColor(color.key)}
               onUpload={(angle, file) => handleUpload(color.key, angle, file)}
               onRemoveImage={(angle) => removeImage(color.key, angle)}
+              onAddSlot={() => addImageSlot(color.key)}
+              onRemoveSlot={(angle) => removeImageSlot(color.key, angle)}
             />
           ))}
 
@@ -594,10 +790,38 @@ export function ProductForm({
   );
 }
 
-/** One colourway: name, hex, and a slot per angle of the current category. */
+/**
+ * The legacy `Product["category"]` for a dynamic category.
+ *
+ * Walks to the root of the branch and reads its slug and name. This is a bridge,
+ * not a long-term model: the two detail routes are still `/bags/[slug]` and
+ * `/shoes/[slug]`, so every product has to resolve to one of them. Anything that
+ * is neither footwear nor a bag falls back to `bag`, which matches the old
+ * default and keeps an unrecognised top-level category from producing a broken
+ * URL.
+ */
+function legacyCategoryFor(
+  category: Category,
+  all: readonly Category[],
+): Product["category"] {
+  let current: Category | undefined = category;
+  const visited = new Set<string>();
+
+  while (current && current.parentId && !visited.has(current.id)) {
+    visited.add(current.id);
+    const parentId: string = current.parentId;
+    current = all.find((entry) => entry.id === parentId);
+  }
+
+  const root = current ?? category;
+  const label = `${root.slug} ${root.name}`.toLowerCase();
+
+  return /shoe|sneaker|boot|sandal|loafer|heel/.test(label) ? "shoe" : "bag";
+}
+
+/** One colourway: name, hex, and as many image slots as the admin wants. */
 function ColorBlock({
   color,
-  angles,
   index,
   total,
   errors,
@@ -605,9 +829,10 @@ function ColorBlock({
   onRemove,
   onUpload,
   onRemoveImage,
+  onAddSlot,
+  onRemoveSlot,
 }: {
   color: ColorDraft;
-  angles: Angle[];
   index: number;
   total: number;
   errors: Record<string, string>;
@@ -615,6 +840,8 @@ function ColorBlock({
   onRemove: () => void;
   onUpload: (angle: Angle, file: File) => void;
   onRemoveImage: (angle: Angle) => void;
+  onAddSlot: () => void;
+  onRemoveSlot: (angle: Angle) => void;
 }) {
   const reduceMotion = useReducedMotion();
   const fileInputs = useRef<Partial<Record<Angle, HTMLInputElement | null>>>({});
@@ -696,119 +923,157 @@ function ColorBlock({
       </div>
 
       {/* The slots. Two up on a phone, which is as narrow as a thumbnail can go
-          before the angle label stops fitting beside it. */}
-      <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {angles.map((angle) => {
-          const url = color.images[angle];
-          const preview = color.previews?.[angle];
-          /* The blob wins while an upload is in flight: it is the file just
-             chosen, which is the whole reason to show a preview at all. */
-          const shown = preview ?? url;
-          const fileName =
-            color.fileNames?.[angle] ?? (url ? fileNameFromUrl(url) : undefined);
-          const isUploading = color.uploading === angle;
+          before the angle label stops fitting beside it. The list is the admin's
+          own ordered set; empty slots are allowed and ignored on save. */}
+      {color.slots.length > 0 ? (
+        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {color.slots.map((angle) => {
+            const url = color.images[angle];
+            const preview = color.previews?.[angle];
+            /* The blob wins while an upload is in flight: it is the file just
+               chosen, which is the whole reason to show a preview at all. */
+            const shown = preview ?? url;
+            const fileName =
+              color.fileNames?.[angle] ?? (url ? fileNameFromUrl(url) : undefined);
+            const isUploading = color.uploading === angle;
 
-          return (
-            <li key={angle}>
-              <span className="block text-xs font-medium tracking-wide text-muted uppercase">
-                {angleLabel(angle)}
-              </span>
+            return (
+              <li key={angle}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="block text-xs font-medium tracking-wide text-muted uppercase">
+                    {angleLabel(angle)}
+                  </span>
 
-              <div
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => onDrop(event, angle)}
-                className="relative mt-1 aspect-square overflow-hidden rounded-lg border border-border bg-background"
-              >
-                {shown ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element --
-                        A blob from the browser's own storage cache, and the point of
-                        the slot is to show the file that was just picked without a
-                        round trip. `next/image` would add an optimiser hop for an
-                        image the person is looking at once, to confirm they picked the
-                        right one. The customer's page uses `next/image`. */}
-                    <img
-                      src={shown}
-                      alt={`${color.name || "Colour"} ${angleLabel(angle)}`}
-                      className="size-full object-cover"
-                    />
+                  <button
+                    type="button"
+                    onClick={() => onRemoveSlot(angle)}
+                    disabled={isUploading}
+                    aria-label={`Remove the ${angleLabel(angle)} image slot`}
+                    title={
+                      isUploading
+                        ? "Wait for this upload to finish"
+                        : `Remove the ${angleLabel(angle)} slot`
+                    }
+                    className="inline-flex size-6 cursor-pointer items-center justify-center rounded-md text-muted transition-colors duration-150 ease-out hover:bg-primary/10 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-40"
+                  >
+                    <Trash2 size={12} strokeWidth={2} aria-hidden="true" />
+                  </button>
+                </div>
 
-                    {isUploading ? (
-                      /* No clear button mid-flight: the file is already on its way,
-                         and clearing the preview would only diverge from the upload. */
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-0 flex items-center justify-center bg-charcoal/40"
-                      >
+                <div
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => onDrop(event, angle)}
+                  className="relative mt-1 aspect-square overflow-hidden rounded-lg border border-border bg-background"
+                >
+                  {shown ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element --
+                          A blob from the browser's own storage cache, and the point of
+                          the slot is to show the file that was just picked without a
+                          round trip. `next/image` would add an optimiser hop for an
+                          image the person is looking at once, to confirm they picked the
+                          right one. The customer's page uses `next/image`. */}
+                      <img
+                        src={shown}
+                        alt={`${color.name || "Colour"} ${angleLabel(angle)}`}
+                        className="size-full object-cover"
+                      />
+
+                      {isUploading ? (
+                        /* No clear button mid-flight: the file is already on its way,
+                           and clearing the preview would only diverge from the upload. */
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-0 flex items-center justify-center bg-charcoal/40"
+                        >
+                          <Loader2
+                            size={18}
+                            strokeWidth={2}
+                            className="animate-spin text-background"
+                          />
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveImage(angle)}
+                          aria-label={`Clear the ${angleLabel(angle)} photograph`}
+                          className="absolute top-1 right-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-full bg-charcoal/75 text-background transition-colors duration-150 ease-out hover:bg-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                        >
+                          <X size={14} strokeWidth={2} aria-hidden="true" />
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fileInputs.current[angle]?.click()}
+                      disabled={isUploading}
+                      className="flex size-full cursor-pointer flex-col items-center justify-center gap-1 text-muted transition-colors duration-150 ease-out hover:bg-primary/5 hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent disabled:cursor-wait"
+                    >
+                      {isUploading ? (
                         <Loader2
                           size={18}
                           strokeWidth={2}
-                          className="animate-spin text-background"
+                          className="animate-spin"
+                          aria-hidden="true"
                         />
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onRemoveImage(angle)}
-                        aria-label={`Clear the ${angleLabel(angle)} photograph`}
-                        className="absolute top-1 right-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-full bg-charcoal/75 text-background transition-colors duration-150 ease-out hover:bg-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                      >
-                        <X size={14} strokeWidth={2} aria-hidden="true" />
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => fileInputs.current[angle]?.click()}
-                    disabled={isUploading}
-                    className="flex size-full cursor-pointer flex-col items-center justify-center gap-1 text-muted transition-colors duration-150 ease-out hover:bg-primary/5 hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent disabled:cursor-wait"
-                  >
-                    {isUploading ? (
-                      <Loader2
-                        size={18}
-                        strokeWidth={2}
-                        className="animate-spin"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <ImagePlus size={18} strokeWidth={1.75} aria-hidden="true" />
-                    )}
-                    <span className="text-xs">{isUploading ? "Uploading" : "Add photo"}</span>
-                  </button>
-                )}
+                      ) : (
+                        <ImagePlus size={18} strokeWidth={1.75} aria-hidden="true" />
+                      )}
+                      <span className="text-xs">{isUploading ? "Uploading" : "Add photo"}</span>
+                    </button>
+                  )}
 
-                <input
-                  ref={(node) => {
-                    fileInputs.current[angle] = node;
-                  }}
-                  type="file"
-                  accept={ACCEPTED_IMAGE_TYPES.join(",")}
-                  className="hidden"
-                  aria-label={`Choose a file for ${angleLabel(angle)}`}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) onUpload(angle, file);
-                    /* Cleared so choosing the *same* file twice fires `change` again.
-                       Without this, replacing a photograph with an identical one does
-                       nothing and looks like a bug — and a rejected file, which
-                       changes nothing else, could never be re-picked. */
-                    event.target.value = "";
-                  }}
-                />
-              </div>
+                  <input
+                    ref={(node) => {
+                      fileInputs.current[angle] = node;
+                    }}
+                    type="file"
+                    accept={ACCEPTED_IMAGE_TYPES.join(",")}
+                    className="hidden"
+                    aria-label={`Choose a file for ${angleLabel(angle)}`}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) onUpload(angle, file);
+                      /* Cleared so choosing the *same* file twice fires `change` again.
+                         Without this, replacing a photograph with an identical one does
+                         nothing and looks like a bug — and a rejected file, which
+                         changes nothing else, could never be re-picked. */
+                      event.target.value = "";
+                    }}
+                  />
+                </div>
 
-              {/* The name, so a pick can be verified at a glance. Truncated to the
-                  slot width; `title` keeps the full name reachable. */}
-              {fileName ? (
-                <p className="mt-1 truncate text-[0.6875rem] text-muted" title={fileName}>
-                  {fileName}
-                </p>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+                {/* The name, so a pick can be verified at a glance. Truncated to the
+                    slot width; `title` keeps the full name reachable. */}
+                {fileName ? (
+                  <p className="mt-1 truncate text-[0.6875rem] text-muted" title={fileName}>
+                    {fileName}
+                  </p>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted">
+          No image slots yet. Add one below to start photographing this colour.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={onAddSlot}
+        disabled={color.slots.length >= ALL_ANGLES.length}
+        className="mt-2 inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors duration-150 ease-out hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Plus size={14} strokeWidth={2} aria-hidden="true" />
+        Add image slot
+      </button>
+
+      <p className="mt-1 text-[0.6875rem] text-muted">
+        {color.slots.length} of {ALL_ANGLES.length} views · empty slots are not saved
+      </p>
 
       {color.error ? (
         <p role="alert" className="mt-3 text-sm text-primary">
@@ -836,11 +1101,10 @@ function angleLabel(angle: Angle): string {
 /**
  * A labelled field.
  *
- * `htmlFor` is optional because the category picker is not an input — it is a
- * `role="radiogroup"` that carries its own `aria-label`. Rendering a `<label>` with no
- * `htmlFor` beside it would be a label pointing at nothing, which is worse than no
- * label element at all, so without `htmlFor` the text is a `<span>` and the group
- * keeps its own name.
+ * `htmlFor` is optional because a caller may eventually place a non-input here
+ * (a custom picker that carries its own `aria-label`). Rendering a `<label>` with
+ * no `htmlFor` beside it would be a label pointing at nothing, which is worse
+ * than no label element at all, so without `htmlFor` the text is a `<span>`.
  */
 function Field({
   label,

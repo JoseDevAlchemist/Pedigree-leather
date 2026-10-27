@@ -23,7 +23,7 @@ export default function ShopError({
             Something went wrong
           </h1>
           <p className="mt-2 max-w-md mx-auto text-pretty leading-relaxed text-muted">
-            We couldn't load this page. Please try again or contact support if the problem persists.
+            We couldn&apos;t load this page. Please try again or contact support if the problem persists.
           </p>
         </div>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">

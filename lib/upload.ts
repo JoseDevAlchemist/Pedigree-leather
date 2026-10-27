@@ -80,6 +80,18 @@ export function publicImageUrl(path: string): string {
 }
 
 /**
+ * The storage path passed to `<Image>`: just `bucket/path`, no host and no
+ * transformation query. The custom loader (`supabase-image-loader.ts`) adds
+ * `SUPABASE_URL/storage/v1/render/image/public/` plus width and quality.
+ *
+ * Callers pass the result straight to `<Image src={...}>` — never construct a
+ * `/storage/v1/render/image/...` URL by hand in a component.
+ */
+export function publicImagePath(bucket: string, path: string): string {
+  return `${bucket}/${path}`;
+}
+
+/**
  * Upload one photograph and return its public URL.
  *
  * Rejects before touching the network on anything the database would reject anyway:

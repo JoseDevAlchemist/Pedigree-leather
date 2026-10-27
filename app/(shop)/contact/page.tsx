@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Mail, MapPin, MessageCircle, Phone, Camera } from "lucide-react";
 
 import { getShopConfig } from "@/lib/shop-config";
@@ -18,7 +17,7 @@ export default async function ContactPage() {
           Contact us
         </h1>
         <p className="mt-4 max-w-md text-pretty text-muted">
-          We're here to help. Reach us through any of the channels below.
+          We&apos;re here to help. Reach us through any of the channels below.
         </p>
       </header>
 

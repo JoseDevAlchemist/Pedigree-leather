@@ -184,6 +184,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          checkout_request_id: string | null
           created_at: string
           customer_email: string | null
           customer_name: string
@@ -195,7 +196,9 @@ export type Database = {
           id: string
           notes: string | null
           order_number: string
+          paid_at: string | null
           payment_method: string | null
+          payment_reference: string | null
           payment_status: string
           status: string
           subtotal: number
@@ -205,6 +208,7 @@ export type Database = {
           zone_name: string | null
         }
         Insert: {
+          checkout_request_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name: string
@@ -216,7 +220,9 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number: string
+          paid_at?: string | null
           payment_method?: string | null
+          payment_reference?: string | null
           payment_status?: string
           status?: string
           subtotal: number
@@ -226,6 +232,7 @@ export type Database = {
           zone_name?: string | null
         }
         Update: {
+          checkout_request_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string
@@ -237,7 +244,9 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: string
+          paid_at?: string | null
           payment_method?: string | null
+          payment_reference?: string | null
           payment_status?: string
           status?: string
           subtotal?: number
@@ -326,6 +335,7 @@ export type Database = {
           base_price: number
           base_price_usd: number | null
           category: string
+          category_id: string | null
           created_at: string
           description: string
           discount_percent: number
@@ -340,6 +350,7 @@ export type Database = {
           base_price: number
           base_price_usd?: number | null
           category: string
+          category_id?: string | null
           created_at?: string
           description?: string
           discount_percent?: number
@@ -354,6 +365,7 @@ export type Database = {
           base_price?: number
           base_price_usd?: number | null
           category?: string
+          category_id?: string | null
           created_at?: string
           description?: string
           discount_percent?: number
@@ -363,7 +375,22 @@ export type Database = {
           slug?: string
           stock_quantity?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shop_settings: {
         Row: {
@@ -410,6 +437,36 @@ export type Database = {
           shop_name?: string
           updated_at?: string | null
           whatsapp?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          parent_id: string | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_id?: string | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_id?: string | null
+          slug?: string
         }
         Relationships: []
       }

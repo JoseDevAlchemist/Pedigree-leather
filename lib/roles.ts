@@ -24,7 +24,11 @@ export interface AdminUser {
  * Returns null if not authenticated or not in admin_users table.
  */
 export async function getCurrentAdminUser(): Promise<AdminUser | null> {
-  const supabase = await createClient();
+  /* A missing Supabase environment is "no session", not a crash. This mirrors
+     `getCurrentAdmin()` in `lib/supabase/guards.ts`, and keeps an env-less
+     build/boot from throwing while the login page is still reachable. */
+  const supabase = await createClient().catch(() => null);
+  if (!supabase) return null;
 
   const {
     data: { user },

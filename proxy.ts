@@ -118,7 +118,9 @@ export const config = {
      *  - _next/static  (build output)
      *  - _next/image   (the image optimiser)
      *  - favicon.ico   and any file with an extension (.*\\.)
+     *  - payment webhooks, which are called by providers with no session and
+     *    must not depend on a Supabase Auth round trip
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/mpesa/callback|api/flutterwave/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

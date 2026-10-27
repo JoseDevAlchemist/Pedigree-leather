@@ -198,7 +198,7 @@ export function AdminSettings({ settings: initialSettings }: AdminSettingsProps)
               placeholder="https://maps.google.com/..."
               className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-            <p className="mt-1 text-xs text-muted">Link for the 'Get directions' button on contact page</p>
+            <p className="mt-1 text-xs text-muted">Link for the &apos;Get directions&apos; button on contact page</p>
           </div>
 
           <div>

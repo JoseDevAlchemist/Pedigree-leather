@@ -69,6 +69,21 @@ function mockProducts(category?: Product["category"]): Product[] {
   return category ? sorted.filter((p) => p.category === category) : sorted;
 }
 
+/** The same field matching as `searchProducts`, for a database that is down. */
+function searchMockProducts(query: string): Product[] {
+  const needle = query.toLowerCase();
+
+  return mockProducts().filter((product) => {
+    const legacyCategory = product.category === "bag" ? "bags bag" : "shoes shoe";
+    return (
+      product.name.toLowerCase().includes(needle) ||
+      product.description.toLowerCase().includes(needle) ||
+      product.colors.some((color) => color.name.toLowerCase().includes(needle)) ||
+      legacyCategory.includes(needle)
+    );
+  });
+}
+
 /* Reasons already reported, so a broken database produces one line per *cause*
    rather than one line per render or per slug. A `Set` of strings, module scope:
    this is per-server-process and deliberately not shared. */
@@ -179,6 +194,183 @@ export async function getProducts(category?: Product["category"]): Promise<Produ
 }
 
 /**
+ * Search products by name, description, category, or colour name.
+ *
+ * PostgREST cannot express one `OR` across a parent table and an embedded
+ * relation reliably, so this runs the matching reads separately and merges the
+ * product ids. That also keeps user input out of a hand-built `.or()` string:
+ * each term goes through the query builder's value encoding.
+ *
+ * The category match expands to children, so "bags" finds products filed under
+ * "Laptop Bags" and "Handbags" too. Colour matching is a plain ILIKE, which is
+ * what makes "brown" find a colour stored as "Cognac Brown".
+ */
+export async function searchProducts(query: string): Promise<Product[]> {
+  const term = query.trim().slice(0, 120);
+  if (!term) return [];
+
+  const pattern = `%${term}%`;
+  const lower = term.toLowerCase();
+
+  let supabase: ReturnType<typeof createPublicClient>;
+  try {
+    supabase = createPublicClient();
+  } catch (error) {
+    reportOnce(
+      "search:client",
+      `Could not create the Supabase client for search: ${
+        error instanceof Error ? error.message : "unknown error"
+      }. Falling back to mock search.`,
+    );
+    return searchMockProducts(term);
+  }
+
+  type SearchCategoryRow = {
+    id: string;
+    name: string;
+    slug: string;
+    parent_id: string | null;
+  };
+
+  const [nameResult, descriptionResult, colorResult, categoryResult] = await Promise.all([
+    supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .ilike("name", pattern)
+      .eq("active", true)
+      .limit(100),
+    supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .ilike("description", pattern)
+      .eq("active", true)
+      .limit(100),
+    supabase
+      .from("product_colors")
+      .select("product_id")
+      .ilike("color_name", pattern)
+      .limit(500),
+    supabase
+      .from("categories")
+      .select("id, name, slug, parent_id")
+      .eq("is_active", true),
+  ]);
+
+  let failed = 0;
+  let succeeded = 0;
+
+  const note = (
+    label: string,
+    error: { code?: string; message?: string } | null,
+  ) => {
+    if (!error) {
+      succeeded += 1;
+      return;
+    }
+
+    failed += 1;
+
+    if (isMissingSchema(error)) {
+      reportOnce(
+        `search:missing-schema:${label}`,
+        `Search could not read ${label} because a table is missing. Run supabase/migrations/021_categories_reconcile.sql if the categories table is absent.`,
+      );
+      return;
+    }
+
+    reportOnce(
+      `search:error:${label}:${error.code ?? error.message ?? "unknown"}`,
+      `Search read failed for ${label} (${error.code ?? "no code"}: ${error.message}). Partial results will be shown.`,
+    );
+  };
+
+  note("name", nameResult.error);
+  note("description", descriptionResult.error);
+  note("colors", colorResult.error);
+  note("categories", categoryResult.error);
+
+  /* If every read failed, the shop is better served by the same mock catalogue
+     the rest of `lib/api.ts` falls back to than by an empty results page. */
+  if (failed > 0 && succeeded === 0) return searchMockProducts(term);
+
+  const categories = (categoryResult.data ?? []) as SearchCategoryRow[];
+  const categoryIds = new Set(
+    categories
+      .filter(
+        (category) =>
+          category.name.toLowerCase().includes(lower) ||
+          category.slug.toLowerCase().includes(lower),
+      )
+      .map((category) => category.id),
+  );
+
+  /* A parent match includes its children, so searching "bags" finds the
+     products filed under "Laptop Bags" and "Handbags" as well. The loop also
+     handles a deeper tree without assuming exactly two levels. */
+  let addedChild = true;
+  while (addedChild) {
+    addedChild = false;
+    for (const category of categories) {
+      if (
+        category.parent_id &&
+        categoryIds.has(category.parent_id) &&
+        !categoryIds.has(category.id)
+      ) {
+        categoryIds.add(category.id);
+        addedChild = true;
+      }
+    }
+  }
+
+  const colorProductIds = [
+    ...new Set(
+      ((colorResult.data ?? []) as { product_id: string }[]).map(
+        (row) => row.product_id,
+      ),
+    ),
+  ];
+
+  const emptyResult = Promise.resolve({ data: [], error: null });
+  const [categoryProducts, colorProducts] = await Promise.all([
+    categoryIds.size > 0
+      ? supabase
+          .from("products")
+          .select(PRODUCT_SELECT)
+          .in("category_id", [...categoryIds])
+          .eq("active", true)
+          .limit(100)
+      : emptyResult,
+    colorProductIds.length > 0
+      ? supabase
+          .from("products")
+          .select(PRODUCT_SELECT)
+          .in("id", colorProductIds)
+          .eq("active", true)
+          .limit(100)
+      : emptyResult,
+  ]);
+
+  note("category products", categoryProducts.error);
+  note("colour products", colorProducts.error);
+
+  const byId = new Map<string, ProductWithRelations>();
+  const batches = [
+    nameResult.data,
+    descriptionResult.data,
+    categoryProducts.data,
+    colorProducts.data,
+  ];
+
+  for (const batch of batches) {
+    for (const row of (batch ?? []) as ProductWithRelations[]) {
+      if (!byId.has(row.id)) byId.set(row.id, row);
+    }
+  }
+
+  return [...byId.values()].map(toProduct).sort(byCreatedAtDesc);
+}
+
+/**
  * A single product by slug, or `null` when it does not exist.
  *
  * `null` is the contract for "not found": the detail page turns it into a 404, so
@@ -225,6 +417,91 @@ export async function getProductSlugs(category?: Product["category"]): Promise<s
     return products.map((product) => product.slug);
   }
   return rows.map((row) => (row as { slug: string }).slug);
+}
+
+/**
+ * All products in a category, newest first. Looks up the category by slug,
+ * then joins products on `category_id`. A parent category also includes the
+ * products filed under its children, so `/category/bags` is "everything in
+ * Bags" rather than only the products assigned to the parent row itself.
+ *
+ * Falls back to mock data filtered by the legacy `category` column when the
+ * schema is not yet available.
+ */
+export async function getProductsByCategory(
+  categorySlug: string,
+): Promise<Product[]> {
+  const supabase = createPublicClient();
+
+  const { data: category, error: categoryError } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", categorySlug)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (categoryError) {
+    if (isMissingSchema(categoryError)) {
+      reportOnce(
+        MISSING_SCHEMA_KEY,
+        "Supabase has no `categories` table yet, so category pages are falling back to mock data. Run supabase/migrations/021_categories_reconcile.sql, then the shop will read from Supabase.",
+      );
+    } else {
+      reportOnce(
+        `error:getProductsByCategory:${categoryError.code ?? categoryError.message ?? "unknown"}`,
+        `Supabase read failed (${categoryError.code ?? "no code"}: ${categoryError.message}). Falling back to mock data.`,
+      );
+    }
+    const legacyCategory = categorySlug === "bags" ? "bag" : "shoe";
+    return mockProducts(legacyCategory);
+  }
+
+  if (!category) {
+    const legacyCategory = categorySlug === "bags" ? "bag" : "shoe";
+    return mockProducts(legacyCategory);
+  }
+
+  const categoryId = (category as { id: string }).id;
+
+  /* One level of children, which is the shape the categories table models. If
+     this read fails we still show the parent's own products: an incomplete grid
+     beats no grid, and the cause is logged once. */
+  const { data: children, error: childrenError } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("parent_id", categoryId);
+
+  if (childrenError) {
+    reportOnce(
+      `error:getProductsByCategory:children:${childrenError.code ?? childrenError.message ?? "unknown"}`,
+      `Could not read child categories (${childrenError.code ?? "no code"}: ${childrenError.message}). Showing only products assigned directly to the parent.`,
+    );
+  }
+
+  const categoryIds = [
+    categoryId,
+    ...((children ?? []) as { id: string }[]).map((child) => child.id),
+  ];
+
+  const rows = await readFromSupabase(
+    `getProductsByCategory:${categorySlug}`,
+    (supabase) => {
+      return supabase
+        .from("products")
+        .select(PRODUCT_SELECT)
+        .in("category_id", categoryIds)
+        .eq("active", true)
+        .order("created_at", { ascending: false });
+    },
+  );
+
+  if (rows === null) {
+    const legacyCategory = categorySlug === "bags" ? "bag" : "shoe";
+    return mockProducts(legacyCategory);
+  }
+
+  return rows.map((row) => toProduct(row)).sort((a, b) => byCreatedAtDesc(a, b));
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, FormEvent } from "react";
 import {
   Search,
@@ -8,11 +8,9 @@ import {
   ChevronRight,
   Truck,
   Package,
-  X,
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { motion, useReducedMotion, AnimatePresence } from "motion/react";
 
 import { formatPrice } from "@/lib/format";
 import { getStatusLabel, getStatusColor } from "@/lib/order-status-labels";
@@ -57,13 +55,15 @@ export function AdminOrdersList({
   initialPage,
 }: AdminOrdersListProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const reduceMotion = useReducedMotion();
   const toast = useToast();
 
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [total, setTotal] = useState(initialTotal);
   const [status, setStatus] = useState(initialStatus);
+  /* The input is free to change on every keystroke; the applied search changes
+     only when the form is submitted. Keeping them apart is what stops the URL
+     (and the server render) from churning on every character. */
+  const [searchInput, setSearchInput] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
   const [page, setPage] = useState(initialPage);
   const [loading, setLoading] = useState(false);
@@ -105,19 +105,10 @@ export function AdminOrdersList({
     router.replace(`/admin/orders?${params.toString()}`, { scroll: false });
   }, [status, search, page, router]);
 
-  // Initial load from props (server-rendered)
-  useEffect(() => {
-    setOrders(initialOrders);
-    setTotal(initialTotal);
-    setStatus(initialStatus);
-    setSearch(initialSearch);
-    setPage(initialPage);
-  }, [initialOrders, initialTotal, initialStatus, initialSearch, initialPage]);
-
   const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    setSearch(formData.get("search") as string);
+    setSearch((formData.get("search") as string) ?? "");
     setPage(1);
   };
 
@@ -174,14 +165,8 @@ export function AdminOrdersList({
                 id="order-search"
                 name="search"
                 placeholder="Search by order #, name, phone…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    setPage(1);
-                  }
-                }}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full sm:w-64 rounded-lg border border-border bg-background pl-10 pr-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>

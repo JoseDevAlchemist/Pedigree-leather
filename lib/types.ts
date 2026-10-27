@@ -10,10 +10,9 @@
 /**
  * One view of a product.
  *
- * The union is the union of everything the workshop might photograph, not the
- * views any single product has. Which of these a product actually has is
- * `Product.angles` — a bag has no laces and a shoe has no gusset to shoot from
- * above, so the two categories carry different subsets. Nothing outside
+ * The union is all eight views the workshop might photograph, not the views any
+ * single product has. Which subset a product actually has is `Product.angles`,
+ * and the admin chooses that subset freely per product. Nothing outside
  * `Product.angles` should ever be indexed for a given product.
  */
 export type Angle =
@@ -30,8 +29,9 @@ export type Angle =
  * One colourway of a product. `hex` drives both the swatch fill and the
  * placeholder block that stands in for photography.
  *
- * `images` is a full record rather than a partial one so that "this angle was
- * never photographed" (`null`) is distinguishable from "we forgot to load it".
+ * `images` is built for the product's chosen angle list. An unphotographed view
+ * is `null`, so the placeholder knows to draw rather than the app crashing on a
+ * missing key. Views outside `Product.angles` are not read for this product.
  */
 export interface ColorVariant {
   id: string;
@@ -39,10 +39,9 @@ export interface ColorVariant {
   /** Swatch + placeholder fill, e.g. "#8B4513". */
   hex: string;
   /**
-   * A slot for every `Angle`, not just the ones this product uses. Keeping the
-   * record total is what makes `images[angle] ?? null` safe: a missing key and
-   * an unphotographed slot read the same, so a shoe's `laces` slot exists and is
-   * simply null.
+   * A slot for every angle in `Product.angles`, plus `null` for angles the
+   * product uses but has not photographed. Keeping the record total over that
+   * list is what makes `images[angle] ?? null` safe.
    */
   images: Record<Angle, string | null>;
 }
@@ -64,6 +63,8 @@ export interface Product {
   stockQuantity: number;
   colors: ColorVariant[];
   category: "bag" | "shoe";
+  /** The admin-managed category this product belongs to, if any. */
+  categoryId?: string | null;
   /**
    * Curated by hand in the admin. `true` puts the product in the home page's
    * "Featured" rail — a merchandising decision, so it is never derived.
@@ -76,17 +77,34 @@ export interface Product {
    */
   createdAt: string;
   /**
-   * This product's views, in roll order. A bag rolls front → side-left →
-   * side-right → top → back; a shoe rolls front → laces → side → back → bottom.
+   * This product's views, in the admin's chosen roll order. A new bag starts as
+   * front → side-left → side-right → top → back and a new shoe as front → laces
+   * → side → back → bottom, but the admin can remove any view and add any unused
+   * one, so a product may have as few as one and as many as eight.
    *
    * Per product rather than one global list, because the roll, the dots, the
-   * arrows and the "1 / 5" counter all address positions in *this* array. A
-   * product with four angles must not inherit five dots, and a shoe must not
-   * offer a top-down gusset view it was never photographed from.
+   * arrows and the "1 / N" counter all address positions in *this* array. A
+   * product with three photographs must not inherit five dots.
    *
-   * Always non-empty, and `front` first — the roll starts and settles there.
+   * Always non-empty: it is derived from the stored image rows, falling back to
+   * the category's default placeholders when the product has no photography.
    */
   angles: Angle[];
+}
+
+/**
+ * An admin-managed product category. `parentId` is null for top-level
+ * categories (Bags, Shoes, Belts); children (Handbags, Laptop Bags, …) point
+ * at their parent. `displayOrder` sorts siblings; `isActive` hides a category
+ * from the shop without deleting it.
+ */
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+  displayOrder: number;
+  isActive: boolean;
 }
 
 /**

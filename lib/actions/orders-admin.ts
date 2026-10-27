@@ -234,6 +234,17 @@ export async function cancelOrderAction(
   }
 }
 
+export interface AdminOrderSummary {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  customer_phone: string;
+  status: string;
+  total: number;
+  delivery_method: "delivery" | "pickup";
+  created_at: string;
+}
+
 /**
  * Get orders for admin list with filters.
  */
@@ -244,7 +255,7 @@ export async function getOrdersAdmin(
     page?: number;
     limit?: number;
   } = {}
-): Promise<{ orders: any[]; total: number }> {
+): Promise<{ orders: AdminOrderSummary[]; total: number }> {
   await requireRole("worker");
   const supabase = createAdminClient();
 
@@ -271,7 +282,11 @@ export async function getOrdersAdmin(
   if (error) throw new Error(error.message);
 
   return {
-    orders: data || [],
+    orders: (data || []).map((row) => ({
+      ...row,
+      delivery_method:
+        row.delivery_method === "pickup" ? ("pickup" as const) : ("delivery" as const),
+    })),
     total: count || 0,
   };
 }

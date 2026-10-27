@@ -135,7 +135,7 @@ export function ContactWidget({
     if (option.external) {
       window.open(option.href, "_blank", "noopener,noreferrer");
     } else {
-      window.location.href = option.href;
+      window.location.assign(option.href);
     }
     setIsOpen(false);
   };

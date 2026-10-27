@@ -25,6 +25,8 @@ interface Order {
   status: string;
   payment_method: string | null;
   payment_status: string;
+  payment_reference: string | null;
+  paid_at: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -477,6 +479,25 @@ export function AdminOrderDetail({ order }: { order: Order }) {
                   {order.payment_status === "pending" ? "Awaiting payment" : order.payment_status === "paid" ? "Paid" : "Failed"}
                 </dd>
               </div>
+              {order.payment_reference && (
+                <div className="flex justify-between gap-6">
+                  <dt className="text-muted">Reference</dt>
+                  <dd className="break-all text-right font-mono text-xs text-foreground">
+                    {order.payment_reference}
+                  </dd>
+                </div>
+              )}
+              {order.paid_at && (
+                <div className="flex justify-between">
+                  <dt className="text-muted">Paid at</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {new Date(order.paid_at).toLocaleString("en-KE", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </dd>
+                </div>
+              )}
             </dl>
           </section>
 

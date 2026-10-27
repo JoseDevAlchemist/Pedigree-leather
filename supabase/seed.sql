@@ -212,6 +212,24 @@ SELECT id, 'Forest', '#2D3E2D', 2 FROM products WHERE slug = 'karura-derby-suede
 ON CONFLICT (product_id, color_name) DO NOTHING;
 
 -- ===========================================================================
+-- Category mapping
+-- ---------------------------------------------------------------------------
+-- On a fresh `supabase db reset`, migrations run before this file, so
+-- 012_categories.sql's backfill sees no products. The seed inserts them after
+-- that, which would leave every product uncategorised. Map them here as well;
+-- the WHERE keeps a more specific category chosen in the admin.
+-- ===========================================================================
+UPDATE products p
+SET category_id = c.id
+FROM categories c
+WHERE p.category_id IS NULL
+  AND c.slug = CASE p.category
+    WHEN 'bag' THEN 'bags'
+    WHEN 'shoe' THEN 'shoes'
+    ELSE NULL
+  END;
+
+-- ===========================================================================
 -- Sanity check
 -- ---------------------------------------------------------------------------
 -- Expect 12 products, 6 of each category, 38 colours, 7 featured.

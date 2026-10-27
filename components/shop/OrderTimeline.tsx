@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { CheckCircle, MapPin, Truck, MessageCircle, Clock, Package, AlertCircle, RefreshCw } from "lucide-react";
 
-import { getStatusLabel, getStatusColor, getAllStatusSteps, getStatusStep } from "@/lib/order-status-labels";
+import { getStatusLabel, getAllStatusSteps, getStatusStep } from "@/lib/order-status-labels";
 
 interface ShopConfig {
   shopName: string;
@@ -75,9 +75,11 @@ export function OrderTimeline({ order, shopConfig }: OrderTimelineProps) {
   const paymentMethodLabel = currentOrder.payment_method
     ? currentOrder.payment_method === "mpesa"
       ? "M-Pesa"
-      : currentOrder.payment_method === "card"
-      ? "Card"
-      : "Pay on delivery"
+      : currentOrder.payment_method === "mpesa_manual"
+        ? "M-Pesa Till"
+        : currentOrder.payment_method === "card"
+          ? "Card"
+          : "Pay on delivery"
     : "Not set";
 
   const currentStatus = currentOrder.status;

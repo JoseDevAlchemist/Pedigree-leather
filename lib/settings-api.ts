@@ -103,3 +103,37 @@ export async function updateShopSettings(
 
   return data as ShopSettings;
 }
+
+export interface DeliveryZoneSummary {
+  id: string;
+  name: string;
+  fee: number;
+}
+
+/**
+ * Look up an active delivery zone by id.
+ *
+ * Server actions must not take the fee from the client: the checkout browser
+ * can only be trusted for *which* zone was chosen, never for how much it
+ * costs. Returns null for unknown or deactivated zones so the caller can ask
+ * the customer to pick again rather than silently charging the flat rate.
+ */
+export async function getActiveDeliveryZone(
+  zoneId: string,
+): Promise<DeliveryZoneSummary | null> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("delivery_zones")
+    .select("id, name, fee")
+    .eq("id", zoneId)
+    .eq("active", true)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    rethrow(error, "load the delivery zone");
+  }
+
+  return data as DeliveryZoneSummary;
+}

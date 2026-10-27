@@ -875,3 +875,143 @@ Daraja M-Pesa STK push and Flutterwave card init, add callback/webhook handlers 
 - TypeScript errors from stale Supabase types resolved by regeneration.
 
 **Next session, first job:** real payment integration — replace `markPaymentMethodAction` STUB with Daraja M-Pesa STK push and Flutterwave card init, add callback/webhook handlers that update `orders.payment_status`, add WhatsApp confirmation trigger. Credentials list in `docs/PAYMENTS_TODO.md`.
+
+---
+
+### Session 8 — 2026-10-20 — Payment Route Recovery, Checkout Navigation Fix, Zone Fee Fix
+
+**Status:** code complete, `pnpm build` and `npx tsc --noEmit` pass, route smoke-tested against the cloud project.
+
+**The bug.** "Continue to payment" created the order, cleared the cart, then appeared to stall or bounce back.
+Two independent causes:
+
+1. `app/(shop)/payment/[orderId]/` no longer existed — only `payment/error.tsx` was left, so
+   `router.push('/payment/<id>')` resolved to the 404. The page had been deleted in an earlier commit.
+2. Checkout cleared the cart *before* navigating. The empty-cart effect then fired
+   `router.push('/bags')` in the same tick, racing the payment push. The debugging code added around
+   this (a re-entrant `handleSubmit` call, a 100ms `setTimeout` fallback to `window.location.href`,
+   and console logs) treated the symptom and made the submit path harder to reason about.
+
+**What was built**
+
+* `app/(shop)/payment/[orderId]/page.tsx` — server component. Validates the UUID, loads the order with
+  the service-role client, `notFound()` for malformed/unknown orders, `redirect()` to
+  `/order/[id]` when already paid. `dynamic = "force-dynamic"`; `noindex`.
+* `app/(shop)/payment/[orderId]/PaymentClient.tsx` — three methods (M-Pesa, Card, Pay on delivery /
+  Pay at the shop for pickup). Native radio group (real inputs, arrow-key support, `peer-focus-visible`
+  ring) instead of a hand-rolled roving tabindex. M-Pesa phone prefilled from the order and validated
+  with `lib/payment-utils.ts`; card fields formatted and validated (Luhn, expiry, CVC) with a clear
+  demo notice. Confirm calls the stub, then `markPaymentMethodAction`, then pushes to
+  `/order/[orderId]`. Button stays in its loading state while navigating.
+* `app/(shop)/checkout/page.tsx` — `handleSubmit(onValid)` from react-hook-form replaces the
+  re-entrant/manual-validation handler; all debug logging and the forced-reload timeout removed;
+  `orderPlacedRef` guards the empty-cart redirect; `router.replace('/bags')` for the genuine empty case.
+* `lib/actions/orders.ts` + `lib/settings-api.ts` — `getActiveDeliveryZone()` reads the fee from
+  `delivery_zones` server-side. Previously any selected zone wrote `delivery_fee = 0`, i.e. free
+  delivery for every zone order. Unknown/deactivated zones now return a customer-facing error.
+* `app/(shop)/payment/error.tsx` — escaped the apostrophe (was the only ESLint error in the tree).
+
+**Verified**
+
+- `GET /payment/invalid-uuid` → 404; `GET /payment/<unknown-uuid>` → 404.
+- `GET /payment/<real-order-uuid>` → 200 with order number, amount and all three methods in the HTML.
+- Order switched to `payment_status = paid` → `307` redirect to `/order/<id>`.
+- `GET /checkout` → 200. `pnpm build` lists `/payment/[orderId]` as dynamic; TypeScript passes.
+- Test order created directly in Supabase for the smoke test, then deleted.
+
+**Still open**
+
+- `createOrderAction` still trusts the client's `subtotal`, `discountTotal` and line `unitPrice`.
+  The zone fix closes the shipping hole; repricing cart lines from `products` server-side is the
+  remaining integrity gap. Tracked as the next hardening job.
+- M-Pesa/Card remain stubs (`lib/payment-stubs.ts`); real Daraja/Flutterwave work is unchanged in
+  `docs/PAYMENTS_TODO.md`.
+- POS login (`pedigree-pos` project) is not in this repository; it needs its own session.
+
+---
+
+## Changelog — Sessions 9–10 (2026-10-23)
+
+### Task 1 — Supabase Image Optimization
+**Files created:** `supabase-image-loader.ts`
+**Files modified:** `next.config.ts` (custom loader + Supabase render host in remotePatterns), `lib/upload.ts` (added `publicImagePath` helper), `components/admin/ProductTable.tsx` (added `sizes="44px"`)
+**Migration:** none
+**Verification:** `pnpm build` passes; `npx tsc --noEmit` passes; `pnpm lint` passes (no new issues)
+**Notes:** Loader extracts the storage path from full Supabase public URLs or accepts plain `bucket/path` strings, rewrites to `${SUPABASE_URL}/storage/v1/render/image/public/<path>?width=<w>&quality=<q>`. Local and non-Supabase absolute URLs pass through unchanged.
+
+### Task 2 — Quick "+" Add-to-Cart Button on Product Cards
+**Files modified:** `components/product/ProductCard.tsx`
+**Migration:** none
+**Verification:** `pnpm build` passes; `npx tsc --noEmit` passes; `pnpm lint` passes (no new issues)
+**Notes:** `+` button (lucide `Plus`, min 44×44px, `bg-white/90`, `text-[--pedigree-brown]`, `rounded-full`, shadow) at top-left of the image well, sibling of the `AnimatePresence` morph layer so it is excluded from the rect `SharedImageTransition` measures. Always visible on mobile, `group-hover` on desktop. Adds the default colour variant's front-angle image to the cart via `useCartStore().addItem`; disabled (`aria-disabled="true"`) when `stockQuantity <= 0`; sonner toast "Added to cart" on success.
+
+### Task 3 — Dynamic Categories (admin-managed)
+**Files created:** `supabase/migrations/012_categories.sql`, `lib/categories-api.ts`, `lib/actions/categories.ts`, `app/(shop)/category/[slug]/page.tsx`, `app/(admin)/admin/categories/page.tsx`, `app/(admin)/admin/categories/new/page.tsx`, `app/(admin)/admin/categories/[id]/page.tsx`, `components/admin/CategoriesList.tsx`
+**Files modified:** `lib/types.ts` (added `Category` interface + `categoryId?` on `Product`), `lib/supabase/types.ts` (added `categories` table + `category_id` on `products`), `lib/mappers.ts` (maps `category_id`), `lib/api.ts` (added `getProductsByCategory`), `lib/validation.ts` (added `categorySchema`), `app/sitemap.ts` (includes `/category/[slug]`), `app/(shop)/bags/page.tsx` (redirects to `/category/bags`), `app/(shop)/shoes/page.tsx` (redirects to `/category/shoes`), `app/(shop)/layout.tsx` (fetches categories server-side, passes to Navbar), `components/layout/Navbar.tsx` (accepts `categories` prop, renders top-level categories with child dropdowns in desktop/mobile, falls back to `NAV_ITEMS`), `components/admin/AdminSidebar.tsx` (added Categories link, owner-only), `components/admin/ProductForm.tsx` (added category select grouped by parent, old category field kept hidden), `app/(admin)/admin/products/new/page.tsx` + `edit/page.tsx` (fetch and pass categories)
+**Migration:** `supabase/migrations/012_categories.sql` — creates `categories` table (id, name, slug, parent_id, display_order, is_active, created_at), indexes on `parent_id` and `display_order`, adds `category_id` FK on `products`, RLS (public SELECT where `is_active = true`), seeds Bags/Shoes parents + Handbags/Laptop Bags/Official Shoes/Sneakers/Belts children, backfills `products.category_id` from the legacy `category` column (kept deprecated)
+**Verification:** `pnpm build` passes (category route is `●` SSG); `npx tsc --noEmit` passes; `pnpm lint` passes (no new issues)
+**Notes:** Follow-up: create a "Belts" category in the admin UI and confirm it appears in the navbar, at `/category/belts`, and in `sitemap.xml` — requires the migration to be applied to a live database. The `category_id` lookup in the M-Pesa callback currently uses the most recent pending M-Pesa order; adding a `checkout_request_id` column to `orders` would make this more reliable.
+
+### Task 4 — Real Payment Flow
+**Files created:** `lib/payments/mpesa.ts`, `lib/actions/payments.ts`, `app/api/mpesa/callback/route.ts`, `app/api/flutterwave/webhook/route.ts`, `app/(shop)/payment/flutterwave-return/page.tsx`
+**Files modified:** `app/(shop)/payment/[orderId]/page.tsx` (feature flags from env, passes `customer_email` + `availableMethods` to client), `app/(shop)/payment/[orderId]/PaymentClient.tsx` (real M-Pesa STK push + polling, Flutterwave inline checkout via `next/script`, card `startCardPaymentAction`, pay-on-delivery via `markPaymentMethodAction`, only shows configured methods)
+**Files deleted:** `lib/payment-stubs.ts`
+**Migration:** none (payment_reference column would be a future migration)
+**Verification:** `pnpm build` passes; `npx tsc --noEmit` passes; `pnpm lint` passes (no new issues from this session)
+**Notes:** Env vars documented (already commented out) in `.env.example`: `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY`, `MPESA_SHORTCODE`, `MPESA_CALLBACK_URL`, `MPESA_ENV`, `FLUTTERWAVE_PUBLIC_KEY`, `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_WEBHOOK_HASH`, `NEXT_PUBLIC_APP_URL`. M-Pesa phone numbers and secrets are redacted in logs. Pay-on-delivery behaviour unchanged. Callbacks/webhooks are idempotent (check `payment_status === "paid"` before writing). Manual sandbox verification outstanding — requires a live Supabase project and Daraja credentials.
+
+---
+
+## Changelog — Session 11 (2026-10-27)
+
+### Task 1 — Real M-Pesa STK Push (Daraja sandbox)
+
+**Files created:** `supabase/migrations/013_mpesa_payments.sql`
+**Files modified:** `lib/payments/mpesa.ts`, `lib/actions/payments.ts`, `app/api/mpesa/callback/route.ts`, `lib/supabase/types.ts`, `lib/orders-api.ts`, `components/admin/AdminOrderDetail.tsx`, `app/(shop)/payment/[orderId]/PaymentClient.tsx`, `proxy.ts`, `.env.example`, `.env.local` (ignored)
+**Migration:** `013_mpesa_payments.sql` — adds `orders.checkout_request_id` (unique partial index), `payment_reference`, `paid_at`
+**Verification:** `pnpm build` passes; `pnpm exec tsc --noEmit` passes; targeted ESLint passes (only pre-existing `PaymentClient` warnings). Daraja OAuth from this machine returned HTTP 400 (same as a dummy key), so live STK verification must happen from the deployed domain with valid sandbox credentials.
+**Notes:**
+- Added `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_PASSKEY`, `MPESA_SHORTCODE`, `MPESA_CALLBACK_URL`, `MPESA_ENV` to `.env.local`; `.env.example` now documents the same names with placeholders. `MPESA_CALLBACK_URL` is still the placeholder and must be replaced with the deployed Vercel domain.
+- OAuth token is cached for ~55 minutes. The STK timestamp is generated in `Africa/Nairobi` (Daraja expects EAT even though Vercel runs UTC). The password is `base64(shortcode + passkey + timestamp)`.
+- `AccountReference` is shortened to the order number without `PED-` to stay within Daraja's 12-character limit; the amount is read server-side from `orders.total`, never from the browser.
+- The `CheckoutRequestID` is stored on the order and is **not** returned to the browser. The callback looks up the order by that ID, is idempotent, writes `payment_reference`/`paid_at`, and only advances `pending_payment` to `paid` (late callbacks cannot regress a fulfilment status).
+- Failure callbacks set `payment_status = failed` but leave the order retryable; the client stops polling and shows a retry message.
+- `proxy.ts` excludes `/api/mpesa/callback` and `/api/flutterwave/webhook` so provider callbacks do not depend on a Supabase Auth round trip.
+- Admin order detail now shows the M-Pesa/card reference and paid timestamp.
+
+**Still open:** apply `013_mpesa_payments.sql` to Supabase (local and Vercel), replace the callback placeholder with the real Vercel URL in Vercel **and** `.env.local`, then test with a Safaricom sandbox test number.
+
+### Task 2 — M-Pesa waiting overlay, polling, and timeout
+
+**Files modified:** `app/(shop)/payment/[orderId]/PaymentClient.tsx`
+**Verification:** `pnpm build` passes; `pnpm exec tsc --noEmit` passes; targeted ESLint passes with no warnings.
+**Notes:** Clicking Pay with M-Pesa now sets `paymentStatus = "waiting"` immediately and shows a full-screen spinner overlay with "Check your phone for the M-Pesa prompt...". Payment method controls are disabled while waiting. Polling reads the existing `/api/orders/[orderId]` server route every 3 seconds (the route reads Supabase with the service role, so the browser never gets the service key) and redirects to `/order/[orderId]` with a success toast on `payment_status = "paid"`. A 45-second timeout clears both the interval and timer, sets `paymentStatus = "failed"`, and shows the required timeout message plus a "Try again" button. Attempt IDs invalidate late poll responses after a timeout/reset, and unmount cleanup clears both timers. Retrying clears the old timers before sending a new STK push.
+
+---
+
+## Changelog — Session 12 (2026-10-27)
+
+### Task 1 — Premium payment method redesign
+
+**Files modified:** `app/(shop)/payment/[orderId]/PaymentClient.tsx`, `app/(shop)/payment/[orderId]/page.tsx`, `components/shop/OrderTimeline.tsx`, `app/globals.css`
+**Verification:** `pnpm exec tsc --noEmit` passes; targeted ESLint passes with no warnings; `pnpm build` passes.
+**Notes:**
+- Replaced the old form with a dark brown "Total to pay" hero, a large serif amount, order number, delivery/pickup summary, and a three-card payment selector. Each card has a lucide icon, bold title, subtitle, hover lift, selected border, and an expanding content panel (`motion/react`, reduced-motion aware).
+- The M-Pesa STK card keeps the prefilled `+254` phone field, 3-second polling, 45-second timeout, full-screen waiting overlay, failure alert, and "Try again" reset.
+- The manual Till card shows the real Till **5655972**, numbered Lipa na M-Pesa instructions, a copy button, a confirmation-code input, and "I have paid".
+- The card card is always visible (page flag is now `true`) and presents the dummy Visa/Mastercard/Amex form: cardholder, number, expiry, CVC, and "Pay securely". It waits 1.2 s, shows "Card integration coming soon", then marks the order paid through the demo server action. No card data leaves the browser.
+- Pay-on-delivery remains available as a secondary action below the cards.
+- `OrderTimeline` now labels `mpesa_manual` as "M-Pesa Till" instead of falling through to "Pay on delivery". Added the missing `--color-destructive` semantic token (deep oxblood) so validation/error classes used across the app actually render.
+
+### Task 2 — Manual M-Pesa persistence and dummy card settlement
+
+**Files created:** `supabase/migrations/014_manual_mpesa.sql`
+**Files modified:** `lib/actions/orders.ts`, `lib/actions/payments.ts`
+**Migration:** `014_manual_mpesa.sql` — replaces `orders_payment_method_check` with `('mpesa', 'mpesa_manual', 'card', 'pay_on_delivery')`.
+**Verification:** `pnpm exec tsc --noEmit` and targeted ESLint pass. `013_mpesa_payments.sql` and `014_manual_mpesa.sql` were applied to the linked Supabase project with `supabase db query --linked --file`; the live `orders` table now has `checkout_request_id`, `payment_reference`, `paid_at`, and accepts `mpesa_manual`. A temporary order was used to call both new server actions against the linked database: manual saved `SFK12345678` as `payment_reference` with `payment_status = pending`, and the demo card wrote `CARD-DEMO-...`, set `paid`, and inserted a `pending_payment → paid` history row. The test order and its history were deleted afterward.
+**Notes:**
+- `markPaymentMethodAction` now validates `orderId`, rejects paid/cancelled orders, clears any in-flight `checkout_request_id`, and supports manual references, pay-on-delivery, and the demo card mark-paid path (including a status-history row).
+- `submitManualMpesaAction` validates the 8–12 character code and saves it to `payment_reference` with `payment_status = pending`, so the owner verifies it against the M-Pesa statement before fulfilment. `completeCardPlaceholderAction` marks the demo order paid.
+- **Migration-history warning:** the linked remote database already had POS migrations numbered `012`–`020` (`pos`, `pos_stock`, `pos_record_sale`, etc.) while this branch uses `012`–`014` for categories/M-Pesa. `supabase db push` therefore considers local `012`–`014` already applied and will not run them. The payment SQL was applied manually; the repo's migration numbering still needs reconciling with the POS branch before the next `db push`.
+
+**Still open:** replace the `MPESA_CALLBACK_URL` placeholder with the deployed URL, verify Daraja sandbox credentials, and live-test an STK push with a Safaricom test number.

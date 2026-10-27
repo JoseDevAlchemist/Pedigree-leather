@@ -160,6 +160,7 @@ export interface ProductInput {
   slug: string;
   description: string;
   category: Product["category"];
+  categoryId: string | null;
   basePrice: number;
   basePriceUsd: number | null;
   discountPercent: number;
@@ -169,14 +170,18 @@ export interface ProductInput {
   /** In display order. An empty list is rejected by the Zod schema, not here. */
   colors: { name: string; hex: string }[];
   /**
-   * Which photographs exist, keyed by colour index then angle.
+   * The photographs to save, keyed by colour index.
+   *
+   * Each entry is an ordered list rather than an angle-keyed object, because the
+   * admin can add, remove and arrange slots freely and the list order is what
+   * becomes `product_images.sort_order`. Empty slots never reach this type.
    *
    * Keyed by *index* rather than by colour id because a colour the form just
    * created does not have an id yet — the ids are minted by Postgres on insert.
    * `updateProduct` deletes and re-inserts every colour anyway, so the ids on the
    * incoming rows are not the ids being written.
    */
-  images: Record<number, Partial<Record<Angle, string>>>;
+  images: Record<number, { angle: Angle; url: string }[]>;
 }
 
 /**
@@ -263,6 +268,7 @@ export async function createProduct(input: ProductInput): Promise<AdminProduct> 
       slug: input.slug,
       description: input.description,
       category: input.category,
+      category_id: input.categoryId,
       base_price: input.basePrice,
       base_price_usd: input.basePriceUsd,
       discount_percent: input.discountPercent,
@@ -299,11 +305,11 @@ export async function createProduct(input: ProductInput): Promise<AdminProduct> 
   );
 
   const imageRows = ordered.flatMap((color, index) =>
-    Object.entries(input.images[index] ?? {}).map(([angle, url]) => ({
+    (input.images[index] ?? []).map((image, slot) => ({
       color_id: color.id,
-      angle,
-      image_url: url ?? null,
-      sort_order: 0,
+      angle: image.angle,
+      image_url: image.url,
+      sort_order: slot,
     })),
   );
 
@@ -343,6 +349,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ad
       slug: input.slug,
       description: input.description,
       category: input.category,
+      category_id: input.categoryId,
       base_price: input.basePrice,
       base_price_usd: input.basePriceUsd,
       discount_percent: input.discountPercent,
@@ -382,11 +389,11 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ad
   );
 
   const imageRows = ordered.flatMap((color, index) =>
-    Object.entries(input.images[index] ?? {}).map(([angle, url]) => ({
+    (input.images[index] ?? []).map((image, slot) => ({
       color_id: color.id,
-      angle,
-      image_url: url ?? null,
-      sort_order: 0,
+      angle: image.angle,
+      image_url: image.url,
+      sort_order: slot,
     })),
   );
 
