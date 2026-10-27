@@ -164,11 +164,10 @@ export interface ProductInput {
   basePrice: number;
   basePriceUsd: number | null;
   discountPercent: number;
-  stockQuantity: number;
   featured: boolean;
   active: boolean;
   /** In display order. An empty list is rejected by the Zod schema, not here. */
-  colors: { name: string; hex: string }[];
+  colors: { name: string; hex: string; stockQuantity: number }[];
   /**
    * The photographs to save, keyed by colour index.
    *
@@ -272,7 +271,6 @@ export async function createProduct(input: ProductInput): Promise<AdminProduct> 
       base_price: input.basePrice,
       base_price_usd: input.basePriceUsd,
       discount_percent: input.discountPercent,
-      stock_quantity: input.stockQuantity,
       featured: input.featured,
       active: input.active,
     })
@@ -288,6 +286,7 @@ export async function createProduct(input: ProductInput): Promise<AdminProduct> 
     color_name: color.name,
     color_hex: color.hex,
     sort_order: index,
+    stock_quantity: color.stockQuantity,
   }));
 
   const { data: createdColors, error: colorsError } = await supabase
@@ -353,7 +352,6 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ad
       base_price: input.basePrice,
       base_price_usd: input.basePriceUsd,
       discount_percent: input.discountPercent,
-      stock_quantity: input.stockQuantity,
       featured: input.featured,
       active: input.active,
     })
@@ -375,6 +373,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ad
     color_name: color.name,
     color_hex: color.hex,
     sort_order: index,
+    stock_quantity: color.stockQuantity,
   }));
 
   const { data: createdColors, error: colorsError } = await supabase
@@ -422,7 +421,7 @@ export async function deleteProduct(id: string): Promise<void> {
  * runtime "column not found" — and so this function cannot be talked into writing
  * an arbitrary column such as `active` from a UI path that was meant to set stock.
  */
-export type QuickField = "stock_quantity" | "discount_percent" | "featured" | "active";
+export type QuickField = "discount_percent" | "featured" | "active";
 
 export async function updateProductField(
   id: string,
@@ -433,18 +432,17 @@ export async function updateProductField(
 
   /* Written out per field rather than as `{ [field]: value }`. A computed key
      erases the column's type, which is both a compile error here and the reason
-     this needs a switch at all: the four columns hold different types, and a form
+     this needs a switch at all: the columns hold different types, and a form
      input arrives as a string whether the column is a number or a boolean. The
      coercion is the point — `"5"` must become `5`, and `"true"` must not become a
-     truthy string that Postgres rejects. */
+     truthy string that Postgres rejects. Stock is not here: it belongs to each
+     colour and is edited in the product form. */
   const updates: TablesUpdate<"products"> =
-    field === "stock_quantity"
-      ? { stock_quantity: toInteger(value) }
-      : field === "discount_percent"
-        ? { discount_percent: toInteger(value) }
-        : field === "featured"
-          ? { featured: toBoolean(value) }
-          : { active: toBoolean(value) };
+    field === "discount_percent"
+      ? { discount_percent: toInteger(value) }
+      : field === "featured"
+        ? { featured: toBoolean(value) }
+        : { active: toBoolean(value) };
 
   const { error } = await supabase.from("products").update(updates).eq("id", id);
   if (error) rethrow(error, `update ${field}`);
@@ -498,19 +496,28 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   const { data, error } = await supabase
     .from("products")
-    .select("category, stock_quantity, active")
+    .select("category, active, product_colors(stock_quantity)")
     .eq("active", true);
 
   if (error) rethrow(error, "read the dashboard counts");
 
-  const rows = data ?? [];
+  const rows = (data ?? []) as {
+    category: string;
+    product_colors: { stock_quantity: number }[] | null;
+  }[];
+  const unitsByProduct = rows.map((row) =>
+    (row.product_colors ?? []).reduce(
+      (sum, color) => sum + color.stock_quantity,
+      0,
+    ),
+  );
 
   return {
     totalProducts: rows.length,
     totalBags: rows.filter((row) => row.category === "bag").length,
     totalShoes: rows.filter((row) => row.category === "shoe").length,
-    lowStock: rows.filter((row) => row.stock_quantity > 0 && row.stock_quantity < 5).length,
-    outOfStock: rows.filter((row) => row.stock_quantity === 0).length,
+    lowStock: unitsByProduct.filter((units) => units > 0 && units < 5).length,
+    outOfStock: unitsByProduct.filter((units) => units === 0).length,
   };
 }
 

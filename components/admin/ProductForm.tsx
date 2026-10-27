@@ -97,6 +97,8 @@ type ColorDraft = {
   key: string;
   name: string;
   hex: string;
+  /** Units on hand for this colourway. Kept as a string while the form is open. */
+  stockQuantity: string;
   /**
    * The views this colour currently has slots for, in display order.
    *
@@ -152,9 +154,6 @@ export function ProductForm({
   const [discountPercent, setDiscountPercent] = useState(
     initialData ? String(initialData.discountPercent) : "",
   );
-  const [stockQuantity, setStockQuantity] = useState(
-    initialData ? String(initialData.stockQuantity) : "",
-  );
   const [featured, setFeatured] = useState(initialData?.featured ?? false);
   const [active, setActive] = useState(initialData?.active ?? true);
 
@@ -168,6 +167,7 @@ export function ProductForm({
           key: "draft-0",
           name: "",
           hex: "#8B4513",
+          stockQuantity: "1",
           slots: categoryAngles("bag"),
           images: {},
         },
@@ -199,6 +199,7 @@ export function ProductForm({
         key: color.id,
         name: color.name,
         hex: color.hex,
+        stockQuantity: String(color.stockQuantity),
         slots: used.length > 0 ? [...used, ...extras] : defaultAngles,
         images,
       };
@@ -294,6 +295,7 @@ export function ProductForm({
         key,
         name: "",
         hex: "#8B4513",
+        stockQuantity: "1",
         slots: categoryAngles(category),
         images: {},
       },
@@ -492,14 +494,17 @@ export function ProductForm({
       basePrice,
       basePriceUsd: basePriceUsd ? Number(basePriceUsd) : null,
       discountPercent,
-      stockQuantity,
       featured,
       active,
-      /* Only the two fields the server wants. `key`, `images`, `uploading` and
+      /* Only the fields the server wants. `key`, `images`, `uploading` and
          `error` are all local UI state and are deliberately dropped here — sending
          them would make the action's schema depend on this component's internal
          shape. */
-      colors: colors.map((color) => ({ name: color.name, hex: color.hex })),
+      colors: colors.map((color) => ({
+        name: color.name,
+        hex: color.hex,
+        stockQuantity: color.stockQuantity,
+      })),
       images,
     };
 
@@ -684,18 +689,6 @@ export function ProductForm({
                 value={discountPercent}
                 onChange={(event) => setDiscountPercent(event.target.value)}
                 className={inputClass(Boolean(errors.discountPercent))}
-              />
-            </Field>
-
-            <Field label="Stock" htmlFor="stockQuantity" error={errors.stockQuantity} required>
-              <input
-                id="stockQuantity"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                value={stockQuantity}
-                onChange={(event) => setStockQuantity(event.target.value)}
-                className={inputClass(Boolean(errors.stockQuantity))}
               />
             </Field>
           </div>
@@ -905,6 +898,30 @@ function ColorBlock({
               className={`${inputClass(Boolean(errors[`colors.${index}.hex`]))} w-32 font-mono`}
             />
           </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor={`color-${color.key}-stock`}
+            className="block text-sm font-medium text-foreground"
+          >
+            Stock
+          </label>
+          <input
+            id={`color-${color.key}-stock`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={color.stockQuantity}
+            onChange={(event) => onChange({ stockQuantity: event.target.value })}
+            className={`${inputClass(Boolean(errors[`colors.${index}.stockQuantity`]))} mt-1 w-24`}
+          />
+          {errors[`colors.${index}.stockQuantity`] ? (
+            <p role="alert" className="mt-1 max-w-48 text-sm text-primary">
+              {errors[`colors.${index}.stockQuantity`]}
+            </p>
+          ) : null}
         </div>
 
         {/* Never lets the form reach zero colours, because the schema requires at

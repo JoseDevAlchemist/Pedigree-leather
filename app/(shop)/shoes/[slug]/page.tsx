@@ -21,7 +21,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const { slug } = await params;
   const product = await getProductBySlug(slug, "shoe");
 
-  if (!product) return { title: "Not found" };
+  if (!product || !product.colors.some((color) => color.stockQuantity > 0)) {
+    return { title: "Not found" };
+  }
 
   const firstImage = product.colors[0]?.images?.front;
   const imageUrl = firstImage ? `https://${new URL(firstImage).host}${firstImage}` : "/icon.png";
@@ -57,8 +59,11 @@ export default async function ShoePage({ params }: ProductPageProps) {
 
   /* The seam returns null for a bag slug on this route as well as for a slug that
      does not exist, so `/shoes/karura-tote` is a 404 rather than a bag on a shoes
-     URL — a page that renders, is crawlable, and is wrong. */
-  if (!product) notFound();
+     URL — a page that renders, is crawlable, and is wrong. A product with no
+     in-stock colour is hidden for the same reason. */
+  if (!product || !product.colors.some((color) => color.stockQuantity > 0)) {
+    notFound();
+  }
 
   /* The same `ProductDetail` as `/bags/[slug]`. It reads the category off the
      product, so the back link, the cart line and the views all follow without

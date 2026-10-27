@@ -10,19 +10,13 @@ import type { CartItem } from "@/lib/types";
 type AddToCartButtonProps = {
   /** The line to add. Assembled by the detail page, which owns the colour and quantity. */
   item: CartItem;
-  /** True when the product is sold out. Changes the label as well as the state. */
-  soldOut?: boolean;
   className?: string;
 };
 
 /** How long the confirmation holds before the label returns. */
 const CONFIRM_MS = 1500;
 
-export function AddToCartButton({
-  item,
-  soldOut = false,
-  className = "",
-}: AddToCartButtonProps) {
+export function AddToCartButton({ item, className = "" }: AddToCartButtonProps) {
   const reduceMotion = useReducedMotion();
   const addItem = useCartStore((state) => state.addItem);
 
@@ -38,8 +32,6 @@ export function AddToCartButton({
   }, []);
 
   const handleClick = () => {
-    if (soldOut) return;
-
     addItem(item);
     setIsConfirmed(true);
 
@@ -51,17 +43,16 @@ export function AddToCartButton({
     <motion.button
       type="button"
       onClick={handleClick}
-      disabled={soldOut}
       /* Press feedback carries most of the weight here: nothing on this page
          changes when the item is added, so the button has to acknowledge it. */
-      whileTap={soldOut || reduceMotion ? undefined : { scale: 0.96 }}
+      whileTap={reduceMotion ? undefined : { scale: 0.96 }}
       transition={{ type: "spring", duration: 0.25, bounce: 0 }}
-      className={`relative flex h-12 w-full cursor-pointer items-center justify-center rounded-full px-6 text-sm font-semibold tracking-wide transition-colors duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:bg-muted/50 disabled:text-background md:w-auto md:min-w-52 ${soldOut ? "bg-muted/50" : "bg-primary text-background hover:bg-primary-deep"} ${className}`}
+      className={`relative flex h-12 w-full cursor-pointer items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold tracking-wide text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:w-auto md:min-w-52 ${className}`}
     >
       {/* The resting label always occupies the button, so the confirmation can
           overlay it without the button resizing. */}
       <span className="flex items-center" aria-hidden={isConfirmed}>
-        {soldOut ? "Sold out" : "Add to Cart"}
+        Add to Cart
       </span>
 
       <AnimatePresence initial={false}>

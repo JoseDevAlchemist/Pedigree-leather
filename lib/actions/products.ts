@@ -165,7 +165,11 @@ export async function deleteProductAction(id: string): Promise<ActionResult<null
 }
 
 /**
- * The inline stock / discount / featured / active edit.
+ * The inline discount / featured / active edit.
+ *
+ * Stock is deliberately absent: it belongs to one colourway, and a single table
+ * cell cannot represent six colours with different counts. That value is edited
+ * on the product form instead.
  *
  * Revalidates only the admin tree. This writes one column of one row, so it cannot
  * change what the shop shows except in the case of `active` — but `revalidateShop`
@@ -187,11 +191,11 @@ export async function updateFieldAction(
       throw new ValidationError(message);
     }
 
-    /* `stock_quantity` and `discount_percent` are integer columns. A table cell can
-       hand over a string, and Postgres will refuse a text value for an integer
-       column with an error nobody wants to read — so the range is re-checked here
-       rather than trusted. `updateProductField` coerces; this refuses the values that
-       have no business existing. */
+    /* `discount_percent` is an integer column. A table cell can hand over a
+       string, and Postgres will refuse a text value for an integer column with an
+       error nobody wants to read — so the range is re-checked here rather than
+       trusted. `updateProductField` coerces; this refuses the values that have no
+       business existing. */
     const numeric = parsed.data.value;
     if (typeof numeric === "number") {
       if (!Number.isInteger(numeric) || numeric < 0) {

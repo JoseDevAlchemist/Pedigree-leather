@@ -19,7 +19,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const { slug } = await params;
   const product = await getProductBySlug(slug, "bag");
 
-  if (!product) return { title: "Not found" };
+  if (!product || !product.colors.some((color) => color.stockQuantity > 0)) {
+    return { title: "Not found" };
+  }
 
   const firstImage = product.colors[0]?.images?.front;
   const imageUrl = firstImage ? `https://${new URL(firstImage).host}${firstImage}` : "/icon.png";
@@ -55,8 +57,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   /* A missing bag is a 404, not a blank page. The api seam returns null for "not
      found" precisely so this can be decided here — and it also returns null for a
-     shoe slug, so `/bags/karura-derby` is a 404 rather than a shoe on a bags URL. */
-  if (!product) notFound();
+     shoe slug, so `/bags/karura-derby` is a 404 rather than a shoe on a bags URL.
+     A product whose every colour is sold out is treated the same way: the shop
+     does not list it, so its detail URL must not resurrect it. */
+  if (!product || !product.colors.some((color) => color.stockQuantity > 0)) {
+    notFound();
+  }
 
   return <ProductDetail product={product} />;
 }

@@ -19,8 +19,6 @@ import { QuantityStepper } from "@/components/ui/QuantityStepper";
 
 /** Matches `MAX_QUANTITY_PER_ITEM` in the cart store. */
 const MAX_QUANTITY = 10;
-/** At or below this, the stock line says how few are left instead of "in stock". */
-const LOW_STOCK = 5;
 /* The standard Material curve. The morph is transform-only, so it stays on the
    compositor; `cubic-bezier(0.2, 0, 0, 1)` is the curve that reads as "the same
    object moved" rather than "a new object appeared". */
@@ -42,10 +40,16 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const { peek, release } = useSharedImageTransition();
 
   /* Read the card's snapshot while rendering, so the colour the shopper was
-     looking at on the grid is the one the page opens on. */
+     looking at on the grid is the one the page opens on. If that colour sold
+     out between the grid render and this navigation, open on the first colour
+     that can actually be bought. */
   const [snapshot] = useState(() => peek(product.id));
 
-  const [colorIndex, setColorIndex] = useState(snapshot?.colorIndex ?? 0);
+  const [activeColorId, setActiveColorId] = useState(() => {
+    const preferred = product.colors[snapshot?.colorIndex ?? 0];
+    if (preferred && preferred.stockQuantity > 0) return preferred.id;
+    return product.colors.find((entry) => entry.stockQuantity > 0)?.id ?? "";
+  });
   const [angleIndex, setAngleIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
@@ -55,8 +59,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const morphRef = useRef<HTMLDivElement>(null);
   const [hasArrived, setHasArrived] = useState(!snapshot);
 
-  const color = product.colors[colorIndex] ?? product.colors[0];
-  const isSoldOut = product.stockQuantity === 0;
+  /* The shop hides sold-out colours everywhere, but filtering again here keeps
+     the component honest if it is ever handed an unfiltered product. */
+  const availableColors = product.colors.filter((entry) => entry.stockQuantity > 0);
+  const color =
+    availableColors.find((entry) => entry.id === activeColorId) ??
+    availableColors[0] ??
+    product.colors[0];
 
   /* Snapshots are single-use: drop this one once the page has read it. */
   useEffect(() => {
@@ -110,7 +119,25 @@ export function ProductDetail({ product }: ProductDetailProps) {
     };
   }, [reduceMotion, snapshot]);
 
-  const maxQuantity = Math.min(MAX_QUANTITY, product.stockQuantity || MAX_QUANTITY);
+  const maxQuantity = Math.min(
+    MAX_QUANTITY,
+    Math.max(1, color?.stockQuantity ?? 1),
+  );
+
+  if (!color) return null;
+
+  const selectColor = (colorId: string) => {
+    const next = availableColors.find((entry) => entry.id === colorId);
+    if (!next) return;
+
+    setActiveColorId(next.id);
+    setAngleIndex(0);
+    /* Lowering the ceiling must lower the current value with it, or a shopper
+       could carry a quantity of 4 into a colour that has 1 left. */
+    setQuantity((current) =>
+      Math.min(current, MAX_QUANTITY, Math.max(1, next.stockQuantity)),
+    );
+  };
 
   /* The one place the "where did you come from" link and its label are decided,
      so a shoe page says "All shoes" and links to /shoes without this component
@@ -129,6 +156,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
     unitPrice: effectivePrice(product.basePrice, product.discountPercent),
     basePrice: product.basePrice,
     quantity,
+    stockQuantity: color.stockQuantity,
     /* `angleAt` clamps, so a stale index from a previous product can never
        address an angle this product does not have. */
     image: color.images[angleAt(angleIndex, product.angles)] ?? color.images.front ?? null,
@@ -196,7 +224,6 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 basePrice={product.basePrice}
                 discountPercent={product.discountPercent}
                 size="detail"
-                muted={isSoldOut}
                 basePriceUsd={product.basePriceUsd}
                 className="mt-3"
               />
@@ -208,58 +235,26 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
             <section aria-label="Colour">
               <ColorSwatches
-                colors={product.colors}
+                colors={availableColors}
                 activeColorId={color.id}
-                onSelect={(colorId) =>
-                  setColorIndex(
-                    product.colors.findIndex((entry) => entry.id === colorId),
-                  )
-                }
+                onSelect={selectColor}
                 size="lg"
                 showActiveName
               />
             </section>
-
-            <StockLine stockQuantity={product.stockQuantity} />
 
             <div className="flex flex-col gap-4 border-t border-border pt-6 md:flex-row md:items-center md:justify-between">
               <QuantityStepper
                 value={quantity}
                 onChange={setQuantity}
                 max={maxQuantity}
-                disabled={isSoldOut}
               />
 
-              <AddToCartButton item={cartItem} soldOut={isSoldOut} />
+              <AddToCartButton item={cartItem} />
             </div>
           </motion.div>
         </div>
       </div>
     </main>
-  );
-}
-
-type StockLineProps = {
-  stockQuantity: number;
-};
-
-/**
- * Availability in words, with a dot rather than another colour: the gold accent
- * is reserved for the discount, so this line stays in the muted token.
- */
-function StockLine({ stockQuantity }: StockLineProps) {
-  const isSoldOut = stockQuantity === 0;
-  const isLow = !isSoldOut && stockQuantity <= LOW_STOCK;
-
-  const message = isSoldOut ? "Sold out" : isLow ? `Only ${stockQuantity} left` : "In stock";
-
-  return (
-    <p className="flex items-center gap-2 text-sm text-muted">
-      <span
-        aria-hidden="true"
-        className={`size-2 rounded-full ${isSoldOut ? "bg-muted/50" : "bg-primary"}`}
-      />
-      <span className={isLow ? "text-accent" : undefined}>{message}</span>
-    </p>
   );
 }

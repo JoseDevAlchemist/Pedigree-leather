@@ -27,10 +27,10 @@ import { useToast } from "@/components/admin/Toast";
  * ---------------------------------------------------------------------------
  * Inline editing, and why it saves a column at a time
  * ---------------------------------------------------------------------------
- * Stock, discount, featured and active are edited in place and saved through
- * `updateFieldAction`, which writes **one column**. Not "read the product, change the
- * field, write the product back" — that would let a stale row in a tab that has been
- * open for an hour silently revert somebody else's edit to the description.
+ * Stock, discount, featured and active used to be edited in place. Discount,
+ * featured and active still are, through `updateFieldAction`, which writes
+ * **one column**. Stock now belongs to individual colours, so it is shown here
+ * as a total and edited on the product form.
  *
  * Every save ends in `router.refresh()`. The server component re-reads, so the table
  * shows what the database actually holds rather than what this component believes it
@@ -38,13 +38,13 @@ import { useToast } from "@/components/admin/Toast";
  * shows the old number rather than a number that is quietly wrong.
  */
 
-type SortKey = "name" | "category" | "basePrice" | "stockQuantity" | "createdAt";
+type SortKey = "name" | "category" | "basePrice" | "totalStock" | "createdAt";
 
 const COLUMNS: { key: SortKey; label: string; align: "left" | "right"; sortable: boolean }[] = [
   { key: "name", label: "Product", align: "left", sortable: true },
   { key: "category", label: "Type", align: "left", sortable: true },
   { key: "basePrice", label: "Price", align: "right", sortable: true },
-  { key: "stockQuantity", label: "Stock", align: "right", sortable: true },
+  { key: "totalStock", label: "Stock", align: "right", sortable: true },
   { key: "createdAt", label: "Added", align: "right", sortable: true },
 ];
 
@@ -81,8 +81,8 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
           return (a.category + a.name).localeCompare(b.category + b.name) * factor;
         case "basePrice":
           return (a.basePrice - b.basePrice) * factor;
-        case "stockQuantity":
-          return (a.stockQuantity - b.stockQuantity) * factor;
+        case "totalStock":
+          return (a.totalStock - b.totalStock) * factor;
         case "createdAt":
           return (Date.parse(a.createdAt) - Date.parse(b.createdAt)) * factor;
         default:
@@ -104,7 +104,7 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
 
   const saveField = async (
     id: string,
-    field: "stock_quantity" | "discount_percent" | "featured" | "active",
+    field: "discount_percent" | "featured" | "active",
     value: number | boolean,
   ) => {
     setPending(`${id}:${field}`);
@@ -147,7 +147,8 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
           <caption className="sr-only">
-            Products. Stock, discount, featured and active can be edited in place.
+            Products. Discount, featured and active can be edited in place. Stock
+            is the total across colours and is edited on the product form.
           </caption>
 
           <thead>
@@ -245,7 +246,6 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
                   </span>
 
                   <NumberCell
-                    field="discount_percent"
                     value={product.discountPercent}
                     suffix="%"
                     pending={pending === `${product.id}:discount_percent`}
@@ -254,13 +254,17 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
                 </td>
 
                 <td className="px-4 py-3 text-right align-middle tabular-nums">
-                  <NumberCell
-                    field="stock_quantity"
-                    value={product.stockQuantity}
-                    pending={pending === `${product.id}:stock_quantity`}
-                    onSave={(next) => saveField(product.id, "stock_quantity", next)}
-                    tone={product.stockQuantity === 0 ? "alert" : product.stockQuantity < 5 ? "warn" : undefined}
-                  />
+                  <span
+                    className={`font-semibold ${
+                      product.totalStock === 0 ? "text-primary" : "text-foreground"
+                    }`}
+                  >
+                    {product.totalStock}
+                  </span>
+                  <span className="mt-0.5 block text-[0.6875rem] text-muted">
+                    {product.colors.length}{" "}
+                    {product.colors.length === 1 ? "colour" : "colours"}
+                  </span>
                 </td>
 
                 <td className="px-4 py-3 text-right align-middle text-xs text-muted tabular-nums">
@@ -321,23 +325,19 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
  * A cell that becomes an input when clicked.
  *
  * Saves on blur and on Enter, and reverts on Escape. Blur is the important one: a
- * person who clicks a stock number, types `3`, and clicks the next row has saved
+ * person who clicks a discount, types `20`, and clicks the next row has saved
  * without ever pressing anything, which is what they meant to do.
  */
 function NumberCell({
-  field,
   value,
   pending,
   onSave,
   suffix,
-  tone,
 }: {
-  field: "stock_quantity" | "discount_percent";
   value: number;
   pending: boolean;
   onSave: (next: number) => void;
   suffix?: string;
-  tone?: "warn" | "alert";
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
@@ -354,12 +354,7 @@ function NumberCell({
        `0` is important: an empty cell is a mistake, and 0 is a real stock level. */
     if (Number.isNaN(parsed) || parsed === value) return;
 
-    if (field === "discount_percent" && (parsed < 0 || parsed > 99)) {
-      setDraft(String(value));
-      return;
-    }
-
-    if (field === "stock_quantity" && parsed < 0) {
+    if (parsed < 0 || parsed > 99) {
       setDraft(String(value));
       return;
     }
@@ -389,7 +384,7 @@ function NumberCell({
             setEditing(false);
           }
         }}
-        aria-label={field === "stock_quantity" ? "Stock quantity" : "Discount percentage"}
+        aria-label="Discount percentage"
         className="w-16 rounded-md border border-primary px-1.5 py-0.5 text-right text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
       />
     );
@@ -404,13 +399,7 @@ function NumberCell({
         setEditing(true);
       }}
       aria-label={`${value}${suffix ?? ""}. Edit.`}
-      className={`-mr-1 inline-flex cursor-pointer items-center justify-end gap-0.5 rounded px-1 py-0.5 tabular-nums transition-colors duration-150 ease-out hover:bg-primary/8 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-50 ${
-        tone === "alert"
-          ? "font-semibold text-primary"
-          : tone === "warn"
-            ? "font-semibold text-foreground"
-            : "text-muted hover:text-foreground"
-      }`}
+      className="-mr-1 inline-flex cursor-pointer items-center justify-end gap-0.5 rounded px-1 py-0.5 tabular-nums text-muted transition-colors duration-150 ease-out hover:bg-primary/8 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-50"
     >
       {value}
       {suffix}

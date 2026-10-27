@@ -113,6 +113,7 @@ export const colorSchema = z.object({
     .min(1, "Give the colour a name")
     .max(40, "That colour name is too long"),
   hex: hexColor,
+  stockQuantity: stockCount,
 });
 
 /** Angles, for validation and the form's slot list. Mirrors the CHECK in 001_initial.sql. */
@@ -156,7 +157,6 @@ export const productInputSchema = z.object({
   basePrice: shillings,
   basePriceUsd: z.coerce.number().int().min(1, "USD price must be positive").max(1_000_000, "That looks too large for a USD price").optional().nullable(),
   discountPercent: percent,
-  stockQuantity: stockCount,
 
   featured: z.boolean(),
   active: z.boolean(),
@@ -213,7 +213,7 @@ export function parseAngle(value: string): Angle | null {
   return (ANGLES as readonly string[]).includes(value) ? (value as Angle) : null;
 }
 
-const quickFieldSchema = z.enum(["stock_quantity", "discount_percent", "featured", "active"]);
+const quickFieldSchema = z.enum(["discount_percent", "featured", "active"]);
 
 /** The inline table editor's single-field save. */
 export const quickFieldEditSchema = z.object({

@@ -126,6 +126,37 @@ export async function generateOrderNumber(): Promise<string> {
 export async function createOrder(input: OrderInput): Promise<{ orderId: string; orderNumber: string }> {
   const supabase = createAdminClient();
 
+  /* Stock belongs to the colour, so re-read the live count before writing the
+     order. The cart carries a snapshot from the product page, but that can be
+     stale by the time someone finishes checkout — and the request itself is
+     untrusted. Doing this here keeps the rule in one server-side place instead
+     of relying on the checkout component. */
+  const colorIds = [...new Set(input.items.map((item) => item.colorId))];
+  const { data: stockRows, error: stockReadError } = await supabase
+    .from("product_colors")
+    .select("id, product_id, color_name, stock_quantity")
+    .in("id", colorIds);
+
+  if (stockReadError) {
+    throw new Error("Could not check stock. Please try again.");
+  }
+
+  const stockById = new Map(
+    (stockRows ?? []).map((row) => [row.id, row]),
+  );
+
+  for (const item of input.items) {
+    const row = stockById.get(item.colorId);
+    const available =
+      row && row.product_id === item.productId ? row.stock_quantity : 0;
+
+    if (item.quantity > available) {
+      throw new Error(
+        `Sorry, only ${available} of ${item.name} in ${row?.color_name ?? item.colorName} are available.`,
+      );
+    }
+  }
+
   // Generate order number with retry on conflict
   let orderNumber: string;
   let attempts = 0;
@@ -184,8 +215,8 @@ export async function createOrder(input: OrderInput): Promise<{ orderId: string;
 
       // Decrement stock for each item
       for (const item of input.items) {
-        const { error: stockError } = await supabase.rpc("decrement_stock", {
-          product_id: item.productId,
+        const { error: stockError } = await supabase.rpc("decrement_color_stock", {
+          color_id: item.colorId,
           qty: item.quantity,
         });
 
@@ -193,7 +224,7 @@ export async function createOrder(input: OrderInput): Promise<{ orderId: string;
           // If stock decrement fails, we have a problem.
           // The order exists but stock wasn't decremented.
           // In production, this should trigger an alert.
-          console.error(`Failed to decrement stock for product ${item.productId}:`, stockError);
+          console.error(`Failed to decrement stock for colour ${item.colorId}:`, stockError);
           // We don't rollback here because the order is already created.
           // The admin will need to handle this manually.
         }

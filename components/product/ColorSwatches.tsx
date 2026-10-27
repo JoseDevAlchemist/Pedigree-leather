@@ -16,8 +16,6 @@ type ColorSwatchesProps = {
    * shopper is aiming at.
    */
   size?: "sm" | "lg";
-  /** Sold-out products cannot be re-coloured. */
-  disabled?: boolean;
   /** The detail page names the active colour in text as well as on hover. */
   showActiveName?: boolean;
   className?: string;
@@ -35,7 +33,6 @@ export function ColorSwatches({
   activeColorId,
   onSelect,
   size = "sm",
-  disabled = false,
   showActiveName = false,
   className = "",
 }: ColorSwatchesProps) {
@@ -48,7 +45,7 @@ export function ColorSwatches({
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-1 ${disabled ? "pointer-events-none opacity-50" : ""} ${className}`}
+      className={`flex flex-wrap items-center gap-1 ${className}`}
       role="radiogroup"
       aria-label="Colour"
     >
@@ -63,13 +60,12 @@ export function ColorSwatches({
             aria-checked={isActive}
             aria-label={color.name}
             title={size === "lg" ? color.name : undefined}
-            disabled={disabled}
             onClick={() => onSelect(color.id)}
             /* Selection is instant (colour change), but the press is a spring.
                No bouncy overshoot here: a colour chip that wobbles looks loose. */
             whileTap={reduceMotion ? undefined : { scale: 0.9 }}
             transition={{ type: "spring", duration: 0.25, bounce: 0 }}
-            className={`flex ${hit} shrink-0 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:cursor-not-allowed`}
+            className={`flex ${hit} shrink-0 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent`}
           >
             <span
               className={`${dot} rounded-full`}

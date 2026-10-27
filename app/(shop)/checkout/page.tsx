@@ -190,6 +190,23 @@ export default function CheckoutPage() {
    */
   const onValid = async (data: CheckoutForm) => {
     if (isSubmitting) return;
+
+    /* The line's stock was captured when it was added. Check it before the round
+       trip so the shopper gets an immediate, specific answer rather than a generic
+       failure. The server repeats the check against the live count, because a
+       client component can be edited and stock can move while someone is typing. */
+    const overStock = items.find((item) => {
+      const available = item.stockQuantity ?? item.quantity;
+      return item.quantity > available;
+    });
+
+    if (overStock) {
+      toast.error(
+        `Sorry, only ${overStock.stockQuantity} of ${overStock.name} in ${overStock.colorName} are available.`,
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -204,6 +221,7 @@ export default function CheckoutPage() {
         unitPrice: item.unitPrice,
         basePrice: item.basePrice,
         quantity: item.quantity,
+        stockQuantity: item.stockQuantity,
         image: item.image,
       }));
 

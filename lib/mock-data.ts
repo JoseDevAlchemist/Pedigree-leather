@@ -43,7 +43,18 @@ function pendingImages(): Record<Angle, string | null> {
 }
 
 function color(id: string, name: string, hex: string): ColorVariant {
-  return { id, name, hex, images: pendingImages() };
+  return { id, name, hex, stockQuantity: 0, images: pendingImages() };
+}
+
+/**
+ * A colourway with stock for one product.
+ *
+ * The palette constants below are shared, so stock cannot live on them: the same
+ * cognac appears on several products with different availability. Cloning here
+ * keeps the shared swatch data immutable while giving each product its own count.
+ */
+function stock(variant: ColorVariant, stockQuantity: number): ColorVariant {
+  return { ...variant, stockQuantity };
 }
 
 /* A fixed palette, reused across products so the grid reads as one collection
@@ -85,9 +96,13 @@ export const MOCK_PRODUCTS: Product[] = [
       "A wide-mouth tote in full-grain leather that stands up on its own. It is unlined and open at the top, so it packs flat when it is empty.",
     basePrice: 18500,
     discountPercent: 0,
-    stockQuantity: 12,
     category: "bag",
-    colors: [COGNAC, BLACK, FOREST, TAN],
+    colors: [
+      stock(COGNAC, 3),
+      stock(BLACK, 3),
+      stock(FOREST, 3),
+      stock(TAN, 3),
+    ],
     angles: bagAngles(),
     featured: true,
     createdAt: "2026-09-05T08:00:00.000Z",
@@ -100,9 +115,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "A flat satchel with one flap and a solid brass turn-lock, cut from a single hide so the grain runs unbroken across the front. Fits a 13-inch laptop and a folio.",
     basePrice: 14000,
     discountPercent: 15,
-    stockQuantity: 8,
     category: "bag",
-    colors: [OXBLOOD, COGNAC, BLACK],
+    colors: [stock(OXBLOOD, 3), stock(COGNAC, 3), stock(BLACK, 2)],
     angles: bagAngles(),
     featured: true,
     createdAt: "2026-09-08T11:30:00.000Z",
@@ -115,9 +129,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "Sized for two nights, with a wide gusset, a reinforced base and a shoulder strap that detaches and stows in the side pocket. Forty-five litres.",
     basePrice: 23500,
     discountPercent: 0,
-    stockQuantity: 5,
     category: "bag",
-    colors: [BLACK, TAN, OXBLOOD],
+    colors: [stock(BLACK, 2), stock(TAN, 2), stock(OXBLOOD, 1)],
     angles: bagAngles(),
     featured: true,
     createdAt: "2026-09-14T16:20:00.000Z",
@@ -130,9 +143,13 @@ export const MOCK_PRODUCTS: Product[] = [
       "A roll-top pack with waxed canvas side panels and a flap that stiffens as it ages. The roll closure keeps rain out and takes up less room than a zip does when the bag is half empty.",
     basePrice: 16500,
     discountPercent: 10,
-    stockQuantity: 0,
     category: "bag",
-    colors: [FOREST, BLACK, CREAM, COGNAC],
+    colors: [
+      stock(FOREST, 0),
+      stock(BLACK, 0),
+      stock(CREAM, 0),
+      stock(COGNAC, 0),
+    ],
     angles: bagAngles(),
     featured: false,
     createdAt: "2026-09-21T10:05:00.000Z",
@@ -145,9 +162,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "A small flat bag on a thin strap, for a phone, a card holder and keys. It is the thinnest thing we make, roughly the size of a paperback.",
     basePrice: 9500,
     discountPercent: 20,
-    stockQuantity: 15,
     category: "bag",
-    colors: [CREAM, TAN, BLACK],
+    colors: [stock(CREAM, 5), stock(TAN, 5), stock(BLACK, 5)],
     angles: bagAngles(),
     featured: true,
     createdAt: "2026-09-29T14:40:00.000Z",
@@ -160,9 +176,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "A structured briefcase with a three-part zip gusset, so it opens flat for a laptop and closes to a hard line for the office. Brass feet underneath keep it off a wet floor.",
     basePrice: 22000,
     discountPercent: 0,
-    stockQuantity: 3,
     category: "bag",
-    colors: [OXBLOOD, BLACK, TAN],
+    colors: [stock(OXBLOOD, 1), stock(BLACK, 1), stock(TAN, 1)],
     angles: bagAngles(),
     featured: false,
     createdAt: "2026-10-03T09:12:00.000Z",
@@ -181,9 +196,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "An open-laced derby cut from a single hide, so the vamp and the quarters are the same leather. Goodyear-welted, so it can be resoled rather than replaced.",
     basePrice: 18500,
     discountPercent: 0,
-    stockQuantity: 8,
     category: "shoe",
-    colors: [COGNAC, BLACK, TAN],
+    colors: [stock(COGNAC, 3), stock(BLACK, 3), stock(TAN, 2)],
     angles: shoeAngles(),
     featured: true,
     createdAt: "2026-09-06T08:45:00.000Z",
@@ -196,9 +210,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "Hand-stitched leather derby with a Goodyear-welted sole and a burnished finish that deepens where your foot flexes it.",
     basePrice: 16500,
     discountPercent: 10,
-    stockQuantity: 6,
     category: "shoe",
-    colors: [OXBLOOD, BLACK, COGNAC],
+    colors: [stock(OXBLOOD, 2), stock(BLACK, 2), stock(COGNAC, 2)],
     angles: shoeAngles(),
     featured: true,
     createdAt: "2026-09-11T13:15:00.000Z",
@@ -211,9 +224,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "A moccasin-stitched loafer with no laces and no heel, so it packs flat. Unlined, and it creases along the vamp the way a shoe should.",
     basePrice: 12500,
     discountPercent: 0,
-    stockQuantity: 11,
     category: "shoe",
-    colors: [TAN, COGNAC, CREAM],
+    colors: [stock(TAN, 4), stock(COGNAC, 4), stock(CREAM, 3)],
     angles: shoeAngles(),
     featured: false,
     createdAt: "2026-09-17T10:30:00.000Z",
@@ -226,9 +238,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "Two eyelets, a storm welt and a crepe sole. The lightest thing we make on a last, and the one that wears a scuff fastest.",
     basePrice: 14500,
     discountPercent: 0,
-    stockQuantity: 0,
     category: "shoe",
-    colors: [FOREST, BLACK, TAN],
+    colors: [stock(FOREST, 0), stock(BLACK, 0), stock(TAN, 0)],
     angles: shoeAngles(),
     featured: false,
     createdAt: "2026-09-23T15:05:00.000Z",
@@ -241,9 +252,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "A six-eyelet service boot on a commando sole, stitched at 6 stitches to the inch so it can be repaired at any cobbler in the country.",
     basePrice: 22000,
     discountPercent: 15,
-    stockQuantity: 4,
     category: "shoe",
-    colors: [BLACK, FOREST, COGNAC],
+    colors: [stock(BLACK, 2), stock(FOREST, 1), stock(COGNAC, 1)],
     angles: shoeAngles(),
     featured: false,
     createdAt: "2026-09-26T09:00:00.000Z",
@@ -256,9 +266,8 @@ export const MOCK_PRODUCTS: Product[] = [
       "The same last as our plain derby, in a waxed suede that beads in the rain and dries to a different shade every time. Goodyear-welted like the rest.",
     basePrice: 17500,
     discountPercent: 0,
-    stockQuantity: 7,
     category: "shoe",
-    colors: [TAN, COGNAC, FOREST],
+    colors: [stock(TAN, 3), stock(COGNAC, 2), stock(FOREST, 2)],
     angles: shoeAngles(),
     featured: true,
     createdAt: "2026-10-01T11:20:00.000Z",

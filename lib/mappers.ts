@@ -88,6 +88,7 @@ function toColorVariant(row: ColorRow, images: ImageRow[], productAngles: Angle[
     id: row.id,
     name: row.color_name,
     hex: row.color_hex,
+    stockQuantity: row.stock_quantity,
     images: record,
   };
 }
@@ -160,7 +161,6 @@ export function toProduct(row: ProductWithRelations): Product {
     basePrice: row.base_price,
     basePriceUsd: row.base_price_usd ?? null,
     discountPercent: row.discount_percent,
-    stockQuantity: row.stock_quantity,
     featured: row.featured,
     /* `active` has no counterpart on the domain type on purpose. The shop's read
        path never sees an inactive row — RLS hides it — so the flag belongs to the
@@ -185,6 +185,11 @@ export function toProduct(row: ProductWithRelations): Product {
 export interface AdminProduct extends Product {
   /** Hidden from the shop, visible here. The only reason this type exists. */
   active: boolean;
+  /**
+   * Units across every colour. Derived for the admin table's at-a-glance stock
+   * column; the editable value lives on each colour in the product form.
+   */
+  totalStock: number;
 }
 
 /** The row shape `lib/admin-api.ts` reads. Same relation nesting as above. */
@@ -195,7 +200,12 @@ export type AdminProductRow = ProductRow & {
 
 /** An admin row plus its flags. */
 export function toAdminProduct(row: AdminProductRow): AdminProduct {
-  return { ...toProduct(row), active: row.active };
+  const product = toProduct(row);
+  return {
+    ...product,
+    active: row.active,
+    totalStock: product.colors.reduce((sum, color) => sum + color.stockQuantity, 0),
+  };
 }
 
 /** The default `Angle[]` for a category. Live products use their own `angles`. */

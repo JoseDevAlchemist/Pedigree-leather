@@ -272,6 +272,7 @@ export type Database = {
           id: string
           product_id: string
           sort_order: number
+          stock_quantity: number
         }
         Insert: {
           color_hex: string
@@ -279,6 +280,7 @@ export type Database = {
           id?: string
           product_id: string
           sort_order?: number
+          stock_quantity?: number
         }
         Update: {
           color_hex?: string
@@ -286,6 +288,7 @@ export type Database = {
           id?: string
           product_id?: string
           sort_order?: number
+          stock_quantity?: number
         }
         Relationships: [
           {
@@ -343,7 +346,6 @@ export type Database = {
           id: string
           name: string
           slug: string
-          stock_quantity: number
         }
         Insert: {
           active?: boolean
@@ -358,7 +360,6 @@ export type Database = {
           id?: string
           name: string
           slug: string
-          stock_quantity?: number
         }
         Update: {
           active?: boolean
@@ -373,7 +374,6 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
-          stock_quantity?: number
         }
         Relationships: [
           {
@@ -475,8 +475,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      decrement_stock: {
-        Args: { product_id: string; qty: number }
+      decrement_color_stock: {
+        Args: { color_id: string; qty: number }
         Returns: number
       }
     }

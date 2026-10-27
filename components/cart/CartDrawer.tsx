@@ -187,7 +187,13 @@ export function CartDrawer() {
                             <QuantityStepper
                               size="sm"
                               value={item.quantity}
-                              max={MAX_QUANTITY_PER_ITEM}
+                              max={Math.min(
+                                MAX_QUANTITY_PER_ITEM,
+                                Math.max(
+                                  1,
+                                  item.stockQuantity ?? MAX_QUANTITY_PER_ITEM,
+                                ),
+                              )}
                               onChange={(next) =>
                                 updateQuantity(item.productId, item.colorId, next)
                               }

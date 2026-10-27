@@ -32,7 +32,7 @@ export interface CartStore {
   /** Adds a line, or tops up the quantity if that product+colour is already in. */
   addItem: (item: CartItem) => void;
   removeItem: (productId: string, colorId: string) => void;
-  /** Setting a quantity of 0 or less removes the line. Quantity is capped at `MAX_QUANTITY_PER_ITEM`. */
+  /** Setting a quantity of 0 or less removes the line. Quantity is capped at the line's stock and `MAX_QUANTITY_PER_ITEM`. */
   updateQuantity: (productId: string, colorId: string, quantity: number) => void;
   clearCart: () => void;
 
@@ -42,9 +42,19 @@ export interface CartStore {
   subtotal: () => number;
 }
 
-function clampQuantity(quantity: number): number {
+function clampQuantity(
+  quantity: number,
+  stockQuantity = MAX_QUANTITY_PER_ITEM,
+): number {
   if (!Number.isFinite(quantity)) return 1;
-  return Math.min(MAX_QUANTITY_PER_ITEM, Math.max(1, Math.round(quantity)));
+  const stockCeiling = Number.isFinite(stockQuantity)
+    ? Math.max(1, Math.floor(stockQuantity))
+    : MAX_QUANTITY_PER_ITEM;
+  return Math.min(
+    MAX_QUANTITY_PER_ITEM,
+    stockCeiling,
+    Math.max(1, Math.round(quantity)),
+  );
 }
 
 export const useCartStore = create<CartStore>()(
@@ -54,7 +64,7 @@ export const useCartStore = create<CartStore>()(
 
       addItem: (item) =>
         set((state) => {
-          const incoming = clampQuantity(item.quantity);
+          const incoming = clampQuantity(item.quantity, item.stockQuantity);
           const match = state.items.findIndex(
             (line) =>
               line.productId === item.productId && line.colorId === item.colorId,
@@ -69,7 +79,10 @@ export const useCartStore = create<CartStore>()(
             ...items[match],
             // Refresh the denormalised copy so a later price or name change shows up.
             ...item,
-            quantity: clampQuantity(items[match].quantity + incoming),
+            quantity: clampQuantity(
+              items[match].quantity + incoming,
+              item.stockQuantity,
+            ),
           };
           return { items };
         }),
@@ -99,7 +112,12 @@ export const useCartStore = create<CartStore>()(
 
           return {
             items: state.items.map((line) =>
-              line === match ? { ...line, quantity: clampQuantity(quantity) } : line,
+              line === match
+                ? {
+                    ...line,
+                    quantity: clampQuantity(quantity, line.stockQuantity),
+                  }
+                : line,
             ),
           };
         }),

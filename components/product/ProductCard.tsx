@@ -73,15 +73,12 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
 
   const color = product.colors[colorIndex] ?? product.colors[0];
   const angleCount = product.angles.length;
-  const isSoldOut = product.stockQuantity <= 0;
 
   const addItem = useCartStore((state) => state.addItem);
 
   const handleQuickAdd = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-
-    if (isSoldOut) return;
 
     /* Quick add is deliberately colour-blind: the card shows the first swatch as
        the default, so the line that lands in the cart is the same one the shopper
@@ -103,6 +100,7 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
       unitPrice,
       basePrice: product.basePrice,
       quantity: 1,
+      stockQuantity: defaultColor.stockQuantity,
       image: defaultColor.images[firstAngle] ?? null,
     };
 
@@ -263,36 +261,18 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
         <button
           type="button"
           onClick={handleQuickAdd}
-          disabled={isSoldOut}
-          aria-disabled={isSoldOut}
-          aria-label={isSoldOut ? "Sold out" : `Add ${product.name} to cart`}
-          className="absolute top-2 right-2 z-10 grid size-10 cursor-pointer place-items-center rounded-full bg-white/90 p-2 text-foreground shadow-md transition-[opacity,background-color,transform] duration-200 ease-out opacity-100 hover:bg-white active:scale-95 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:pointer-events-none sm:top-3 sm:right-3"
+          aria-label={`Add ${product.name} to cart`}
+          className="absolute top-2 right-2 z-10 grid size-10 cursor-pointer place-items-center rounded-full bg-white/90 p-2 text-foreground shadow-md transition-[opacity,background-color,transform] duration-200 ease-out opacity-100 hover:bg-white active:scale-95 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 sm:top-3 sm:right-3"
         >
           <Plus size={18} strokeWidth={2} aria-hidden="true" />
-          <span className="sr-only">
-            {isSoldOut ? "Sold out" : `Add ${product.name} to cart`}
-          </span>
+          <span className="sr-only">{`Add ${product.name} to cart`}</span>
         </button>
 
-        {/* No discount badge on a sold-out product: the price is not something
-            the shopper can act on, and under the sold-out scrim the badge
-            renders as a muddy patch rather than as a number. */}
-        {!isSoldOut && hasDiscount(product.discountPercent) ? (
+        {hasDiscount(product.discountPercent) ? (
           <DiscountBadge
             discountPercent={product.discountPercent}
             className="absolute top-2 left-2 sm:top-3 sm:left-3"
           />
-        ) : null}
-
-        {isSoldOut ? (
-          /* A dark scrim, not a cream one. `bg-card/70` bleached every colour
-             to the same pale grey, which read as a photograph that failed to
-             load rather than as a bag we have sold out of. */
-          <div className="absolute inset-0 flex items-center justify-center bg-charcoal/25 backdrop-blur-[2px]">
-            <span className="rounded-full border border-border bg-card/95 px-3 py-1 font-serif text-xs font-semibold text-foreground sm:px-4 sm:py-1.5 sm:text-sm">
-              Sold out
-            </span>
-          </div>
         ) : null}
 
         {/* Development only. The roll is invisible while it works — the picture
@@ -334,7 +314,6 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
           <PriceRow
             basePrice={product.basePrice}
             discountPercent={product.discountPercent}
-            muted={isSoldOut}
             stacked
             basePriceUsd={product.basePriceUsd}
           />
@@ -348,7 +327,6 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
                 product.colors.findIndex((entry) => entry.id === colorId),
               )
             }
-            disabled={isSoldOut}
             className="relative z-10 shrink-0"
           />
         </div>

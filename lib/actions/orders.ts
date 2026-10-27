@@ -99,6 +99,7 @@ export async function createOrderAction(
       unitPrice: number;
       basePrice: number;
       quantity: number;
+      stockQuantity: number;
       image: string | null;
     }[];
 

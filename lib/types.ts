@@ -39,6 +39,12 @@ export interface ColorVariant {
   /** Swatch + placeholder fill, e.g. "#8B4513". */
   hex: string;
   /**
+   * Units of this colourway on hand. Stock belongs to the colour, not the
+   * product: a bag in cognac can be available while the same bag in black is
+   * sold out. Storefront reads only return colours with a positive count.
+   */
+  stockQuantity: number;
+  /**
    * A slot for every angle in `Product.angles`, plus `null` for angles the
    * product uses but has not photographed. Keeping the record total over that
    * list is what makes `images[angle] ?? null` safe.
@@ -59,8 +65,6 @@ export interface Product {
   basePriceUsd?: number | null;
   /** 0 for no discount. Otherwise 1–99. Applied to `basePrice` and `basePriceUsd` proportionally. */
   discountPercent: number;
-  /** Units across all colours. 0 means the product is sold out. */
-  stockQuantity: number;
   colors: ColorVariant[];
   category: "bag" | "shoe";
   /** The admin-managed category this product belongs to, if any. */
@@ -127,5 +131,10 @@ export interface CartItem {
   /** Base price before discount (for discount display at checkout). */
   basePrice: number;
   quantity: number;
+  /**
+   * Units available in this colour when the line was added. Checkout compares
+   * the requested quantity against it before creating an order.
+   */
+  stockQuantity: number;
   image: string | null;
 }
