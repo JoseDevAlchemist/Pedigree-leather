@@ -88,10 +88,21 @@ export async function updateOrderStatusAction(
       }
     }
 
-    // Update order status
+    // Update order status. A manual move to "paid" must also settle the payment
+    // fields, otherwise the receipt generated below still says "Payment pending".
+    const update: {
+      status: string;
+      payment_status?: "paid";
+      paid_at?: string;
+    } = { status: newStatus };
+    if (newStatus === "paid") {
+      update.payment_status = "paid";
+      update.paid_at = new Date().toISOString();
+    }
+
     const { error: updateError } = await supabase
       .from("orders")
-      .update({ status: newStatus })
+      .update(update)
       .eq("id", orderId);
 
     if (updateError) {
@@ -112,6 +123,20 @@ export async function updateOrderStatusAction(
     if (historyError) {
       console.error("[updateOrderStatusAction] History error:", historyError);
       // Don't fail the action if history fails
+    }
+
+    /* Manual "paid" transitions get the same receipt as an M-Pesa callback.
+       The action still succeeds if Resend is down or misconfigured. */
+    if (newStatus === "paid" && currentStatus !== "paid") {
+      try {
+        const { sendReceiptEmail } = await import("@/lib/emails/sendReceipt");
+        const orderDetails = await getOrderById(orderId);
+        if (orderDetails) {
+          await sendReceiptEmail(orderDetails);
+        }
+      } catch (receiptError) {
+        console.error("[Receipt] Email failed:", receiptError);
+      }
     }
 
     revalidatePath("/admin/orders");

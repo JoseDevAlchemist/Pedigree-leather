@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { CheckCircle, MapPin, Truck, MessageCircle, Clock, Package, AlertCircle, RefreshCw } from "lucide-react";
+import { Check, MapPin, Truck, MessageCircle, Clock, Package, AlertCircle, RefreshCw } from "lucide-react";
 
 import { getStatusLabel, getAllStatusSteps, getStatusStep } from "@/lib/order-status-labels";
 
@@ -86,19 +86,9 @@ export function OrderTimeline({ order, shopConfig }: OrderTimelineProps) {
   const steps = getAllStatusSteps(isDelivery);
   const currentStepIndex = getStatusStep(currentStatus, isDelivery);
 
-  // Build timeline steps array
-  const timelineSteps: string[] = [];
-
-  if (currentStatus === "cancelled") {
-    steps.forEach(s => {
-      if (s !== "cancelled") timelineSteps.push(s);
-    });
-    timelineSteps.push("cancelled");
-  } else {
-    steps.forEach(s => {
-      timelineSteps.push(s);
-    });
-  }
+  /* `getAllStatusSteps` never includes "cancelled": a cancellation is a
+     terminal branch, rendered separately below so it cannot appear twice. */
+  const timelineSteps: string[] = steps;
 
   const refreshOrder = useCallback(async () => {
     setIsRefreshing(true);
@@ -125,94 +115,76 @@ export function OrderTimeline({ order, shopConfig }: OrderTimelineProps) {
     return () => clearInterval(interval);
   }, [refreshOrder]);
 
-  // Helper function to build dot className
-  function getDotClassName(isCurrent: boolean, isPast: boolean, isCancelled: boolean, step: string): string {
-    const base = "absolute -left-4 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ";
-    if (isCurrent) {
-      return base + "bg-primary text-primary-foreground ring-4 ring-primary ring-opacity-20";
-    }
-    if (isPast) {
-      return base + "bg-emerald-500 text-white";
-    }
-    if (isCancelled && step !== "cancelled") {
-      return base + "bg-muted bg-opacity-50";
-    }
-    return base + "border-border text-muted text-opacity-50";
+  const isCancelled = currentStatus === "cancelled";
+  const cancelledHistory = currentOrder.history?.find(
+    (entry) => entry.to_status === "cancelled",
+  );
+
+  function formatTimestamp(timestamp: string): string {
+    return new Date(timestamp).toLocaleString("en-KE", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
-  // Helper function to build text className
-  function getTextClassName(isCurrent: boolean, isPast: boolean): string {
-    const base = "transition-colors ";
-    if (isCurrent) return base + "text-foreground";
-    if (isPast) return base + "text-muted";
-    return base + "text-muted text-opacity-50";
+  function futureIcon(step: string): React.ReactNode {
+    if (step === "pending_payment") return <Clock className="size-4" aria-hidden="true" />;
+    if (step === "preparing") return <Package className="size-4" aria-hidden="true" />;
+    if (step === "ready_for_delivery" || step === "out_for_delivery") {
+      return <Truck className="size-4" aria-hidden="true" />;
+    }
+    return <Check className="size-4" aria-hidden="true" />;
   }
 
-  // Build timeline elements using map with helper functions
   const timelineElements = timelineSteps.map((step, index) => {
-    const isCurrent = step === currentStatus;
-    const isPast = index < currentStepIndex && currentStatus !== "cancelled";
-    const isCancelled = currentStatus === "cancelled";
+    const isCurrent = !isCancelled && step === currentStatus;
+    const isPast = !isCancelled && index < currentStepIndex;
 
     const stepHistory = currentOrder.history?.find((h) => h.to_status === step);
     const timestamp = stepHistory?.created_at;
 
-    let dotIcon: React.ReactNode = null;
-    if (isPast) {
-      dotIcon = <CheckCircle className="size-5" aria-hidden="true" />;
-    } else if (isCurrent) {
-      dotIcon = <span className="font-bold">{index + 1}</span>;
-    } else if (step === "pending_payment") {
-      dotIcon = <Clock className="size-5" aria-hidden="true" />;
-    } else if (step === "paid") {
-      dotIcon = <CheckCircle className="size-5" aria-hidden="true" />;
-    } else if (step === "preparing") {
-      dotIcon = <Package className="size-5" aria-hidden="true" />;
-    } else if (step === "ready_for_delivery") {
-      dotIcon = <Truck className="size-5" aria-hidden="true" />;
-    } else if (step === "out_for_delivery") {
-      dotIcon = <Truck className="size-5" aria-hidden="true" />;
-    } else {
-      dotIcon = <CheckCircle className="size-5" aria-hidden="true" />;
-    }
-
-    const dotClassName = getDotClassName(isCurrent, isPast, isCancelled, step);
-    const textClassName = getTextClassName(isCurrent, isPast);
+    const circleClassName = isPast
+      ? "bg-primary text-white"
+      : isCurrent
+        ? "border-2 border-primary bg-background text-primary ring-4 ring-primary/15"
+        : "bg-muted text-white";
 
     return (
-      <div key={step} className="relative">
-        {/* Dot */}
-        <div className={dotClassName}>
-          {dotIcon}
+      <div key={step} className="relative flex items-start gap-4">
+        <div
+          className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full transition-colors ${circleClassName}`}
+        >
+          {isPast ? (
+            <Check className="size-4" strokeWidth={3} aria-hidden="true" />
+          ) : isCurrent ? (
+            <span className="size-2.5 rounded-full bg-primary motion-safe:animate-pulse" />
+          ) : (
+            futureIcon(step)
+          )}
         </div>
 
-        <div className={textClassName}>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">
+        <div className="flex min-h-8 min-w-0 flex-1 flex-col justify-center">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`font-medium ${isPast || isCurrent ? "text-foreground" : "text-muted"}`}
+            >
               {getStatusLabel(step, isDelivery)}
             </span>
             {isCurrent && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary bg-opacity-10 text-primary font-medium">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                 Current
               </span>
             )}
           </div>
           {timestamp && (
-            <p className="mt-1 text-sm text-muted">
-              {new Date(timestamp).toLocaleString("en-KE", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
+            <p className="mt-1 text-sm text-muted">{formatTimestamp(timestamp)}</p>
           )}
           {stepHistory?.note && (
             <p className="mt-1 text-sm text-muted italic">
-              {"\""}
-              {stepHistory.note}
-              {"\""}
+              &quot;{stepHistory.note}&quot;
             </p>
           )}
         </div>
@@ -220,21 +192,21 @@ export function OrderTimeline({ order, shopConfig }: OrderTimelineProps) {
     );
   });
 
-  // Cancelled element if needed
-  const cancelledElement = currentStatus === "cancelled" ? (
-    <div key="cancelled" className="relative">
-      <div className="absolute -left-4 w-8 h-8 rounded-full flex items-center justify-center bg-rose-500 text-white text-sm font-medium">
-        <AlertCircle className="size-5" aria-hidden="true" />
+  const cancelledElement = isCancelled ? (
+    <div key="cancelled" className="relative flex items-start gap-4">
+      <div className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white">
+        <AlertCircle className="size-4" aria-hidden="true" />
       </div>
-      <div className="text-rose-600">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">Cancelled</span>
-        </div>
-        {currentOrder.history?.find((h) => h.to_status === "cancelled")?.note && (
+      <div className="flex min-h-8 min-w-0 flex-1 flex-col justify-center text-rose-600">
+        <span className="font-medium">Cancelled</span>
+        {cancelledHistory?.created_at && (
+          <p className="mt-1 text-sm text-muted">
+            {formatTimestamp(cancelledHistory.created_at)}
+          </p>
+        )}
+        {cancelledHistory?.note && (
           <p className="mt-1 text-sm text-muted italic">
-            {"\""}
-            {currentOrder.history?.find((h) => h.to_status === "cancelled")?.note}
-            {"\""}
+            &quot;{cancelledHistory.note}&quot;
           </p>
         )}
       </div>
@@ -265,14 +237,14 @@ export function OrderTimeline({ order, shopConfig }: OrderTimelineProps) {
           </div>
         </div>
 
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-4 top-0 bottom-0 w-0.5 border-border" aria-hidden="true" />
-
-          <div className="space-y-6 pl-12">
-            {timelineElements}
-            {cancelledElement}
-          </div>
+        <div className="relative flex flex-col gap-6">
+          {/* Continuous connector sits under the circles, whose centres are at 1rem. */}
+          <div
+            className="absolute top-4 bottom-4 left-4 w-0.5 bg-border"
+            aria-hidden="true"
+          />
+          {timelineElements}
+          {cancelledElement}
         </div>
       </section>
 

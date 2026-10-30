@@ -164,7 +164,7 @@ export default async function OrderConfirmationPage({
           {order.discount_total > 0 && (
             <div className="flex justify-between text-primary">
               <dt>Discount</dt>
-              <dd className="font-medium tabular-nums">\u2212{formatPrice(order.discount_total)}</dd>
+              <dd className="font-medium tabular-nums">-{formatPrice(order.discount_total)}</dd>
             </div>
           )}
 

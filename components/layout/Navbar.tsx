@@ -264,23 +264,6 @@ export function Navbar({ categories }: NavbarProps = {}) {
     };
   }, [closeSearch, isSearchOpen]);
 
-  /* Navigate after the shopper stops typing for half a second. Enter submits
-     immediately; closing the form cancels the pending timer via the cleanup. */
-  useEffect(() => {
-    if (!isSearchOpen) return;
-
-    const term = searchValue.trim();
-    if (!term) return;
-
-    const timer = window.setTimeout(() => {
-      setIsSearchOpen(false);
-      setSearchValue("");
-      router.push(`/search?q=${encodeURIComponent(term)}`);
-    }, 500);
-
-    return () => window.clearTimeout(timer);
-  }, [isSearchOpen, router, searchValue]);
-
   /* Closing returns focus to the trigger that opened search. */
   useEffect(() => {
     if (hadSearchOpen.current && !isSearchOpen) {
@@ -299,7 +282,7 @@ export function Navbar({ categories }: NavbarProps = {}) {
       </a>
 
       <header
-        className={`sticky top-0 z-50 border-b border-black/10 bg-primary-dark transition-shadow duration-200 ease-out ${
+        className={`sticky top-0 z-50 border-b border-black/10 bg-leather-header transition-shadow duration-200 ease-out ${
           isScrolled ? "shadow-bar" : "shadow-none"
         }`}
       >

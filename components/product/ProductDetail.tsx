@@ -243,7 +243,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               />
             </section>
 
-            <div className="flex flex-col gap-4 border-t border-border pt-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex w-full flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
               <QuantityStepper
                 value={quantity}
                 onChange={setQuantity}

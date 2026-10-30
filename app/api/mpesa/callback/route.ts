@@ -151,6 +151,24 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
+  /* Email is a side effect of a successful payment, never part of it. A
+     missing API key, unverified domain, or Resend outage must not turn a paid
+     order into a callback failure that Daraja retries. */
+  if (success) {
+    try {
+      const [{ getOrderById }, { sendReceiptEmail }] = await Promise.all([
+        import("@/lib/orders-api"),
+        import("@/lib/emails/sendReceipt"),
+      ]);
+      const fullOrder = await getOrderById(order.id);
+      if (fullOrder) {
+        await sendReceiptEmail(fullOrder);
+      }
+    } catch (receiptError) {
+      console.error("[mpesa/callback] receipt email failed:", receiptError);
+    }
+  }
+
   if (!success) {
     console.warn(
       `[mpesa/callback] ${CheckoutRequestID} failed: ${ResultCode} ${ResultDesc}`,

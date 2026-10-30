@@ -651,7 +651,7 @@ export default function CheckoutPage() {
                 {discountTotal > 0 && (
                   <div className="flex justify-between text-primary">
                     <dt>Discount</dt>
-                    <dd className="font-medium tabular-nums">−{formatPrice(discountTotal)}</dd>
+                    <dd className="font-medium tabular-nums">-{formatPrice(discountTotal)}</dd>
                   </div>
                 )}
 

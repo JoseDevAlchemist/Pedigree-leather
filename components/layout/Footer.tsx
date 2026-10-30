@@ -200,6 +200,17 @@ export function Footer() {
 
           <div className="mt-3 flex flex-col items-start justify-between gap-2 text-xs text-background/55 sm:flex-row sm:items-center">
           <p>© {year} Pedigree Leather. All rights reserved.</p>
+          <nav aria-label="Legal" className="flex flex-wrap items-center gap-3">
+            <Link href="/legal/privacy" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              Privacy
+            </Link>
+            <Link href="/legal/terms" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              Terms
+            </Link>
+            <Link href="/legal/returns" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              Returns
+            </Link>
+          </nav>
           {/* Editable credit line. Kept as literal text rather than pulled from a
               config object: it is prose, it changes when someone decides to
               change it, and there is exactly one of them. */}

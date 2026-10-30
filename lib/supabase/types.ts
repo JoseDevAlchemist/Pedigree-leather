@@ -440,6 +440,27 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_pages: {
+        Row: {
+          slug: string
+          title: string
+          content: string
+          updated_at: string | null
+        }
+        Insert: {
+          slug: string
+          title: string
+          content: string
+          updated_at?: string | null
+        }
+        Update: {
+          slug?: string
+          title?: string
+          content?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string

@@ -1,6 +1,6 @@
 "use client";
 
-import { hasDiscount, formatPrice, formatUsd, calculateDiscountedPrice, getDisplayPrices } from "@/lib/format";
+import { hasDiscount, getDisplayPrices } from "@/lib/format";
 
 type PriceRowProps = {
   basePrice: number;
@@ -116,7 +116,7 @@ export function DiscountBadge({ discountPercent, className = "" }: DiscountBadge
     <span
       className={`inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-xs font-semibold tabular-nums text-accent-ink shadow-bar ${className}`}
     >
-      −{Math.round(discountPercent)}%
+      -{Math.round(discountPercent)}%
     </span>
   );
 }

@@ -124,6 +124,15 @@ export function LoginForm() {
           {/* `role="alert"` so it is announced the moment it appears, and `tabIndex`
               so it can take focus — a sighted person who pressed Save and watched
               nothing happen needs this to be where their attention already is. */}
+          <div className="text-right">
+            <Link
+              href="/admin/forgot-password"
+              className="text-xs text-muted transition-colors duration-150 ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           {error ? (
             <p
               role="alert"

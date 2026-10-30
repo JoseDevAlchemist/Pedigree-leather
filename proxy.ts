@@ -79,7 +79,12 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAdminRoute = pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`);
 
-  if (!user && isAdminRoute && pathname !== LOGIN_PATH) {
+  const isPublicAdminAuthRoute =
+    pathname === LOGIN_PATH ||
+    pathname === "/admin/forgot-password" ||
+    pathname === "/admin/reset-password";
+
+  if (!user && isAdminRoute && !isPublicAdminAuthRoute) {
     /* `redirectTo` carries where they were going, so signing in resumes the
        navigation instead of dumping them on the dashboard. */
     const loginUrl = request.nextUrl.clone();

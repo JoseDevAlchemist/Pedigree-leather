@@ -73,12 +73,12 @@ export default async function CategoryPage({
 
         {children.length > 0 ? (
           <nav aria-label={`${category.name} subcategories`} className="mb-6">
-            <ul className="flex flex-wrap gap-2">
+            <ul className="flex flex-wrap gap-4 text-sm font-medium text-muted">
               {children.map((child) => (
                 <li key={child.id}>
                   <Link
                     href={`/category/${child.slug}`}
-                    className="inline-flex min-h-9 items-center rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors duration-150 ease-out hover:border-primary/40 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="transition-colors duration-150 ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                   >
                     {child.name}
                   </Link>
@@ -88,19 +88,20 @@ export default async function CategoryPage({
           </nav>
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-10">
+        {/* Filters stay available on mobile, but the desktop sidebar stays gone. */}
+        <div className="mb-6 lg:hidden">
           <FilterBar availableColors={colorOptions} filters={filters} />
+        </div>
 
-          <div className="min-w-0">
-            <Suspense fallback={<ProductGridSkeleton count={8} />}>
-              <CategoryGrid
-                slug={slug}
-                categoryName={category.name}
-                filters={dataFilters}
-                filtered={activeFilterCount > 0}
-              />
-            </Suspense>
-          </div>
+        <div className="min-w-0">
+          <Suspense fallback={<ProductGridSkeleton count={8} />}>
+            <CategoryGrid
+              slug={slug}
+              categoryName={category.name}
+              filters={dataFilters}
+              filtered={activeFilterCount > 0}
+            />
+          </Suspense>
         </div>
       </div>
     </main>

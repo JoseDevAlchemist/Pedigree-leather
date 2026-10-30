@@ -33,8 +33,11 @@ export function CartDrawer() {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const handleCheckout = () => {
+    // The drawer lives in the root layout, so it survives navigation. Close it
+    // first or it stays over the checkout page and the click looks like it did
+    // nothing.
+    closeCart();
     router.push("/checkout");
-    // Do NOT auto-close the drawer — let the page transition handle it naturally
   };
 
   /* While the drawer is open: lock the page behind it, move focus in, keep Tab

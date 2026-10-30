@@ -77,7 +77,7 @@ export function ProductGrid({
 
   if (visible.length === 0) {
     return (
-      <p className="rounded-2xl border border-border bg-card px-6 py-16 text-center text-pretty text-muted">
+      <p className="py-8 text-center text-pretty text-muted">
         {emptyMessage ?? "No products here yet. Please check back soon."}
       </p>
     );

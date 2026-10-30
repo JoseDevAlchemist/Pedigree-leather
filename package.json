@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
+    "@react-pdf/renderer": "^4.9.0",
     "@sentry/nextjs": "^11.6.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
@@ -20,6 +21,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "^7.89.0",
+    "resend": "^6.35.0",
     "server-only": "^0.0.1",
     "sonner": "^2.0.8",
     "twilio": "^6.1.2",

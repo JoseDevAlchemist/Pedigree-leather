@@ -47,7 +47,7 @@ export function AddToCartButton({ item, className = "" }: AddToCartButtonProps) 
          changes when the item is added, so the button has to acknowledge it. */
       whileTap={reduceMotion ? undefined : { scale: 0.96 }}
       transition={{ type: "spring", duration: 0.25, bounce: 0 }}
-      className={`relative flex h-12 w-full cursor-pointer items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold tracking-wide text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:w-auto md:min-w-52 ${className}`}
+      className={`relative flex h-12 w-full cursor-pointer items-center justify-center whitespace-nowrap rounded-full bg-primary px-6 text-sm font-semibold tracking-wide text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-auto sm:min-w-52 ${className}`}
     >
       {/* The resting label always occupies the button, so the confirmation can
           overlay it without the button resizing. */}
