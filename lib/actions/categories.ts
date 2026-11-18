@@ -66,7 +66,8 @@ export async function createCategoryAction(
 
     if (!created.ok) throw new Error(created.error);
 
-    revalidatePath("/admin/categories", "layout");
+    revalidatePath("/admin/categories");
+    revalidatePath("/");
     revalidatePath("/", "layout");
     revalidatePath("/category/[slug]", "page");
     revalidatePath("/sitemap.xml");
@@ -97,7 +98,8 @@ export async function updateCategoryAction(
 
     if (!updated.ok) throw new Error(updated.error);
 
-    revalidatePath("/admin/categories", "layout");
+    revalidatePath("/admin/categories");
+    revalidatePath("/");
     revalidatePath("/", "layout");
     revalidatePath("/category/[slug]", "page");
     revalidatePath("/sitemap.xml");
@@ -114,7 +116,8 @@ export async function deleteCategoryAction(
     const deleted = await deleteCategoryRow(id);
     if (!deleted.ok) throw new Error(deleted.error);
 
-    revalidatePath("/admin/categories", "layout");
+    revalidatePath("/admin/categories");
+    revalidatePath("/");
     revalidatePath("/", "layout");
     revalidatePath("/category/[slug]", "page");
     revalidatePath("/sitemap.xml");
@@ -129,7 +132,8 @@ export async function reorderCategoriesAction(
     const reordered = await reorderCategoriesRow(ids);
     if (!reordered.ok) throw new Error(reordered.error);
 
-    revalidatePath("/admin/categories", "layout");
+    revalidatePath("/admin/categories");
+    revalidatePath("/");
     revalidatePath("/", "layout");
     revalidatePath("/category/[slug]", "page");
     revalidatePath("/sitemap.xml");

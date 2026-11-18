@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { ImagePlus, Loader2, Plus, Save, Trash2, X } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
@@ -152,6 +153,8 @@ export function ProductForm({
   const [basePrice, setBasePrice] = useState(
     initialData ? String(initialData.basePrice) : "",
   );
+  const [barcode, setBarcode] = useState(initialData?.barcode ?? "");
+  const [publishToPos, setPublishToPos] = useState(initialData?.publishToPos ?? true);
   const [basePriceUsd, setBasePriceUsd] = useState(
     initialData?.basePriceUsd != null ? String(initialData.basePriceUsd) : "",
   );
@@ -212,6 +215,8 @@ export function ProductForm({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const uploadLock = useRef(false);
   const nextKey = useRef(colors.length);
 
   /**
@@ -380,7 +385,7 @@ export function ProductForm({
     );
   };
 
-  const handleUpload = async (colorKey: string, angle: Angle, file: File) => {
+  const uploadAngle = async (colorKey: string, angle: Angle, file: File) => {
     const color = colors.find((entry) => entry.key === colorKey);
     if (!color) return;
 
@@ -389,8 +394,7 @@ export function ProductForm({
        own handler either way, so a rejected file can still be chosen again. */
     const problem = fileProblem(file);
     if (problem) {
-      toast.error("That file cannot be used", problem);
-      return;
+      return problem;
     }
 
     /* Show the pick immediately — a blob preview and its name — so the file can
@@ -398,9 +402,7 @@ export function ProductForm({
     const previewUrl = URL.createObjectURL(file);
     updateColor(colorKey, {
       uploading: angle,
-      error: undefined,
-      previews: { ...color.previews, [angle]: previewUrl },
-      fileNames: { ...color.fileNames, [angle]: file.name },
+      previews: { [angle]: previewUrl },
     });
 
     try {
@@ -415,31 +417,48 @@ export function ProductForm({
           return {
             ...entry,
             images: { ...entry.images, [angle]: withCacheBuster(url) },
+            fileNames: { ...entry.fileNames, [angle]: file.name },
             previews,
           };
         }),
       );
     } catch (error) {
-      setColors((current) =>
-        current.map((entry) => {
-          if (entry.key !== colorKey) return entry;
-          const previews = { ...entry.previews };
-          delete previews[angle];
-          return {
-            ...entry,
-            previews,
-            error: error instanceof Error ? error.message : "That upload failed.",
-          };
-        }),
-      );
+      return `${file.name}: ${error instanceof Error ? error.message : "Upload failed."}`;
     } finally {
-      /* The stored URL takes over from the blob once the upload resolves. */
       URL.revokeObjectURL(previewUrl);
-      setColors((current) =>
-        current.map((entry) =>
-          entry.key === colorKey ? { ...entry, uploading: undefined } : entry,
-        ),
-      );
+      updateColor(colorKey, { uploading: undefined, previews: {} });
+    }
+  };
+
+  const handleUploads = async (color: ColorDraft, files: File[], angle?: Angle) => {
+    if (files.length === 0 || uploadLock.current || isSaving) return;
+
+    const angles = angle ? [angle] : [
+      ...color.slots.filter((slot) => !color.images[slot]),
+      ...angleOrder(category).filter((slot) => !color.slots.includes(slot)),
+    ];
+    if (files.length > angles.length) {
+      toast.error("Too many photos", `This colour has ${angles.length} empty angle slots.`);
+      return;
+    }
+
+    uploadLock.current = true;
+    setIsUploadingImages(true);
+    updateColor(color.key, {
+      slots: [...new Set([...color.slots, ...angles.slice(0, files.length)])],
+      error: undefined,
+    });
+
+    const problems: string[] = [];
+    try {
+      for (const [index, file] of files.entries()) {
+        const problem = await uploadAngle(color.key, angles[index], file);
+        if (problem) problems.push(problem);
+      }
+      if (problems.length) updateColor(color.key, { error: problems.join(" ") });
+    } finally {
+      uploadLock.current = false;
+      setIsUploadingImages(false);
     }
   };
 
@@ -471,7 +490,7 @@ export function ProductForm({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isSaving) return;
+    if (isSaving || uploadLock.current) return;
 
     setErrors({});
 
@@ -496,6 +515,8 @@ export function ProductForm({
       category,
       categoryId,
       basePrice,
+      barcode,
+      publishToPos,
       basePriceUsd: basePriceUsd ? Number(basePriceUsd) : null,
       discountPercent,
       featured,
@@ -609,6 +630,7 @@ export function ProductForm({
             }
           >
             <select
+              disabled={isUploadingImages || isSaving}
               id="categoryId"
               value={categoryId ?? ""}
               onChange={(event) => handleCategoryChange(event.target.value)}
@@ -670,7 +692,7 @@ export function ProductForm({
               label="Price in USD (optional)"
               htmlFor="basePriceUsd"
               error={errors.basePriceUsd}
-              hint="Leave blank if this product is only sold in KES."
+              hint="Leave blank to use the exchange rate in Currency Settings."
             >
               <input
                 id="basePriceUsd"
@@ -697,7 +719,19 @@ export function ProductForm({
             </Field>
           </div>
 
+          <Field label="Internal Barcode / SKU" htmlFor="barcode" error={errors.barcode}>
+            <input
+              id="barcode"
+              type="text"
+              maxLength={128}
+              value={barcode}
+              onChange={(event) => setBarcode(event.target.value)}
+              className={inputClass(Boolean(errors.barcode))}
+            />
+          </Field>
+
           <div className="flex flex-wrap gap-6 pt-1">
+            <Switch checked={publishToPos} onChange={setPublishToPos} label="Publish to POS" />
             <Switch checked={featured} onChange={setFeatured} label="Featured" />
             <Switch checked={active} onChange={setActive} label="Active" />
           </div>
@@ -719,7 +753,9 @@ export function ProductForm({
               errors={errors}
               onChange={(patch) => updateColor(color.key, patch)}
               onRemove={() => removeColor(color.key)}
-              onUpload={(angle, file) => handleUpload(color.key, angle, file)}
+              uploadsDisabled={isUploadingImages || isSaving}
+              onUpload={(angle, file) => void handleUploads(color, [file], angle)}
+              onUploadBatch={(files) => void handleUploads(color, files)}
               onRemoveImage={(angle) => removeImage(color.key, angle)}
               onAddSlot={() => addImageSlot(color.key)}
               onRemoveSlot={(angle) => removeImageSlot(color.key, angle)}
@@ -729,6 +765,7 @@ export function ProductForm({
           <div>
             <button
               type="button"
+              disabled={isUploadingImages || isSaving}
               onClick={addColor}
               className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors duration-150 ease-out hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
@@ -767,7 +804,7 @@ export function ProductForm({
 
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || isUploadingImages}
               className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold tracking-wide text-background transition-colors duration-150 ease-out hover:bg-primary-deep active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? (
@@ -826,7 +863,9 @@ function ColorBlock({
   errors,
   onChange,
   onRemove,
+  uploadsDisabled,
   onUpload,
+  onUploadBatch,
   onRemoveImage,
   onAddSlot,
   onRemoveSlot,
@@ -837,21 +876,22 @@ function ColorBlock({
   errors: Record<string, string>;
   onChange: (patch: Partial<ColorDraft>) => void;
   onRemove: () => void;
+  uploadsDisabled: boolean;
   onUpload: (angle: Angle, file: File) => void;
+  onUploadBatch: (files: File[]) => void;
   onRemoveImage: (angle: Angle) => void;
   onAddSlot: () => void;
   onRemoveSlot: (angle: Angle) => void;
 }) {
   const reduceMotion = useReducedMotion();
+  const batchInput = useRef<HTMLInputElement>(null);
   const fileInputs = useRef<Partial<Record<Angle, HTMLInputElement | null>>>({});
 
-  /* A `<input type="file">` per slot, hidden, driven by a label. Drag and drop
-     dispatches a `drop` on the label and sets `input.files` programmatically — which
-     is the only way to make a drop behave exactly like a click. */
   const onDrop = (event: React.DragEvent, angle: Angle) => {
     event.preventDefault();
-    const file = event.dataTransfer.files?.[0];
-    if (file) onUpload(angle, file);
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length > 1) onUploadBatch(files);
+    else if (files[0]) onUpload(angle, files[0]);
   };
 
   return (
@@ -937,6 +977,7 @@ function ColorBlock({
           <button
             type="button"
             onClick={onRemove}
+            disabled={uploadsDisabled}
             aria-label={`Remove ${color.name || `colour ${index + 1}`}`}
             className="inline-flex size-10 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors duration-150 ease-out hover:bg-primary/10 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
@@ -944,6 +985,32 @@ function ColorBlock({
           </button>
         ) : null}
       </div>
+
+      <button
+        type="button"
+        disabled={uploadsDisabled}
+        onClick={() => batchInput.current?.click()}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          onUploadBatch(Array.from(event.dataTransfer.files));
+        }}
+        className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted hover:border-primary focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50"
+      >
+        <ImagePlus size={18} strokeWidth={1.5} aria-hidden="true" />
+        Drop photos or choose files for this colour
+      </button>
+      <input
+        ref={batchInput}
+        type="file"
+        multiple
+        accept={ACCEPTED_IMAGE_TYPES.join(",")}
+        className="hidden"
+        onChange={(event) => {
+          onUploadBatch(Array.from(event.currentTarget.files ?? []));
+          event.currentTarget.value = "";
+        }}
+      />
 
       {/* The slots. Two up on a phone, which is as narrow as a thumbnail can go
           before the angle label stops fitting beside it. The list is the admin's
@@ -970,7 +1037,7 @@ function ColorBlock({
                   <button
                     type="button"
                     onClick={() => onRemoveSlot(angle)}
-                    disabled={isUploading}
+                    disabled={uploadsDisabled}
                     aria-label={`Remove the ${angleLabel(angle)} image slot`}
                     title={
                       isUploading
@@ -990,16 +1057,13 @@ function ColorBlock({
                 >
                   {shown ? (
                     <>
-                      {/* eslint-disable-next-line @next/next/no-img-element --
-                          A blob from the browser's own storage cache, and the point of
-                          the slot is to show the file that was just picked without a
-                          round trip. `next/image` would add an optimiser hop for an
-                          image the person is looking at once, to confirm they picked the
-                          right one. The customer's page uses `next/image`. */}
-                      <img
+                      <Image
                         src={shown}
                         alt={`${color.name || "Colour"} ${angleLabel(angle)}`}
-                        className="size-full object-cover"
+                        fill
+                        sizes="(max-width: 640px) 50vw, 240px"
+                        unoptimized={Boolean(preview)}
+                        className="object-cover"
                       />
 
                       {isUploading ? (
@@ -1018,6 +1082,7 @@ function ColorBlock({
                       ) : (
                         <button
                           type="button"
+                          disabled={uploadsDisabled}
                           onClick={() => onRemoveImage(angle)}
                           aria-label={`Clear the ${angleLabel(angle)} photograph`}
                           className="absolute top-1 right-1 inline-flex size-7 cursor-pointer items-center justify-center rounded-full bg-charcoal/75 text-background transition-colors duration-150 ease-out hover:bg-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -1030,7 +1095,7 @@ function ColorBlock({
                     <button
                       type="button"
                       onClick={() => fileInputs.current[angle]?.click()}
-                      disabled={isUploading}
+                      disabled={uploadsDisabled}
                       className="flex size-full cursor-pointer flex-col items-center justify-center gap-1 text-muted transition-colors duration-150 ease-out hover:bg-primary/5 hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent disabled:cursor-wait"
                     >
                       {isUploading ? (
@@ -1087,7 +1152,7 @@ function ColorBlock({
       <button
         type="button"
         onClick={onAddSlot}
-        disabled={color.slots.length >= ALL_ANGLES.length}
+        disabled={uploadsDisabled || color.slots.length >= ALL_ANGLES.length}
         className="mt-2 inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors duration-150 ease-out hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Plus size={14} strokeWidth={2} aria-hidden="true" />

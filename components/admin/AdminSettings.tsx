@@ -1,23 +1,11 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { Save, Shield, Package, Settings, CheckCircle, AlertCircle } from "lucide-react";
-import { updateShopInfoAction, updateDeliverySettingsAction } from "@/lib/actions/settings";
+import { Save, Shield, Package, Settings } from "lucide-react";
+import { updateCurrencySettingsAction, updateShopInfoAction, updateDeliverySettingsAction } from "@/lib/actions/settings";
 import { useToast } from "@/components/admin/Toast";
 
-interface ShopSettings {
-  shop_name: string;
-  phone: string;
-  whatsapp: string;
-  email: string | null;
-  address: string;
-  google_maps_url: string | null;
-  delivery_flat_rate: number;
-  free_delivery_threshold: number;
-  pickup_available: boolean;
-  instagram_handle: string | null;
-  instagram_url: string | null;
-}
+import type { ShopSettings } from "@/lib/settings-api";
 
 interface AdminSettingsProps {
   settings: ShopSettings;
@@ -25,7 +13,7 @@ interface AdminSettingsProps {
 
 export function AdminSettings({ settings: initialSettings }: AdminSettingsProps) {
   const toast = useToast();
-  const [saving, setSaving] = useState<"info" | "delivery" | false>(false);
+  const [saving, setSaving] = useState<"info" | "delivery" | "currency" | false>(false);
   const [infoForm, setInfoForm] = useState({
     shop_name: initialSettings.shop_name,
     phone: initialSettings.phone,
@@ -80,6 +68,15 @@ export function AdminSettings({ settings: initialSettings }: AdminSettingsProps)
     }
   };
 
+  const handleCurrencySubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSaving("currency");
+    const result = await updateCurrencySettingsAction(new FormData(event.currentTarget));
+    setSaving(false);
+    if (result.ok) toast.success("Exchange rate saved");
+    else toast.error("Failed to save", result.error);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -89,7 +86,7 @@ export function AdminSettings({ settings: initialSettings }: AdminSettingsProps)
             Settings
           </h1>
           <p className="text-sm text-muted">
-            Configure shop information and delivery settings
+            Configure shop information, delivery and currency settings
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -249,6 +246,37 @@ export function AdminSettings({ settings: initialSettings }: AdminSettingsProps)
                 Save shop info
               </>
             )}
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-5" aria-labelledby="currency-heading">
+        <h2 id="currency-heading" className="mb-4 text-lg font-semibold text-foreground">
+          Currency Settings
+        </h2>
+        <form onSubmit={handleCurrencySubmit} className="space-y-4">
+          <div className="max-w-xs">
+            <label htmlFor="usd-exchange-rate" className="mb-1 block text-sm font-medium text-foreground">
+              Exchange Rate (1 USD = ? KES)
+            </label>
+            <input
+              id="usd-exchange-rate"
+              name="exchange_rate_kes_to_usd"
+              type="number"
+              step="any"
+              inputMode="decimal"
+              required
+              defaultValue={initialSettings.exchange_rate_kes_to_usd}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-accent"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={Boolean(saving)}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-background hover:bg-primary-deep disabled:opacity-50"
+          >
+            <Save size={16} aria-hidden="true" />
+            {saving === "currency" ? "Saving…" : "Save exchange rate"}
           </button>
         </form>
       </section>

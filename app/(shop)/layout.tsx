@@ -1,8 +1,9 @@
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { ContactWidgetWrapper } from "@/components/layout/ContactWidgetWrapper";
-import { getCategories } from "@/lib/categories-api";
-import type { Category } from "@/lib/types";
+import { getCategories, getParentCategories } from "@/lib/categories-api";
+import { getUsdExchangeRate } from "@/lib/settings-api";
+import { ExchangeRateProvider } from "@/components/product/ExchangeRateContext";
 import { Toaster } from "sonner";
 
 /**
@@ -29,21 +30,18 @@ import { Toaster } from "sonner";
 export default async function ShopLayout({
   children,
 }: LayoutProps<"/">) {
-  /* Fetch categories server-side. If the fetch fails (missing migration, DB
-     down), we pass nothing and the navbar falls back to its static items — the
-     shell never crashes because of a category problem. */
-  let categories: readonly Category[] = [];
-  try {
-    categories = await getCategories();
-  } catch (error) {
-    console.warn("[pedigree/shop-layout] categories failed to load:", error);
-    categories = [];
-  }
+  const [categories, parentCategories, exchangeRate] = await Promise.all([
+    getCategories(),
+    getParentCategories(),
+    getUsdExchangeRate(),
+  ]);
 
   return (
     <>
-      <Navbar categories={categories} />
-      {children}
+      <ExchangeRateProvider rate={exchangeRate}>
+        <Navbar categories={categories} parentCategories={parentCategories} />
+        {children}
+      </ExchangeRateProvider>
       {/* Below the page, above nothing. `body` is a flex column and every page's
           `<main>` is `flex-1`, so the footer sits at the bottom of the viewport on
           short pages and below the fold on long ones instead of floating

@@ -155,6 +155,13 @@ export const productInputSchema = z.object({
   categoryId: z.string().uuid("Invalid category").nullable().optional(),
 
   basePrice: shillings,
+  barcode: z
+    .string()
+    .trim()
+    .max(128, "Barcode must be at most 128 characters")
+    .nullish()
+    .transform((value) => value || null),
+  publishToPos: z.boolean().default(true),
   basePriceUsd: z.coerce.number().int().min(1, "USD price must be positive").max(1_000_000, "That looks too large for a USD price").optional().nullable(),
   discountPercent: percent,
 

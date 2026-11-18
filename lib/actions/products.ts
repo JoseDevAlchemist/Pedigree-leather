@@ -49,12 +49,16 @@ export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string
  * diagnosed from the server log, not from a toast.
  */
 function explain(error: unknown, context: string): string {
-  const message = error instanceof Error ? error.message : String(error);
-  const code = (error as { code?: string } | null)?.code ?? "";
+  const databaseError = error instanceof Error ? error.cause ?? error : error;
+  const { code = "", message = String(databaseError) } =
+    (databaseError ?? {}) as { code?: string; message?: string };
 
   console.error(`[admin/products] ${context}:`, error);
 
   if (code === "23505" || /duplicate key value violates unique constraint/i.test(message)) {
+    if (/idx_products_barcode/.test(message)) {
+      return "That barcode is already assigned to another product.";
+    }
     if (/products_slug_key/.test(message)) {
       return "That URL slug is already in use. Pick another — the name can stay the same.";
     }

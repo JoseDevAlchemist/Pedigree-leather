@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { angleSpoken, stepIndex } from "@/lib/angles";
+import { SoldOutOverlay } from "./SoldOutOverlay";
 import { productHref } from "@/lib/category";
 import { effectivePrice, formatPrice, hasDiscount } from "@/lib/format";
 import { useCartStore } from "@/lib/store/cart";
@@ -72,6 +73,7 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
   const [colorIndex, setColorIndex] = useState(0);
 
   const color = product.colors[colorIndex] ?? product.colors[0];
+  const soldOut = !product.colors.some((entry) => entry.stockQuantity > 0);
   const angleCount = product.angles.length;
 
   const addItem = useCartStore((state) => state.addItem);
@@ -84,7 +86,7 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
        the default, so the line that lands in the cart is the same one the shopper
        would get by opening the product and pressing Add to Cart without touching
        a swatch. */
-    const defaultColor = product.colors[0];
+    const defaultColor = product.colors.find((entry) => entry.stockQuantity > 0);
     if (!defaultColor) return;
 
     const firstAngle = product.angles[0];
@@ -258,11 +260,13 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
             hover or keyboard focus on desktop, so it does not clutter a grid the
             shopper is only browsing. The discount chip lives top-left so the two
             never collide. */}
+        {soldOut && <SoldOutOverlay />}
         <button
           type="button"
+          disabled={soldOut}
           onClick={handleQuickAdd}
           aria-label={`Add ${product.name} to cart`}
-          className="absolute top-2 right-2 z-10 grid size-10 cursor-pointer place-items-center rounded-full bg-white/90 p-2 text-foreground shadow-md transition-[opacity,background-color,transform] duration-200 ease-out opacity-100 hover:bg-white active:scale-95 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 sm:top-3 sm:right-3"
+          className="absolute top-2 right-2 z-10 grid size-10 cursor-pointer place-items-center rounded-full bg-white/90 p-2 text-foreground shadow-md transition-[opacity,background-color,transform] duration-200 ease-out opacity-100 hover:bg-white active:scale-95 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-45 sm:top-3 sm:right-3"
         >
           <Plus size={18} strokeWidth={2} aria-hidden="true" />
           <span className="sr-only">{`Add ${product.name} to cart`}</span>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { angleAt } from "@/lib/angles";
+import { SoldOutOverlay } from "./SoldOutOverlay";
 import { categoryName as categoryNameFor, categoryPath as categoryPathFor } from "@/lib/category";
 import { effectivePrice, hasDiscount } from "@/lib/format";
 import type { CartItem, Product } from "@/lib/types";
@@ -59,13 +60,11 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const morphRef = useRef<HTMLDivElement>(null);
   const [hasArrived, setHasArrived] = useState(!snapshot);
 
-  /* The shop hides sold-out colours everywhere, but filtering again here keeps
-     the component honest if it is ever handed an unfiltered product. */
   const availableColors = product.colors.filter((entry) => entry.stockQuantity > 0);
+  const soldOut = availableColors.length === 0;
+  const selectableColors = soldOut ? product.colors : availableColors;
   const color =
-    availableColors.find((entry) => entry.id === activeColorId) ??
-    availableColors[0] ??
-    product.colors[0];
+    selectableColors.find((entry) => entry.id === activeColorId) ?? selectableColors[0];
 
   /* Snapshots are single-use: drop this one once the page has read it. */
   useEffect(() => {
@@ -127,7 +126,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
   if (!color) return null;
 
   const selectColor = (colorId: string) => {
-    const next = availableColors.find((entry) => entry.id === colorId);
+    const next = selectableColors.find((entry) => entry.id === colorId);
     if (!next) return;
 
     setActiveColorId(next.id);
@@ -184,7 +183,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
               style={{ visibility: hasArrived ? "visible" : "hidden" }}
             >
               <div>
-                <div className="relative">
+                <div className="relative overflow-hidden rounded-2xl">
                   <AngleSwiper
                     productName={product.name}
                     color={color}
@@ -192,6 +191,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
                     angleIndex={angleIndex}
                     onAngleChange={setAngleIndex}
                   />
+
+                  {soldOut && <SoldOutOverlay />}
 
                   {hasDiscount(product.discountPercent) ? (
                     <DiscountBadge
@@ -235,7 +236,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
             <section aria-label="Colour">
               <ColorSwatches
-                colors={availableColors}
+                colors={selectableColors}
                 activeColorId={color.id}
                 onSelect={selectColor}
                 size="lg"
@@ -244,11 +245,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </section>
 
             <div className="flex w-full flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <QuantityStepper
-                value={quantity}
-                onChange={setQuantity}
-                max={maxQuantity}
-              />
+              {!soldOut && (
+                <QuantityStepper
+                  value={quantity}
+                  onChange={setQuantity}
+                  max={maxQuantity}
+                />
+              )}
 
               <AddToCartButton item={cartItem} />
             </div>

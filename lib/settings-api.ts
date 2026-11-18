@@ -1,5 +1,7 @@
 import "server-only";
 
+import { DEFAULT_USD_EXCHANGE_RATE } from "@/lib/exchange-rate";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function rethrow(error: unknown, context: string): never {
@@ -50,6 +52,7 @@ export interface ShopSettings {
   pickup_available: boolean;
   instagram_handle: string | null;
   instagram_url: string | null;
+  exchange_rate_kes_to_usd: number;
   updated_at: string | null;
 }
 
@@ -78,13 +81,14 @@ export async function getShopSettings(): Promise<ShopSettings> {
         pickup_available: true,
         instagram_handle: null,
         instagram_url: null,
+        exchange_rate_kes_to_usd: DEFAULT_USD_EXCHANGE_RATE,
         updated_at: null,
       };
     }
     rethrow(error, "fetch shop settings");
   }
 
-  return data as ShopSettings;
+  return { ...data, exchange_rate_kes_to_usd: data.exchange_rate_kes_to_usd ?? DEFAULT_USD_EXCHANGE_RATE };
 }
 
 export async function updateShopSettings(
@@ -136,4 +140,19 @@ export async function getActiveDeliveryZone(
   }
 
   return data as DeliveryZoneSummary;
+}
+
+export async function getUsdExchangeRate(): Promise<number> {
+  try {
+    const { data, error } = await createPublicClient()
+      .from("shop_settings")
+      .select("exchange_rate_kes_to_usd")
+      .eq("id", "default")
+      .maybeSingle();
+    if (error) throw error;
+    return data?.exchange_rate_kes_to_usd ?? DEFAULT_USD_EXCHANGE_RATE;
+  } catch (error) {
+    console.warn("[settings-api] Could not load USD exchange rate:", error);
+    return DEFAULT_USD_EXCHANGE_RATE;
+  }
 }

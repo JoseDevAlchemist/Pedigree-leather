@@ -80,3 +80,24 @@ export async function updateDeliverySettingsAction(
     return { ok: false, error: error instanceof Error ? error.message : "Something went wrong" };
   }
 }
+
+export async function updateCurrencySettingsAction(
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireRole("owner");
+
+  const rate = Number(formData.get("exchange_rate_kes_to_usd"));
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return { ok: false, error: "Enter an exchange rate greater than zero." };
+  }
+
+  try {
+    await updateShopSettings({ exchange_rate_kes_to_usd: rate });
+    revalidatePath("/admin/settings");
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    console.error("[updateCurrencySettingsAction]", error);
+    return { ok: false, error: "Could not save the exchange rate." };
+  }
+}

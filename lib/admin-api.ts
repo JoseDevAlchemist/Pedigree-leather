@@ -162,7 +162,9 @@ export interface ProductInput {
   category: Product["category"];
   categoryId: string | null;
   basePrice: number;
-  basePriceUsd: number | null;
+  basePriceUsd?: number | null;
+  barcode: string | null;
+  publishToPos: boolean;
   discountPercent: number;
   featured: boolean;
   active: boolean;
@@ -269,7 +271,10 @@ export async function createProduct(input: ProductInput): Promise<AdminProduct> 
       category: input.category,
       category_id: input.categoryId,
       base_price: input.basePrice,
-      base_price_usd: input.basePriceUsd,
+      base_price_usd: input.basePriceUsd ?? null,
+      barcode: input.barcode,
+      is_website_published: true,
+      publish_to_pos: input.publishToPos,
       discount_percent: input.discountPercent,
       featured: input.featured,
       active: input.active,
@@ -292,19 +297,13 @@ export async function createProduct(input: ProductInput): Promise<AdminProduct> 
   const { data: createdColors, error: colorsError } = await supabase
     .from("product_colors")
     .insert(colors)
-    .select("id");
+    .select("id, sort_order");
 
   if (colorsError) rethrow(colorsError, "save its colours");
 
-  /* Postgres does not promise the order of returned rows, so the ids are matched
-     back to their positions by `sort_order` rather than by array position. Getting
-     this wrong quietly attaches every photograph to the wrong colourway. */
-  const ordered = [...(createdColors as { id: string; sort_order: number }[])].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
-
-  const imageRows = ordered.flatMap((color, index) =>
-    (input.images[index] ?? []).map((image, slot) => ({
+  /* Match each photo batch to the colour's stored position. */
+  const imageRows = createdColors.flatMap((color) =>
+    (input.images[color.sort_order] ?? []).map((image, slot) => ({
       color_id: color.id,
       angle: image.angle,
       image_url: image.url,
@@ -350,7 +349,9 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ad
       category: input.category,
       category_id: input.categoryId,
       base_price: input.basePrice,
-      base_price_usd: input.basePriceUsd,
+      base_price_usd: input.basePriceUsd ?? null,
+      barcode: input.barcode,
+      publish_to_pos: input.publishToPos,
       discount_percent: input.discountPercent,
       featured: input.featured,
       active: input.active,
@@ -383,12 +384,8 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Ad
 
   if (colorsError) throw colorsError;
 
-  const ordered = [...(createdColors as { id: string; sort_order: number }[])].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
-
-  const imageRows = ordered.flatMap((color, index) =>
-    (input.images[index] ?? []).map((image, slot) => ({
+  const imageRows = createdColors.flatMap((color) =>
+    (input.images[color.sort_order] ?? []).map((image, slot) => ({
       color_id: color.id,
       angle: image.angle,
       image_url: image.url,

@@ -71,16 +71,10 @@ function byCreatedAtDesc(a: Product, b: Product): number {
 }
 
 function mockProducts(category?: Product["category"]): Product[] {
-  const sorted = [...MOCK_PRODUCTS]
+  return [...MOCK_PRODUCTS]
     .sort((a, b) => byCreatedAtDesc(a, b))
-    .filter((product) => !category || product.category === category);
-
-  /* Mirror the database read: only colours with stock are visible, and a
-     product with no available colour is not a product the shop can sell. */
-  return sorted.flatMap((product) => {
-    const colors = product.colors.filter((color) => color.stockQuantity > 0);
-    return colors.length > 0 ? [{ ...product, colors }] : [];
-  });
+    .filter((product) => !category || product.category === category)
+    .map(withShopColors);
 }
 
 /** The same field matching as `searchProducts`, for a database that is down. */
@@ -338,23 +332,16 @@ async function readFromSupabase(
   }
 }
 
-/**
- * The select that builds a product with its colours and their photographs.
- *
- * `product_colors!inner` is deliberate: the public shop must only see colours
- * that are in stock, and a product with no such colour must disappear from every
- * grid, search result and detail route. Admin reads use their own select in
- * `lib/admin-api.ts` and still see sold-out colours so they can be restocked.
- *
- * Written once because getting it subtly wrong is easy and looks like missing data
- * rather than like a bug: forgetting `product_images` yields a product whose
- * colourways all render the same placeholder, and forgetting the sort columns
- * yields colours in a stable-looking but arbitrary order.
- */
 const PRODUCT_SELECT = "*, product_colors!inner(*, product_images(*))";
 
-/** The embedded-resource filter that makes `product_colors!inner` stock-aware. */
-const IN_STOCK_FILTER = "product_colors.stock_quantity";
+function withShopColors(product: Product): Product {
+  const available = product.colors.filter((color) => color.stockQuantity > 0);
+  return available.length > 0 ? { ...product, colors: available } : product;
+}
+
+function toShopProduct(row: ProductWithRelations): Product {
+  return withShopColors(toProduct(row));
+}
 
 /**
  * All products, newest first. The category filter is optional, and the two
@@ -366,14 +353,13 @@ export async function getProducts(category?: Product["category"]): Promise<Produ
     let query = supabase
       .from("products")
       .select(PRODUCT_SELECT)
-      .gt(IN_STOCK_FILTER, 0)
       .order("created_at", { ascending: false });
     if (category) query = query.eq("category", category);
     return query;
   });
 
   if (rows === null) return mockProducts(category);
-  return rows.map(toProduct).sort((a, b) => byCreatedAtDesc(a, b));
+  return rows.map(toShopProduct).sort((a, b) => byCreatedAtDesc(a, b));
 }
 
 /**
@@ -421,20 +407,17 @@ export async function searchProducts(query: string): Promise<Product[]> {
       .select(PRODUCT_SELECT)
       .ilike("name", pattern)
       .eq("active", true)
-      .gt(IN_STOCK_FILTER, 0)
       .limit(100),
     supabase
       .from("products")
       .select(PRODUCT_SELECT)
       .ilike("description", pattern)
       .eq("active", true)
-      .gt(IN_STOCK_FILTER, 0)
       .limit(100),
     supabase
       .from("product_colors")
       .select("product_id")
       .ilike("color_name", pattern)
-      .gt("stock_quantity", 0)
       .limit(500),
     supabase
       .from("categories")
@@ -524,7 +507,6 @@ export async function searchProducts(query: string): Promise<Product[]> {
           .select(PRODUCT_SELECT)
           .in("category_id", [...categoryIds])
           .eq("active", true)
-          .gt(IN_STOCK_FILTER, 0)
           .limit(100)
       : emptyResult,
     colorProductIds.length > 0
@@ -533,7 +515,6 @@ export async function searchProducts(query: string): Promise<Product[]> {
           .select(PRODUCT_SELECT)
           .in("id", colorProductIds)
           .eq("active", true)
-          .gt(IN_STOCK_FILTER, 0)
           .limit(100)
       : emptyResult,
   ]);
@@ -555,7 +536,7 @@ export async function searchProducts(query: string): Promise<Product[]> {
     }
   }
 
-  return [...byId.values()].map(toProduct).sort(byCreatedAtDesc);
+  return [...byId.values()].map(toShopProduct).sort(byCreatedAtDesc);
 }
 
 /**
@@ -572,7 +553,6 @@ export async function getProductBySlug(
     let query = supabase
       .from("products")
       .select(PRODUCT_SELECT)
-      .gt(IN_STOCK_FILTER, 0)
       .eq("slug", slug);
     /* The category guard is not redundant with the route: slugs are unique across
        the whole catalogue, so without it a shoe slug resolves on the bags route. */
@@ -587,7 +567,7 @@ export async function getProductBySlug(
     return match;
   }
 
-  return rows.length > 0 ? toProduct(rows[0]) : null;
+  return rows.length > 0 ? toShopProduct(rows[0]) : null;
 }
 
 /**
@@ -601,8 +581,7 @@ export async function getProductSlugs(category?: Product["category"]): Promise<s
   const rows = await readFromSupabase(`getProductSlugs:${category ?? "all"}`, (supabase) => {
     let query = supabase
       .from("products")
-      .select("slug, product_colors!inner(stock_quantity)")
-      .gt(IN_STOCK_FILTER, 0);
+      .select("slug, product_colors!inner(id)");
     if (category) query = query.eq("category", category);
     return query;
   });
@@ -611,11 +590,7 @@ export async function getProductSlugs(category?: Product["category"]): Promise<s
     const products = mockProducts(category);
     return products.map((product) => product.slug);
   }
-  /* The inner join returns one row per in-stock colour, so a product with three
-     available colours appears three times. Static params must be unique. */
-  return [
-    ...new Set(rows.map((row) => (row as { slug: string }).slug)),
-  ];
+  return rows.map((row) => (row as { slug: string }).slug);
 }
 
 /**
@@ -666,8 +641,7 @@ export async function getProductsByCategory(
     const { data: colorRows, error: colorError } = await supabase
       .from("product_colors")
       .select("product_id")
-      .in("color_name", filters.colors)
-      .gt("stock_quantity", 0);
+      .in("color_name", filters.colors);
 
     if (colorError) {
       reportOnce(
@@ -698,8 +672,7 @@ export async function getProductsByCategory(
         .from("products")
         .select(PRODUCT_SELECT)
         .in("category_id", categoryIds)
-        .eq("active", true)
-        .gt(IN_STOCK_FILTER, 0);
+        .eq("active", true);
 
       if (colorProductIds) {
         query = query.in("id", colorProductIds);
@@ -731,7 +704,7 @@ export async function getProductsByCategory(
   if (rows === null) return fallback();
 
   /* Keep the database order: it already reflects the requested sort. */
-  return rows.map((row) => toProduct(row));
+  return rows.map(toShopProduct);
 }
 
 /**
@@ -770,8 +743,7 @@ export async function getCategoryColorOptions(
     .from("products")
     .select("product_colors!inner(color_name, color_hex)")
     .in("category_id", categoryIds)
-    .eq("active", true)
-    .gt(IN_STOCK_FILTER, 0);
+    .eq("active", true);
 
   if (error) {
     reportOnce(
@@ -810,12 +782,11 @@ export async function getFeaturedProducts(): Promise<Product[]> {
       .from("products")
       .select(PRODUCT_SELECT)
       .eq("featured", true)
-      .gt(IN_STOCK_FILTER, 0)
       .order("created_at", { ascending: false }),
   );
 
   if (rows === null) return mockProducts().filter((product) => product.featured);
-  return rows.map(toProduct).sort((a, b) => byCreatedAtDesc(a, b));
+  return rows.map(toShopProduct).sort((a, b) => byCreatedAtDesc(a, b));
 }
 
 /**
@@ -831,13 +802,12 @@ export async function getNewArrivals(limit: number): Promise<Product[]> {
     supabase
       .from("products")
       .select(PRODUCT_SELECT)
-      .gt(IN_STOCK_FILTER, 0)
       .order("created_at", { ascending: false })
       .limit(Math.max(0, limit)),
   );
 
   if (rows === null) return mockProducts().slice(0, Math.max(0, limit));
-  return rows.map(toProduct);
+  return rows.map(toShopProduct);
 }
 
 /**

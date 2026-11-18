@@ -336,6 +336,9 @@ export type Database = {
         Row: {
           active: boolean
           base_price: number
+          barcode: string | null
+          is_website_published: boolean
+          publish_to_pos: boolean
           base_price_usd: number | null
           category: string
           category_id: string | null
@@ -350,6 +353,9 @@ export type Database = {
         Insert: {
           active?: boolean
           base_price: number
+          barcode?: string | null
+          is_website_published?: boolean
+          publish_to_pos?: boolean
           base_price_usd?: number | null
           category: string
           category_id?: string | null
@@ -364,6 +370,9 @@ export type Database = {
         Update: {
           active?: boolean
           base_price?: number
+          barcode?: string | null
+          is_website_published?: boolean
+          publish_to_pos?: boolean
           base_price_usd?: number | null
           category?: string
           category_id?: string | null
@@ -404,6 +413,7 @@ export type Database = {
           instagram_url: string | null
           phone: string
           pickup_available: boolean
+          exchange_rate_kes_to_usd: number
           shop_name: string
           updated_at: string | null
           whatsapp: string
@@ -419,6 +429,7 @@ export type Database = {
           instagram_url?: string | null
           phone?: string
           pickup_available?: boolean
+          exchange_rate_kes_to_usd?: number
           shop_name?: string
           updated_at?: string | null
           whatsapp?: string
@@ -434,6 +445,7 @@ export type Database = {
           instagram_url?: string | null
           phone?: string
           pickup_available?: boolean
+          exchange_rate_kes_to_usd?: number
           shop_name?: string
           updated_at?: string | null
           whatsapp?: string

@@ -1,5 +1,7 @@
 "use client";
 
+import { useContext } from "react";
+import { ExchangeRateContext } from "./ExchangeRateContext";
 import { hasDiscount, getDisplayPrices } from "@/lib/format";
 
 type PriceRowProps = {
@@ -45,7 +47,13 @@ export function PriceRow({
   className = "",
   basePriceUsd,
 }: PriceRowProps) {
-  const display = getDisplayPrices({ basePrice, basePriceUsd, discountPercent });
+  const exchangeRate = useContext(ExchangeRateContext);
+  const display = getDisplayPrices({
+    basePrice,
+    basePriceUsd,
+    exchangeRate,
+    discountPercent,
+  });
   const discounted = hasDiscount(discountPercent);
 
   const priceSize = size === "detail" ? "text-3xl md:text-4xl" : "text-sm sm:text-base";

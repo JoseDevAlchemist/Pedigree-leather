@@ -31,8 +31,14 @@ const USD_GROUPED = new Intl.NumberFormat("en-US", {
   useGrouping: true,
 });
 
-export function formatUsd(amount: number): string {
-  return `$${USD_GROUPED.format(Math.round(amount))}`;
+const USD_CENTS = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+export function formatUsd(amount: number, showCents = false): string {
+  const formatter = showCents ? USD_CENTS : USD_GROUPED;
+  return `$${formatter.format(amount)}`;
 }
 
 /**
@@ -73,18 +79,21 @@ export function getDisplayPrices(product: {
   basePrice: number;
   basePriceUsd?: number | null;
   discountPercent: number;
+  exchangeRate?: number;
 }): {
   kes: string;
   usd: string | null;
   kesOriginal?: string;
   usdOriginal?: string | null;
 } {
-  const { basePrice, basePriceUsd, discountPercent } = product;
+  const { basePrice, basePriceUsd, discountPercent, exchangeRate } = product;
+  const automatic = basePriceUsd == null && exchangeRate !== undefined;
+  const usdBase = basePriceUsd ?? (exchangeRate === undefined ? null : basePrice / exchangeRate);
   const hasDiscountFlag = hasDiscount(discountPercent);
 
   const kes = formatPrice(hasDiscountFlag ? calculateDiscountedPrice(basePrice, discountPercent) : basePrice);
-  const usd = basePriceUsd != null
-    ? formatUsd(hasDiscountFlag ? Math.round(basePriceUsd * (1 - discountPercent / 100)) : basePriceUsd)
+  const usd = usdBase != null
+    ? formatUsd(effectivePrice(usdBase, discountPercent), automatic)
     : null;
 
   if (hasDiscountFlag) {
@@ -92,7 +101,7 @@ export function getDisplayPrices(product: {
       kes,
       usd,
       kesOriginal: formatPrice(basePrice),
-      usdOriginal: basePriceUsd != null ? formatUsd(basePriceUsd) : null,
+      usdOriginal: usdBase != null ? formatUsd(usdBase, automatic) : null,
     };
   }
 

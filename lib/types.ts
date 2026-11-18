@@ -41,7 +41,7 @@ export interface ColorVariant {
   /**
    * Units of this colourway on hand. Stock belongs to the colour, not the
    * product: a bag in cognac can be available while the same bag in black is
-   * sold out. Storefront reads only return colours with a positive count.
+   * sold out. Storefront reads keep every colour when the product is sold out.
    */
   stockQuantity: number;
   /**
@@ -61,7 +61,7 @@ export interface Product {
   description: string;
   /** Price in KES before any discount. */
   basePrice: number;
-  /** Optional price in USD before any discount. When null/undefined, only KES is shown. */
+  /** Manual USD price before any discount. A blank value uses the shop exchange rate. */
   basePriceUsd?: number | null;
   /** 0 for no discount. Otherwise 1–99. Applied to `basePrice` and `basePriceUsd` proportionally. */
   discountPercent: number;

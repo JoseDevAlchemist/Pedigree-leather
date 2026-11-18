@@ -22,13 +22,14 @@ type NavbarProps = {
    * the category fetch failed.
    */
   categories?: readonly Category[];
+  parentCategories?: readonly Category[];
 };
 
 function isActive(href: string, pathname: string): boolean {
   return href === "/" ? pathname === href : pathname.startsWith(href);
 }
 
-export function Navbar({ categories }: NavbarProps = {}) {
+export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const reduceMotion = useReducedMotion();
@@ -62,7 +63,7 @@ export function Navbar({ categories }: NavbarProps = {}) {
      static items (Home, Contact). The old hardcoded Bags/Shoes links are only a
      fallback for a failed/empty category fetch; once the database has roots, the
      categories own those slots and the static duplicates disappear. */
-  const categoryLinks = categories?.filter((c) => !c.parentId) ?? [];
+  const categoryLinks = parentCategories ?? [];
   const usingCategories = categoryLinks.length > 0;
   const staticLinks = NAV_ITEMS.filter(
     (item) => !usingCategories || (item.href !== "/bags" && item.href !== "/shoes"),

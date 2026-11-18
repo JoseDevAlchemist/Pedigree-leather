@@ -185,6 +185,8 @@ export function toProduct(row: ProductWithRelations): Product {
 export interface AdminProduct extends Product {
   /** Hidden from the shop, visible here. The only reason this type exists. */
   active: boolean;
+  barcode: string | null;
+  publishToPos: boolean;
   /**
    * Units across every colour. Derived for the admin table's at-a-glance stock
    * column; the editable value lives on each colour in the product form.
@@ -204,6 +206,8 @@ export function toAdminProduct(row: AdminProductRow): AdminProduct {
   return {
     ...product,
     active: row.active,
+    barcode: row.barcode ?? null,
+    publishToPos: row.publish_to_pos ?? true,
     totalStock: product.colors.reduce((sum, color) => sum + color.stockQuantity, 0),
   };
 }

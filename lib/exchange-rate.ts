@@ -1,0 +1,1 @@
+export const DEFAULT_USD_EXCHANGE_RATE = 130;

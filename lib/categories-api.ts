@@ -91,32 +91,10 @@ export const getCategories = cache(async (): Promise<Category[]> => {
   return ((data ?? []) as CategoryRow[]).map(toCategory);
 });
 
-/**
- * Top-level categories only (`parent_id IS NULL`), in display order.
- *
- * Used where a parent is the only sensible choice — picking a parent for a new
- * category, for example. The shop itself needs the full list to build dropdowns,
- * so this is not simply "the navbar's categories".
- */
-export const getParentCategories = cache(async (): Promise<Category[]> => {
-  const supabase = publicClientOrNull("getParentCategories");
-  if (!supabase) return [];
-
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("is_active", true)
-    .is("parent_id", null)
-    .order("display_order", { ascending: true })
-    .order("name", { ascending: true });
-
-  if (error) {
-    console.error("[pedigree/categories] getParentCategories:", error);
-    return [];
-  }
-
-  return ((data ?? []) as CategoryRow[]).map(toCategory);
-});
+/** Top-level active categories, in display order. */
+export const getParentCategories = cache(async (): Promise<Category[]> =>
+  (await getCategories()).filter((category) => !category.parentId),
+);
 
 /**
  * A single active category by slug, or `null`.
