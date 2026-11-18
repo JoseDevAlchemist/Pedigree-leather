@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import {
   createProduct as createProductRow,
@@ -120,7 +121,10 @@ function isRedirect(error: unknown): boolean {
  * revalidated. That is the one gap in the static build, and this is where it gets
  * closed.
  */
-export async function createProductAction(input: unknown): Promise<ActionResult<unknown>> {
+export async function createProductAction(
+  input: unknown,
+  productId?: string,
+): Promise<ActionResult<unknown>> {
   return guarded("createProduct", async () => {
     const parsed = productInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -128,7 +132,10 @@ export async function createProductAction(input: unknown): Promise<ActionResult<
       throw new ValidationError(message);
     }
 
-    const created = await createProductRow(parsed.data as ProductInput);
+    const id = z.uuid().optional().safeParse(productId);
+    if (!id.success) throw new ValidationError("Invalid product ID.");
+
+    const created = await createProductRow(parsed.data as ProductInput, id.data);
     revalidateShop();
     return created;
   });

@@ -259,12 +259,16 @@ export async function getProduct(id: string): Promise<AdminProduct | null> {
  * `throwOnError` on each call, and the error surfaced, is what makes the admin form
  * show the failure instead of silently saving half a product.
  */
-export async function createProduct(input: ProductInput): Promise<AdminProduct> {
+export async function createProduct(
+  input: ProductInput,
+  productId?: string,
+): Promise<AdminProduct> {
   const supabase = createAdminClient();
 
   const { data: product, error: productError } = await supabase
     .from("products")
     .insert({
+      ...(productId && { id: productId }),
       name: input.name,
       slug: input.slug,
       description: input.description,

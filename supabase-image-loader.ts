@@ -13,7 +13,7 @@
  *   - Passes through local (`/`) assets, data/blob URIs, and external URLs that
  *     are not Supabase storage URLs unchanged.
  *   - Extracts the storage path from a Supabase public URL and rewrites it to the
- *     render endpoint with `width`, `quality` and `format=webp`.
+ *     render endpoint with `width` and `quality`. Supabase negotiates WebP automatically.
  *   - Requests a square derivative (`height` equal to `width`, `resize=cover`).
  *     Every product frame is square and already uses `object-cover`, so cropping
  *     at the renderer discards the off-frame area before it is downloaded
@@ -21,10 +21,8 @@
  *   - Caps the render width: phone-sized requests become 800px and desktop-sized
  *     requests become 1200px. Fixed thumbnails (cart, admin table) keep their
  *     requested 64–256px width instead of being upscaled.
- *   - Preserves cache-busting query params such as `?v=...`. Stored image URLs
- *     carry one after a replacement upload, and treating that query as part of
- *     the path produced `?v=...?width=...`, which made Supabase ignore the width
- *     and serve a near-original file.
+ *   - Parses the object path independently of the query. Only the upload
+ *     version (`v`) is carried over to the render URL.
  *   - Treats any other relative string as a storage path and rewrites it the same way.
  *   - Falls back without throwing when `NEXT_PUBLIC_SUPABASE_URL` is absent at
  *     build time: a full Supabase URL still supplies its own origin, and anything
@@ -37,9 +35,6 @@ const OBJECT_PATH_RE = /^\/?storage\/v1\/object\/public\/([^/]+)\/(.+)$/;
 
 /** `/storage/v1/render/image/public/<bucket>/<path>` */
 const RENDER_PATH_RE = /^\/?storage\/v1\/render\/image\/public\/([^/]+)\/(.+)$/;
-
-/** Params we own. Anything else on the source URL is a cache-buster or tracking. */
-const RESERVED_PARAMS = new Set(["width", "quality", "format", "height", "resize"]);
 
 /**
  * Fixed-size thumbnails below this stay at their requested width. Upscaling a
@@ -75,11 +70,8 @@ function renderUrl(
     `${origin}/storage/v1/render/image/public/${bucket}/${path}`,
   );
 
-  /* Keep `v=...` so replacing a photograph at the same storage path still
-     bypasses the CDN cache, but never keep a stale width/quality/format. */
-  sourceParams.forEach((value, key) => {
-    if (!RESERVED_PARAMS.has(key)) url.searchParams.set(key, value);
-  });
+  const version = sourceParams.get("v");
+  if (version !== null) url.searchParams.set("v", version);
 
   url.searchParams.set("width", String(width));
   /* The layout always displays product photography in a square well with
@@ -88,10 +80,6 @@ function renderUrl(
   url.searchParams.set("height", String(width));
   url.searchParams.set("resize", "cover");
   url.searchParams.set("quality", String(quality));
-  /* Supabase also honours the browser's Accept header. Setting this explicitly
-     keeps the result WebP even when a proxy strips or rewrites Accept. */
-  url.searchParams.set("format", "webp");
-
   return url.toString();
 }
 
@@ -108,7 +96,7 @@ export default function supabaseLoader({
   if (src.startsWith("/") || /^(data|blob):/i.test(src)) return src;
 
   const safeWidth = optimizedWidth(Math.max(1, Math.round(width ?? 400)));
-  const safeQuality = Math.min(100, Math.max(1, Math.round(quality ?? 75)));
+  const safeQuality = Math.min(100, Math.max(20, Math.round(quality ?? 75)));
 
   if (/^https?:\/\//i.test(src)) {
     let source: URL;

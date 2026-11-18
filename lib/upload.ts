@@ -49,33 +49,40 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** The extension for a mime type, so the path ends in something meaningful. */
-const EXTENSION: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/avif": "avif",
-};
-
-/**
- * `<productSlug>/<colour>-<angle>.<ext>`.
- *
- * One file per slot, no version suffix. That is what makes re-uploading a
- * photograph idempotent: the new file overwrites the old one at the same path, so
- * there is never a stale `-2.jpg` to clean up and no orphaned object left in the
- * bucket when somebody replaces a photo.
- *
- * Exported because the admin form shows the path it is about to write, and a person
- * should be able to see that two colours are not going to collide.
- */
+/** The object key for a product photo. Use the draft colour ID until it has a name. */
 export function imagePath(
-  productSlug: string,
+  productId: string,
+  colorId: string,
   colorName: string,
   angle: Angle,
-  mimeType: string,
 ): string {
-  const extension = EXTENSION[mimeType] ?? "bin";
-  return `${slugify(productSlug)}/${slugify(colorName)}-${angle}.${extension}`;
+  const color = slugify(colorName) || slugify(colorId);
+  return `${productId}/${color}-${angle}.webp`;
+}
+
+/** Encode photos before upload so the filename and content type match the bytes. */
+async function encodeWebp(file: File): Promise<Blob> {
+  if (file.type === "image/webp") return file;
+
+  const image = await createImageBitmap(file);
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Could not prepare the image for upload.");
+
+    context.drawImage(image, 0, 0);
+    const webp = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/webp", 0.9),
+    );
+    if (webp?.type !== "image/webp") {
+      throw new Error("This browser could not encode the image as WebP.");
+    }
+    return webp;
+  } finally {
+    image.close();
+  }
 }
 
 /** A public URL for a stored path. */
@@ -107,7 +114,8 @@ export function publicImagePath(bucket: string, path: string): string {
  */
 export async function uploadProductImage(
   file: File,
-  productSlug: string,
+  productId: string,
+  colorId: string,
   colorName: string,
   angle: Angle,
 ): Promise<string> {
@@ -127,15 +135,18 @@ export async function uploadProductImage(
     throw new Error(`${file.name} is empty.`);
   }
 
-  const supabase = createClient();
-  const path = imagePath(productSlug, colorName, angle, file.type);
+  const webp = await encodeWebp(file);
+  if (webp.size > MAX_BYTES) {
+    throw new Error("The converted image is too large. Please resize it to under 4MB.");
+  }
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+  const supabase = createClient();
+  const path = imagePath(productId, colorId, colorName, angle);
+
+  const { error } = await supabase.storage.from(BUCKET).upload(path, webp, {
     /* Replace whatever is in this slot. See the note on `imagePath`. */
     upsert: true,
-    /* Belt and braces: the bucket also constrains mime types, and a client-side
-       check is advisory while this one is not. */
-    contentType: file.type,
+    contentType: "image/webp",
     cacheControl: "31536000",
   });
 

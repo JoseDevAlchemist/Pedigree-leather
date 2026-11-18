@@ -8,7 +8,7 @@ import { useMemo, useRef, useState } from "react";
 
 import { createProductAction, updateProductAction } from "@/lib/actions/products";
 import { ALL_ANGLES, angleOrder, categoryAngles } from "@/lib/angles";
-import { uploadProductImage } from "@/lib/upload";
+import { imagePath, publicImageUrl, uploadProductImage } from "@/lib/upload";
 import type { AdminProduct } from "@/lib/mappers";
 import type { Angle, Category, Product } from "@/lib/types";
 import { productInputSchema } from "@/lib/validation";
@@ -82,11 +82,8 @@ function fileProblem(file: File): string | null {
 /**
  * Stamp a URL so a replaced photograph is not served from a stale cache.
  *
- * A slot always writes to the same storage path (see `imagePath` in
- * `lib/upload.ts`), and storage serves that path with a one-year cache. With an
- * unchanged URL, replacing a photo leaves the old bytes in the browser and in
- * the Next image optimiser no matter how many times the admin saves. The `?v=`
- * seed makes the URL new, so both layers fetch the file that is actually there.
+ * Replacing a photo can reuse an object key that is cached for a year. The
+ * version makes both the raw preview URL and the transformed URL unique.
  */
 function withCacheBuster(url: string): string {
   return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
@@ -138,6 +135,7 @@ export function ProductForm({
   categories?: readonly Category[];
 }) {
   const router = useRouter();
+  const productId = useRef(initialData?.id);
   const toast = useToast();
 
   const [name, setName] = useState(initialData?.name ?? "");
@@ -397,6 +395,15 @@ export function ProductForm({
       return problem;
     }
 
+    const id = (productId.current ??= crypto.randomUUID());
+    const target = publicImageUrl(imagePath(id, color.key, color.name, angle));
+    const pathInUse = colors.some(
+      (entry) =>
+        entry.key !== colorKey &&
+        Object.values(entry.images).some((url) => url?.split("?")[0] === target),
+    );
+    if (pathInUse) return "This filename is already used by another colour. Choose a distinct colour name.";
+
     /* Show the pick immediately — a blob preview and its name — so the file can
        be confirmed before the upload has even finished. */
     const previewUrl = URL.createObjectURL(file);
@@ -406,9 +413,7 @@ export function ProductForm({
     });
 
     try {
-      /* The slug is the storage path's first segment, so the folder is predictable
-         before the product even has an id. */
-      const url = await uploadProductImage(file, slug || "unassigned", color.name || "colour", angle);
+      const url = await uploadProductImage(file, id, color.key, color.name, angle);
       setColors((current) =>
         current.map((entry) => {
           if (entry.key !== colorKey) return entry;
@@ -547,7 +552,7 @@ export function ProductForm({
 
     const result =
       mode === "create"
-        ? await createProductAction(parsed.data)
+        ? await createProductAction(parsed.data, productId.current)
         : await updateProductAction(initialData!.id, parsed.data);
 
     if (result.ok) {
@@ -1061,8 +1066,7 @@ function ColorBlock({
                         src={shown}
                         alt={`${color.name || "Colour"} ${angleLabel(angle)}`}
                         fill
-                        sizes="(max-width: 640px) 50vw, 240px"
-                        unoptimized={Boolean(preview)}
+                        unoptimized
                         className="object-cover"
                       />
 
