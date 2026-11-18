@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { getProductBySlug, getProductSlugs } from "@/lib/api";
+import { originalProductImageUrl } from "@/lib/product-image-url";
 
 type ProductPageProps = PageProps<"/bags/[slug]">;
 
@@ -24,7 +25,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   }
 
   const firstImage = product.colors[0]?.images?.front;
-  const imageUrl = firstImage ? `https://${new URL(firstImage).host}${firstImage}` : "/icon.png";
+  const imageUrl = firstImage ? originalProductImageUrl(firstImage) : "/icon.png";
 
   return {
     title: product.name,

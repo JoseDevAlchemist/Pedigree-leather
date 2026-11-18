@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import { formatPrice } from "@/lib/format";
+import { originalProductImageUrl } from "@/lib/product-image-url";
 import { MAX_QUANTITY_PER_ITEM, useCartStore, useCartCount, useCartSubtotal } from "@/lib/store/cart";
 
 import { useCartDrawer } from "@/components/cart/CartDrawerProvider";
@@ -262,14 +263,12 @@ function CartLineThumbnail({
     >
       {image ? (
         <Image
-          src={image}
+          src={originalProductImageUrl(image)}
           alt=""
           width={64}
           height={64}
-          sizes="32px"
-          quality={75}
           className="size-16 object-cover"
-          /* If the renderer rejects the source, the colour block underneath is
+          /* If the photo fails to load, the colour block underneath is
              the same fallback the product grid uses. */
           onError={(event) => {
             event.currentTarget.style.display = "none";

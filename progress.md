@@ -1015,3 +1015,102 @@ Two independent causes:
 - **Migration-history warning:** the linked remote database already had POS migrations numbered `012`–`020` (`pos`, `pos_stock`, `pos_record_sale`, etc.) while this branch uses `012`–`014` for categories/M-Pesa. `supabase db push` therefore considers local `012`–`014` already applied and will not run them. The payment SQL was applied manually; the repo's migration numbering still needs reconciling with the POS branch before the next `db push`.
 
 **Still open:** replace the `MPESA_CALLBACK_URL` placeholder with the deployed URL, verify Daraja sandbox credentials, and live-test an STK push with a Safaricom test number.
+
+---
+
+## Changelog — Admin image previews, POS SKU, and product labels (2026-11-18)
+
+### Admin image previews and uploads
+
+- The product form uses the public Supabase URL for stored previews and a local preview while an upload is in flight. The storefront loader rewrites public object URLs to the render endpoint, keeps the upload version as a separate query parameter, and lets Supabase negotiate WebP.
+- New uploads are stored as WebP under `product-images/{productId}/{colourName}-{angle}.webp`. New products reserve a UUID before uploading and reuse it on insert. Unnamed colours use their draft ID in the filename. Next.js explicitly allows public object URLs from `scvscxbxfpjqbqkfkset.supabase.co`.
+- TypeScript and focused loader, preview, and mocked upload checks passed. The sandbox blocked the dev server from binding a port, and Supabase credentials were unavailable. A live admin upload and persisted `image_url` check remain open.
+
+### POS SKU and label printing
+
+- The Pedigree Leather create/edit form displays **Product Code / SKU**. Both save paths continue to write the value to Supabase `products.barcode`.
+- Product Edit offers **Print label** for each saved colour when the product has a SKU. The protected print view uses saved values and shows the product code, name, colour, and current KES selling price on a 2⅝ × 1 inch label. No migration was required.
+- The existing search in the sibling `PedigreePOS` repository matches name, slug, barcode, and QR code. A fixture verified that entering `LB-532` found the product, pressing Enter added one unit and cleared the query, and the scanner callback added another unit. The separate POS manager form still needs the field-label rename because that repository was outside the writable workspace.
+- Targeted ESLint and label rendering checks passed. The standard webpack build stopped at Next.js parsing empty TypeScript CLI output. A retry with the TypeScript compiler API and local font fixtures passed, and the temporary configuration was restored. Live till, scanner hardware, and physical print output remain unverified.
+
+---
+
+## Development session — Project status audit (2026-11-18)
+
+Audit baseline: Pedigree Leather HEAD `94cb683` plus the existing working-tree SKU wording and label route from the preceding session. No later storefront commit was present. This entry records current implementation and previously underdocumented changes in migrations 021–024, catalogue filtering, colour inventory, exchange rates, POS publication, and PDF receipts. The older status and setup notes remain historical.
+
+Reviewed the progress log, README, AGENTS, project reference, setup/deploy/handover and planning docs, storefront source and migrations, and the local `PedigreePOS` (`0f88725`) and `posversion2` (`ba53643`) source for shared schema assumptions. This was a documentation-only audit. No deployed site, production schema, payment provider, or live till was probed.
+
+### Current Project Status
+
+#### Implemented and locally verified
+
+- TypeScript passed with `tsc --noEmit --incremental false` on the inspected working tree. Local fixtures confirmed an alphanumeric SKU is trimmed, a blank SKU becomes null, disabling Publish to POS survives validation, zero colour stock is accepted and negative stock rejected, a colour can carry multiple WebP/JPG URLs, and USD display uses the configured conversion or an explicit product override.
+- The preceding session records passing local fixtures for raw admin previews, loader URL rewriting, mocked uploads, the label view, and Enter-to-cart for `LB-532` in the older POS. It also records a webpack build with temporary TypeScript and font workarounds. These are historical local checks. No new build or browser session was run for this audit.
+
+#### Implemented in source, with production verification outstanding
+
+| Area | Current implementation |
+| --- | --- |
+| Categories and subcategories | Owner-managed categories have a parent, slug, order and active state. The product form selects a category via `products.category_id`. Navigation and category pages use active database records, and parent category grids include direct children. Category filters and sorting run through the storefront data layer. The separate legacy `bag`/`shoe` value still drives detail URLs, some admin filtering and default image angles. See migrations 012 and 021, `lib/categories-api.ts` and `lib/api.ts`. |
+| Product management and SKU | Admin create/edit routes share `ProductForm.tsx` and server-side validation. Saves persist category, optional SKU in `products.barcode`, KES and optional USD price, discount, flags, colours, stock and ordered photos. Migration 024 defines a partial unique index on non-null barcodes. The working tree includes a guarded per-colour label view using saved SKU and the effective KES price. The older POS can search SKU on Enter. The storefront admin list search currently covers name and slug. |
+| Photography | The admin supports batch JPG/JPEG, PNG and WebP input per colour with angle slots and a 4 MiB limit. New objects are uploaded as WebP under the product UUID, with existing JPG URLs still accepted by the data model. Admin previews use blob/public URLs and storefront images use the custom Supabase transformation loader. Live upload, replacement, URL persistence, transformation availability and label printing still need staging checks. |
+| Inventory | Migration 022 moves stock and the decrement RPC to `product_colors`, with a backfill from product stock when present. Admin totals sum colours. Web checkout checks live colour quantity before creating an order and then calls the colour decrement RPC. Available colours take precedence in storefront displays. Fully sold-out products can remain visible with purchase controls disabled. |
+| Currency | Owner Settings saves a positive finite KES-per-USD value in `shop_settings.exchange_rate_kes_to_usd` for the `id = 'default'` row. The storefront reads that value, falls back to 130 and lets an explicit USD price override conversion. Web checkout remains KES. The newer POS implements a storefront-row read and a manager RPC that supports both settings table shapes. Shared updates and resulting display changes have yet to be verified. |
+| Publication and POS | The storefront saves `publish_to_pos` and sets `is_website_published` to true on create. Migration 024 installs a restrictive POS product-read policy only if `pos_is_staff()` already exists when it runs. There is no storefront-side push or standalone till in this repo. The older POS pulls catalogue rows and queues sales through its own sync layer. The newer POS has colour-based catalogue and sale paths. The deployed client, policy installation, RPC visibility and whether unpublishing removes cached POS listings remain open. |
+| Payments and receipts | Daraja STK initiation, checkout-request correlation, callback and browser polling are wired. Manual M-Pesa saves a pending reference for reconciliation, and pay on delivery remains available. A Resend PDF receipt is wired to successful STK callbacks. Flutterwave return and webhook handlers exist. Production provider settlement and receipt delivery were not verified. |
+
+#### Incomplete or broken
+
+- **Reported stock error.** The exact error, failing request and project are still unknown. The older POS explicitly selects `products.stock_quantity`, and its SQL includes product-level stock changes for catalogue creation, sales and returns. On a shared schema after migration 022 drops that column, those old paths are incompatible. A storefront request failing on `product_colors.stock_quantity` points instead to the colour column, deployment/schema selection, or PostgREST metadata. The admin readiness probe selects only `products.id` and can pass while either stock contract is broken.
+- **Product edits and stock consistency.** Creates write product, colours and photos in separate calls. Edits delete and recreate all colours and cascade image rows, so a save can replace IDs, overwrite newer counts from a stale form, or leave a partially written product. POS v2 sales and return references can reject colour deletion on a shared schema. Even a successful replacement can invalidate a storefront cart holding the old colour IDs. Order creation and decrement are also separate writes, and checkout logs decrement failures without undoing the order. Cancellation does not restore stock in the inspected path.
+- **Website publication and SKU privacy.** The storefront catalogue filters active products or relies on RLS and does not consistently enforce `is_website_published` itself. Confirm how POS-only items are kept off the website. The newer POS private-code migration revokes direct barcode SELECT and explicitly requires storefront projections that omit it. The storefront still uses a wildcard product projection in shared public reads, so applying that migration would make those reads incompatible under the affected roles. Catalogue mock fallback can mask failures.
+- **Payment launch blockers.** The storefront card option still uses a demo action that can mark an order paid without provider settlement. Flutterwave verification handlers do not compare verified amount and currency with the order, and the web checkout does not fully reprice submitted cart lines from authoritative records. Daraja callback correlation is implemented but settlement verification and production delivery remain open. Login also has unawaited membership checks, although admin layout and write guards have separate awaited checks.
+
+#### Planned or missing in the inspected implementation
+
+- Structured product materials are described as an optional field in `GEMINI.md`. There is no dedicated materials field in the current form, validator, product model or migrations. Product descriptions can contain material text.
+- Full provider-backed storefront card checkout, atomic product and order/stock mutations, cancellation or abandonment stock release, and automated cleanup of unreferenced Storage objects remain open. The category UI supports a parent and direct children. Recursive storefront taxonomy and retiring the legacy product type would be separate work.
+
+### Database consistency investigation
+
+- Compare the deployed migration ledger with the actual schema and identify which POS codebase shares the database. The earlier progress entry documents historical collisions at versions 012–014 with the older POS migration line and a manual application of payment SQL. Migration 021 reconciles categories. A historical ledger entry or a successful application build is insufficient evidence that migrations 021–024 are installed on the current target.
+- For the stock incident, collect the request context and exact database error code. Inspect both stock columns, constraints, relevant foreign keys and dependent procedures or policies, including `decrement_color_stock` and the deployed POS sales/returns calls. Compare PostgREST-visible columns with the database schema. Establish which stock values are authoritative before any repair or backfill.
+- Confirm migration 024's SKU index, `publish_to_pos` and `is_website_published` defaults and policies, the timing of `pos_is_staff()` installation, and the grants used by API roles. The older POS additionally expects `qr_code`, which the storefront migration chain does not add. The newer POS uses timestamped migrations and a private-barcode migration. Verify public projections and POS read boundaries before combining those changes.
+- Check that storefront settings use `id = 'default'` and that the newer POS reads or updates that same row when sharing the database. Its standalone settings migration also supports a separate `key = 'exchange_rate'` shape. Verify both applications' types, grants and write paths against the chosen shared layout.
+
+### Recommended next development tasks
+
+1. Triage the stock error with deployment logs and read-only schema/ledger evidence. Establish the active POS version and reconcile the two stock contracts in staging before changing production.
+2. Stabilize colour IDs and make product saves and inventory mutations transactional. Test concurrent web/POS sales, edits with existing carts or POS history, cancellation and rollback in staging.
+3. Verify publication and private SKU rules across both apps, align public projections and POS sync, then test create, edit, upload, SKU search, unpublish, rate updates and label printing against the same staging catalogue.
+4. Before accepting live payments, remove demo card settlement, validate authoritative prices and provider settlement details, and test Daraja, manual reconciliation and receipt delivery. Review login guards and database grants as part of launch readiness.
+5. Define and implement structured materials if needed for merchandising. Reconcile setup, handover and reference docs after the shared schema and workflows are confirmed.
+
+---
+
+## Development session — POS catalogue and image compatibility audit (2026-11-18)
+
+Added the [shared catalogue and image compatibility specification](docs/POS_CATALOGUE_COMPATIBILITY.md) with the existing database contract, POS write requirements, proposed repository ownership and staging checklist.
+
+- Confirmed in source and local fixtures that the admin preview uses the original object URL, while storefront galleries use a Supabase render URL for both JPG and WebP. Encoded path segments, version queries and colour/angle associations behaved as specified in fixtures. Live Storage responses, transformation availability and deployed image behaviour remain unverified.
+- Reproduced malformed Open Graph/Twitter image URLs on both product detail routes. This is separate from gallery loading. The inspected POS create path still writes a single front image per colour, and the update RPC gives all image rows the same sort order and leaves the dynamic category ID untouched.
+- Documented the website publication and SKU grant dependencies, the difference between sold-out catalogue cards and detail 404s, and the absence of a reviewed POS-to-storefront cache invalidation path. Production policy, visibility timing and live till compatibility remain open.
+- Audit edits were limited to documentation. No application code, database, migrations or deployments were changed.
+
+---
+
+## Development session — Direct Storage photos for Supabase Free (2026-11-18)
+
+- The reported storefront 403 occurred on the Supabase transformation endpoint. Admin form previews already requested the original object. Removed the custom transformation loader and set Next.js 16 images to `unoptimized`, so the browser requests originals without a generated `srcset` or a Next Image Optimization API request.
+- The shared URL resolver preserves public object URLs, including encoded path segments and query parameters. It translates legacy public transform links and bucket-relative sources to the public object endpoint at display time. It is used by cards, galleries, admin previews and thumbnails, cart, checkout and product social metadata. Existing WebP and JPG objects are used as stored.
+- Grid photos remain lazy. The detail gallery loads the selected angle eagerly without preloading other angles. Frames, colour switching, angle transitions and the leather-textured fallback for missing or failed images remain in place. The browser downloads the stored image size for each shown frame.
+- Local checks passed for decodable WebP and JPG fixtures, Next image attributes, URL preservation, and the missing/failed photograph fallback. TypeScript passed and full ESLint reported zero errors and 14 existing warnings. The standard webpack build hit the empty TypeScript CLI output issue. The production build passed with a temporary TypeScript compiler API setting and local font fixtures. The temporary configuration was restored.
+- Live HTTP 200 and browser rendering in the authenticated admin and storefront remain unverified because the sandbox denied a local port bind and could not resolve the Supabase host. Database records, Storage objects and permissions, and the POS repository were untouched.
+
+### Regression checks for direct product images (2026-11-18)
+
+- Added [focused URL resolver tests](tests/product-image-url.test.mjs). Run with `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/product-image-url.test.mjs` on Node 22.18+. All eight checks passed for WebP, JPG and PNG, legacy transform URLs, encoded object keys, version queries, project hosts and local previews.
+- Exercised colour selection, swipe, angle selection and the leather fallback with local component fixtures. Next image props used the public object URL with decodable WebP, JPG and PNG fixtures and emitted no optimizer URL or generated `srcset`. The [POS catalogue compatibility spec](docs/POS_CATALOGUE_COMPATIBILITY.md) now documents the direct-object path and its live verification checklist.
+- TypeScript passed. Full ESLint reported zero errors and 14 existing warnings. Live browser and HTTP 200 checks remain open because the sandbox denied loopback binding and could not resolve the Supabase hostname.
+- The fresh webpack production build passed using the temporary TypeScript compiler API and local font fixtures. The build manifest confirms that image optimization is disabled, and the temporary configuration was restored.

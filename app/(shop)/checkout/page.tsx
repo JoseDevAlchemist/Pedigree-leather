@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { useCartStore, useCartSubtotal } from "@/lib/store/cart";
 import { formatPrice } from "@/lib/format";
+import { originalProductImageUrl } from "@/lib/product-image-url";
 import { createOrderAction } from "@/lib/actions/orders";
 import {
   KENYAN_PHONE_PREFIX,
@@ -603,12 +604,10 @@ export default function CheckoutPage() {
                     >
                       {item.image && (
                         <Image
-                          src={item.image}
+                          src={originalProductImageUrl(item.image)}
                           alt=""
                           width={64}
                           height={64}
-                          sizes="32px"
-                          quality={75}
                           className="size-16 object-cover"
                           onError={(event) => {
                             event.currentTarget.style.display = "none";

@@ -90,14 +90,7 @@ export function publicImageUrl(path: string): string {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
 }
 
-/**
- * The storage path passed to `<Image>`: just `bucket/path`, no host and no
- * transformation query. The custom loader (`supabase-image-loader.ts`) adds
- * `SUPABASE_URL/storage/v1/render/image/public/` plus width and quality.
- *
- * Callers pass the result straight to `<Image src={...}>` — never construct a
- * `/storage/v1/render/image/...` URL by hand in a component.
- */
+/** A bucket-relative object key for consumers that resolve Storage paths. */
 export function publicImagePath(bucket: string, path: string): string {
   return `${bucket}/${path}`;
 }

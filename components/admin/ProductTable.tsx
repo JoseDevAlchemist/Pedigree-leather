@@ -10,6 +10,7 @@ import { useMemo, useState, useTransition } from "react";
 import { deleteProductAction, updateFieldAction } from "@/lib/actions/products";
 import type { AdminProduct } from "@/lib/mappers";
 import { formatPrice } from "@/lib/format";
+import { originalProductImageUrl } from "@/lib/product-image-url";
 
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/admin/Toast";
@@ -553,11 +554,10 @@ function ProductThumb({ product }: { product: AdminProduct }) {
 
   return (
     <Image
-      src={src}
+      src={originalProductImageUrl(src)}
       alt=""
       width={44}
       height={44}
-      sizes="32px"
       className="size-11 rounded-lg object-cover"
       style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.08)" }}
     />

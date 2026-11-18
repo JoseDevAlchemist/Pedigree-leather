@@ -58,7 +58,7 @@ function explain(error: unknown, context: string): string {
 
   if (code === "23505" || /duplicate key value violates unique constraint/i.test(message)) {
     if (/idx_products_barcode/.test(message)) {
-      return "That barcode is already assigned to another product.";
+      return "That product code is already assigned to another product.";
     }
     if (/products_slug_key/.test(message)) {
       return "That URL slug is already in use. Pick another — the name can stay the same.";

@@ -6,44 +6,8 @@ import { useState } from "react";
 
 import { angleLabel, angleSpoken } from "@/lib/angles";
 import { onColorOpacity, readableTextClass, shade } from "@/lib/color";
+import { originalProductImageUrl } from "@/lib/product-image-url";
 import type { Angle } from "@/lib/types";
-
-/**
- * `sizes` for an image inside the shop grid — a card in the two/four-up layout.
- *
- * At 1024px and up the grid is four columns inside `max-w-6xl`, so a card is
- * about 254px, roughly 22vw; the middle step covers the three-up tablet grid and
- * the final `50vw` is the two-up phone grid. This is a hint, not a measurement:
- * when it is too low the browser fetches a source smaller than the slot and the
- * photograph looks soft, which is the bug this constant exists to prevent.
- */
-export const CARD_IMAGE_SIZES = "(min-width: 1024px) 22vw, (min-width: 768px) 30vw, 50vw";
-
-/**
- * `sizes` for the product detail page's main image.
- *
- * The detail image sits either full width (stacked, below `lg`) or in the wider
- * of two columns — roughly 48–54vw between 1024px and 1280px.
- *
- * Below `lg` the hint is deliberately smaller than the rendered width: a `100vw`
- * hint on a 3x phone asked for a 1440px source. `52vw` keeps the candidate under
- * the loader's 800px phone bucket at 1x, 2x and 3x, which is still sharp on a
- * phone without the desktop-sized download. Tablets get the larger 66vw step,
- * where there is room to spare.
- */
-export const DETAIL_IMAGE_SIZES =
-  "(min-width: 1024px) 50vw, (min-width: 768px) 66vw, 52vw";
-
-/**
- * The quality every product photograph is optimised at.
- *
- * 75 is the size/quality point for this catalogue. The loader also requests the
- * square crop the layout actually displays, which keeps an 800px phone image
- * around 40–90 KB across the current catalogue. This value must also appear in
- * `images.qualities` in `next.config.ts` — Next 16 coerces an unlisted quality
- * back down without warning, so the two move together.
- */
-const IMAGE_QUALITY = 75;
 
 type ProductImageProps = {
   /** Image URL for this angle of this colour, or `null` while photography is pending. */
@@ -57,15 +21,10 @@ type ProductImageProps = {
   angle: Angle;
   /** Sizing behaviour. `fill` fills the parent; `card` gives the card its square. */
   sizing?: "fill" | "square";
-  /**
-   * The `sizes` hint for the browser's srcset choice. Defaults to the shop
-   * grid's card width; the product detail page passes `DETAIL_IMAGE_SIZES`.
-   */
-  sizes?: string;
   className?: string;
   /** Animate in on mount. Used by the angle swiper, not by grid cards. */
   animateIn?: boolean;
-  priority?: boolean;
+  loading?: "eager" | "lazy";
 };
 
 /**
@@ -86,10 +45,9 @@ export function ProductImage({
   productName,
   angle,
   sizing = "fill",
-  sizes = CARD_IMAGE_SIZES,
   className = "",
   animateIn = false,
-  priority = false,
+  loading = "lazy",
 }: ProductImageProps) {
   /* Alt text reads as a sentence, so it uses the spoken label ("left side")
    * rather than the stamped one ("Side L"). */
@@ -103,14 +61,13 @@ export function ProductImage({
     return (
       <ProductPhoto
         key={src}
-        src={src}
+        src={originalProductImageUrl(src)}
         alt={alt}
         hex={hex}
         angle={angle}
         frame={frame}
         className={className}
-        sizes={sizes}
-        priority={priority}
+        loading={loading}
         animateIn={animateIn}
       />
     );
@@ -135,18 +92,11 @@ type ProductPhotoProps = {
   angle: Angle;
   frame: string;
   className: string;
-  sizes: string;
-  priority: boolean;
+  loading: "eager" | "lazy";
   animateIn: boolean;
 };
 
-/**
- * The real photograph, with a fallback for sources Supabase cannot transform.
- *
- * Supabase's image renderer rejects originals over 5 MB, and a CDN/proxy failure
- * produces the same `error` event. Falling back to the leather swatch keeps the
- * grid intact instead of leaving a broken-image icon and a blank 4:5 frame.
- */
+/** Fall back to the leather swatch when the stored photograph fails to load. */
 function ProductPhoto({
   src,
   alt,
@@ -154,8 +104,7 @@ function ProductPhoto({
   angle,
   frame,
   className,
-  sizes,
-  priority,
+  loading,
   animateIn,
 }: ProductPhotoProps) {
   const [failed, setFailed] = useState(false);
@@ -179,9 +128,7 @@ function ProductPhoto({
         src={src}
         alt={alt}
         fill
-        priority={priority}
-        quality={IMAGE_QUALITY}
-        sizes={sizes}
+        loading={loading}
         className="object-cover"
         style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.1)" }}
         onError={() => setFailed(true)}

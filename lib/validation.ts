@@ -158,7 +158,7 @@ export const productInputSchema = z.object({
   barcode: z
     .string()
     .trim()
-    .max(128, "Barcode must be at most 128 characters")
+    .max(128, "Product code must be at most 128 characters")
     .nullish()
     .transform((value) => value || null),
   publishToPos: z.boolean().default(true),

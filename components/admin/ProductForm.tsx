@@ -10,6 +10,7 @@ import { createProductAction, updateProductAction } from "@/lib/actions/products
 import { ALL_ANGLES, angleOrder, categoryAngles } from "@/lib/angles";
 import { imagePath, publicImageUrl, uploadProductImage } from "@/lib/upload";
 import type { AdminProduct } from "@/lib/mappers";
+import { originalProductImageUrl } from "@/lib/product-image-url";
 import type { Angle, Category, Product } from "@/lib/types";
 import { productInputSchema } from "@/lib/validation";
 
@@ -724,11 +725,12 @@ export function ProductForm({
             </Field>
           </div>
 
-          <Field label="Internal Barcode / SKU" htmlFor="barcode" error={errors.barcode}>
+          <Field label="Product Code / SKU" htmlFor="barcode" error={errors.barcode}>
             <input
               id="barcode"
               type="text"
               maxLength={128}
+              placeholder="LB-532"
               value={barcode}
               onChange={(event) => setBarcode(event.target.value)}
               className={inputClass(Boolean(errors.barcode))}
@@ -755,6 +757,12 @@ export function ProductForm({
               color={color}
               index={index}
               total={colors.length}
+              labelHref={
+                initialData?.barcode?.trim() &&
+                initialData.colors.some((savedColor) => savedColor.id === color.key)
+                  ? `/admin/products/${initialData.id}/label?colour=${encodeURIComponent(color.key)}`
+                  : undefined
+              }
               errors={errors}
               onChange={(patch) => updateColor(color.key, patch)}
               onRemove={() => removeColor(color.key)}
@@ -865,6 +873,7 @@ function ColorBlock({
   color,
   index,
   total,
+  labelHref,
   errors,
   onChange,
   onRemove,
@@ -878,6 +887,7 @@ function ColorBlock({
   color: ColorDraft;
   index: number;
   total: number;
+  labelHref?: string;
   errors: Record<string, string>;
   onChange: (patch: Partial<ColorDraft>) => void;
   onRemove: () => void;
@@ -975,6 +985,17 @@ function ColorBlock({
           ) : null}
         </div>
 
+        {labelHref ? (
+          <a
+            href={labelHref}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex min-h-10 items-center rounded-full border border-border px-4 text-sm font-semibold text-foreground hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            Print label
+          </a>
+        ) : null}
+
         {/* Never lets the form reach zero colours, because the schema requires at
             least one and a form that can produce a state it will refuse to save is a
             dead end. */}
@@ -1063,7 +1084,7 @@ function ColorBlock({
                   {shown ? (
                     <>
                       <Image
-                        src={shown}
+                        src={originalProductImageUrl(shown)}
                         alt={`${color.name || "Colour"} ${angleLabel(angle)}`}
                         fill
                         unoptimized

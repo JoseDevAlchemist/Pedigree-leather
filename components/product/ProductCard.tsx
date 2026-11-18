@@ -20,7 +20,7 @@ import { useSharedImageTransition } from "@/components/motion/SharedImageTransit
 import { AngleDots } from "@/components/product/AngleDots";
 import { ColorSwatches } from "@/components/product/ColorSwatches";
 import { DiscountBadge, PriceRow } from "@/components/product/PriceRow";
-import { CARD_IMAGE_SIZES, ProductImage } from "@/components/product/ProductImage";
+import { ProductImage } from "@/components/product/ProductImage";
 
 /* Lift is a desktop affordance: a phone has no hover, so a scale that nothing
    can cancel would just fight the tap. */
@@ -246,9 +246,6 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
               colorName={color.name}
               productName={product.name}
               angle={angle}
-              /* Explicit rather than leaning on the default, so the two image
-                 contexts in the shop each name their own size at the call site. */
-              sizes={CARD_IMAGE_SIZES}
             />
           </motion.div>
         </AnimatePresence>
