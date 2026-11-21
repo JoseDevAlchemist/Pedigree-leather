@@ -189,7 +189,7 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
 
               <th scope="col" className="px-4 py-3 text-right">
                 <span className="text-xs font-semibold tracking-wide text-muted uppercase">
-                  Listed
+                  Website
                 </span>
               </th>
 
@@ -216,7 +216,7 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
                   >
                     {product.name}
                   </Link>
-                  <span className="mt-0.5 block text-xs text-muted">{product.slug}</span>
+                  <span className="mt-0.5 block text-xs text-muted">{product.barcode ?? product.slug}</span>
 
                   <span className="mt-1 flex items-center gap-2">
                     <Toggle
@@ -262,9 +262,8 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
                   >
                     {product.totalStock}
                   </span>
-                  <span className="mt-0.5 block text-[0.6875rem] text-muted">
-                    {product.colors.length}{" "}
-                    {product.colors.length === 1 ? "colour" : "colours"}
+                  <span className="mt-0.5 block min-w-32 text-[0.6875rem] text-muted">
+                    {product.colors.map((colour) => `${colour.name} · ${colour.stockQuantity}`).join(", ")}
                   </span>
                 </td>
 
@@ -280,11 +279,13 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
                   <span className="flex items-center justify-end gap-1">
                     <Toggle
                       pressed={product.active}
-                      label={`${product.active ? "Hide" : "Show"} ${product.name}`}
+                      label={`${product.active ? "Deactivate" : "Activate"} ${product.name}`}
                       onClick={() => saveField(product.id, "active", !product.active)}
                       disabled={pending === `${product.id}:active`}
                     />
-                    <span className="ml-1 text-xs text-muted">{product.active ? "live" : "hidden"}</span>
+                    <span className="ml-1 text-xs text-muted">
+                      {product.isWebsitePublished ? (product.active ? "Published" : "Hidden") : "Draft"}
+                    </span>
                   </span>
                 </td>
 

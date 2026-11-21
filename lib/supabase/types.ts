@@ -94,6 +94,10 @@ export type Database = {
         Row: {
           color_hex: string
           color_name: string
+          color_id: string | null
+          size_id: string | null
+          size_system: string | null
+          size_label: string | null
           id: string
           line_total: number
           order_id: string
@@ -104,6 +108,10 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          color_id?: string | null
+          size_id?: string | null
+          size_system?: string | null
+          size_label?: string | null
           color_hex: string
           color_name: string
           id?: string
@@ -116,6 +124,10 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          color_id?: string | null
+          size_id?: string | null
+          size_system?: string | null
+          size_label?: string | null
           color_hex?: string
           color_name?: string
           id?: string
@@ -265,6 +277,18 @@ export type Database = {
           },
         ]
       }
+      product_color_sizes: {
+        Row: { id: string; color_id: string; size_system: string; size_label: string; stock_quantity: number; archived: boolean }
+        Insert: { id?: string; color_id: string; size_system: string; size_label: string; stock_quantity?: number; archived?: boolean }
+        Update: { stock_quantity?: number; archived?: boolean }
+        Relationships: [{
+          foreignKeyName: "product_color_sizes_color_id_fkey"
+          columns: ["color_id"]
+          isOneToOne: false
+          referencedRelation: "product_colors"
+          referencedColumns: ["id"]
+        }]
+      }
       product_colors: {
         Row: {
           color_hex: string
@@ -334,6 +358,7 @@ export type Database = {
       }
       products: {
         Row: {
+          stock_tracking_mode: "color" | "size"
           active: boolean
           base_price: number
           barcode: string | null
@@ -351,6 +376,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          stock_tracking_mode?: "color" | "size"
           active?: boolean
           base_price: number
           barcode?: string | null
@@ -368,6 +394,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          stock_tracking_mode?: "color" | "size"
           active?: boolean
           base_price?: number
           barcode?: string | null
@@ -508,6 +535,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      website_cancel_order: {
+        Args: { p_order_id: string; p_actor_email: string; p_actor_role: string; p_note: string }
+        Returns: boolean
+      }
+      website_create_order: {
+        Args: { p_request_id: string; p_order: Json; p_items: Json }
+        Returns: { order_id: string; order_number: string; created: boolean }[]
+      }
+      website_edit_product: {
+        Args: { p_product_id: string; p_edit: Json }
+        Returns: string
+      }
       decrement_color_stock: {
         Args: { color_id: string; qty: number }
         Returns: number

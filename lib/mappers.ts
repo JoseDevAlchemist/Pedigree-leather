@@ -21,8 +21,15 @@ type ColorRow = Tables<"product_colors">;
 type ImageRow = Tables<"product_images">;
 
 /** The nested shape one PostgREST select produces, with the joins typed. */
-export type ProductWithRelations = ProductRow & {
-  product_colors: (ColorRow & { product_images: ImageRow[] })[];
+export type ProductWithRelations = Pick<ProductRow,
+  "id" | "name" | "slug" | "description" | "category" | "category_id" |
+  "base_price" | "base_price_usd" | "discount_percent" | "featured" | "created_at"
+> & {
+  stock_tracking_mode?: "color" | "size";
+  product_colors: (ColorRow & {
+    product_images: ImageRow[];
+    product_color_sizes?: Pick<Tables<"product_color_sizes">, "id" | "size_label" | "size_system" | "stock_quantity" | "archived">[];
+  })[];
 };
 
 /**
@@ -57,7 +64,7 @@ function isAngle(value: string): value is Angle {
  * URL or five angles that do not exist.
  */
 function isCategory(value: string): value is Product["category"] {
-  return value === "bag" || value === "shoe";
+  return value === "bag" || value === "shoe" || value === "belt";
 }
 
 /**
@@ -102,8 +109,7 @@ function toColorVariant(row: ColorRow, images: ImageRow[], productAngles: Angle[
  * by the current form carry `sort_order`; legacy rows all carry zero and fall
  * back to the category's preferred order, then the remaining known angles.
  *
- * If the product has no photography at all, it keeps the category's five
- * placeholder views — that is what makes an unphotographed product browsable.
+ * An unphotographed product shows one colour swatch.
  */
 function productAngles(
   colors: (ColorRow & { product_images: ImageRow[] })[],
@@ -133,7 +139,7 @@ function productAngles(
     }
   }
 
-  return derived.length > 0 ? derived : categoryAngles(category);
+  return derived.length > 0 ? derived : ["front"];
 }
 
 /** A row plus its relations into the app's `Product`. */
@@ -150,7 +156,14 @@ export function toProduct(row: ProductWithRelations): Product {
   const angles = productAngles(sortedColors, category);
 
   const colors = sortedColors.map((color) =>
-    toColorVariant(color, color.product_images ?? [], angles),
+    {
+      const variant = toColorVariant(color, color.product_images ?? [], angles);
+      if (row.stock_tracking_mode !== "size") return variant;
+      const sizes = (color.product_color_sizes ?? []).filter((size) => !size.archived).map((size) => ({
+        id: size.id, label: size.size_label, system: size.size_system, stockQuantity: size.stock_quantity,
+      })).sort((a, b) => a.system.localeCompare(b.system) || a.label.localeCompare(b.label, undefined, { numeric: true }));
+      return { ...variant, sizes, stockQuantity: sizes.reduce((total, size) => total + size.stockQuantity, 0) };
+    },
   );
 
   return {
@@ -167,6 +180,7 @@ export function toProduct(row: ProductWithRelations): Product {
        admin, not to the product. It is carried through admin reads separately;
        see `lib/admin-api.ts`. */
     colors,
+    stockTrackingMode: row.stock_tracking_mode ?? "color",
     category,
     categoryId: row.category_id ?? null,
     angles,
@@ -187,6 +201,7 @@ export interface AdminProduct extends Product {
   active: boolean;
   barcode: string | null;
   publishToPos: boolean;
+  isWebsitePublished: boolean;
   /**
    * Units across every colour. Derived for the admin table's at-a-glance stock
    * column; the editable value lives on each colour in the product form.
@@ -195,20 +210,52 @@ export interface AdminProduct extends Product {
 }
 
 /** The row shape `lib/admin-api.ts` reads. Same relation nesting as above. */
-export type AdminProductRow = ProductRow & {
-  product_colors: (ColorRow & { product_images: ImageRow[] })[];
-  active: boolean;
+export type AdminProductRow = ProductRow & Pick<ProductWithRelations, "product_colors">;
+
+/** An edit baseline excludes stock, which can change while the form is open. */
+export function productEditSnapshot(row: AdminProductRow) {
+  return {
+    product: [
+      row.name, row.slug, row.description, row.category, row.category_id, row.base_price,
+      row.base_price_usd, row.barcode, row.publish_to_pos, row.discount_percent,
+      row.featured, row.active, row.is_website_published, row.stock_tracking_mode ?? null,
+    ],
+    colors: [...row.product_colors].sort((a, b) => a.id.localeCompare(b.id)).map((color) => ({
+      id: color.id,
+      name: color.color_name,
+      hex: color.color_hex,
+      order: color.sort_order,
+      images: [...color.product_images].sort((a, b) => a.id.localeCompare(b.id)).map((image) => ({
+        id: image.id,
+        angle: image.angle,
+        url: image.image_url,
+        order: image.sort_order,
+      })),
+    })),
+  };
+}
+
+export type EditableAdminProduct = AdminProduct & {
+  editSnapshot: ReturnType<typeof productEditSnapshot>;
 };
 
 /** An admin row plus its flags. */
 export function toAdminProduct(row: AdminProductRow): AdminProduct {
   const product = toProduct(row);
+  // The admin shows physical stock, including archived sizes. Public availability
+  // still comes from the non-archived size rows in toProduct.
+  const physicalStock = new Map(row.product_colors.map((color) => [color.id, color.stock_quantity]));
+  const colors = product.colors.map((color) => ({
+    ...color, stockQuantity: physicalStock.get(color.id) ?? 0,
+  }));
   return {
     ...product,
+    colors,
     active: row.active,
     barcode: row.barcode ?? null,
     publishToPos: row.publish_to_pos ?? true,
-    totalStock: product.colors.reduce((sum, color) => sum + color.stockQuantity, 0),
+    isWebsitePublished: row.is_website_published,
+    totalStock: colors.reduce((sum, color) => sum + color.stockQuantity, 0),
   };
 }
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { anglesForCategory, toProduct } from "@/lib/mappers";
 import type { ProductWithRelations } from "@/lib/mappers";
 import { MOCK_PRODUCTS } from "@/lib/mock-data";
@@ -18,34 +19,9 @@ import type { Product } from "@/lib/types";
  * Supabase. Swapping the backend is a change to this file and nothing else.
  *
  * ---------------------------------------------------------------------------
- * FALLBACK TO MOCK DATA — AND WHY IT IS HERE
- * ---------------------------------------------------------------------------
- * Every read below tries Supabase first and falls back to `MOCK_PRODUCTS` if the
- * read fails. That is not a stub, and it is not laziness: at the time this was
- * written the migration in `supabase/migrations/001_initial.sql` had not been run,
- * so `products` did not exist and PostgREST answered every query with PGRST205.
- * Without a fallback, that would have made the shop's front page, the grids, and
- * all twelve detail pages throw — the client would have gone dark for want of a
- * database that is one paste away from existing.
+ * Demo data is available only when explicitly enabled outside production.
+ * Catalogue errors in the deployed shop leave the affected results empty.
  *
- * So the fallback is load-bearing until the migration lands. The properties that
- * matter:
- *
- *   - **It is loud.** Every distinct reason is logged once with an actionable
- *     message. Silence would be the real failure here.
- *   - **It self-heals.** There is no flag to flip and nothing to redeploy. The
- *     moment the migration runs, the next request reads from Supabase and the
- *     fallback stops being used. Re-running a build is enough.
- *   - **It is one block.** `readFromSupabase` returning `null` is the whole
- *     mechanism, so removing the fallback later is deleting one function and its
- *     five call sites' `?? mock` — not an audit of the file.
- *
- * Once the migration is applied, delete `mockFallback` and make
- * `readFromSupabase` throw instead of returning null. That is a deliberate
- * follow-up, tracked in docs/ADMIN_INTEGRATION_TODO.md, so that a missing row
- * eventually fails loudly rather than quietly rendering nothing.
- *
- * ---------------------------------------------------------------------------
  * Caching
  * ---------------------------------------------------------------------------
  * These reads are mostly static-page reads, so they happen at build time and are
@@ -71,6 +47,7 @@ function byCreatedAtDesc(a: Product, b: Product): number {
 }
 
 function mockProducts(category?: Product["category"]): Product[] {
+  if (process.env.NODE_ENV === "production" || process.env.PEDIGREE_DEMO_CATALOGUE !== "1") return [];
   return [...MOCK_PRODUCTS]
     .sort((a, b) => byCreatedAtDesc(a, b))
     .filter((product) => !category || product.category === category)
@@ -220,7 +197,7 @@ async function resolveCategoryScope(
     } else {
       reportOnce(
         `error:resolveCategoryScope:${categoryError.code ?? categoryError.message ?? "unknown"}`,
-        `Supabase read failed (${categoryError.code ?? "no code"}: ${categoryError.message}). Falling back to mock data.`,
+        `Supabase read failed (${categoryError.code ?? "no code"}: ${categoryError.message}). Catalogue data unavailable.`,
       );
     }
     return null;
@@ -307,7 +284,7 @@ async function readFromSupabase(
         reportOnce(
           `error:${label}:${error.code ?? error.message ?? "unknown"}`,
           `Supabase read failed (${error.code ?? "no code"}: ${error.message}). ` +
-            "Falling back to mock data. This is not the same as the migration being " +
+            "Catalogue data unavailable. This is not the same as the migration being " +
             "un-run — check the Supabase project's health and your env vars.",
         );
       }
@@ -332,7 +309,28 @@ async function readFromSupabase(
   }
 }
 
-const PRODUCT_SELECT = "*, product_colors!inner(*, product_images(*))";
+const PRODUCT_SELECT = "id,name,slug,description,category,category_id,base_price,base_price_usd,discount_percent,featured,created_at,stock_tracking_mode,product_colors!inner(id,product_id,color_name,color_hex,sort_order,stock_quantity,product_color_sizes(id,size_label,size_system,stock_quantity,archived),product_images(id,color_id,angle,image_url,sort_order))";
+
+const COLOUR_PRODUCT_SELECT = "id,name,slug,description,category,category_id,base_price,base_price_usd,discount_percent,featured,created_at,product_colors!inner(id,product_id,color_name,color_hex,sort_order,stock_quantity,product_images(id,color_id,angle,image_url,sort_order))";
+
+const catalogueProjection = cache(async () => {
+  const probe = await publicProducts(createPublicClient(), PRODUCT_SELECT).limit(0);
+  const error = probe.error;
+  if ((error?.code === "PGRST200" && error.message.includes("product_color_sizes"))
+    || (error?.code === "42703" && error.message.includes("stock_tracking_mode"))) {
+    return COLOUR_PRODUCT_SELECT;
+  }
+  return PRODUCT_SELECT;
+});
+
+function publicProducts<Projection extends string>(
+  supabase: ReturnType<typeof createPublicClient>,
+  projection: Projection,
+) {
+  return supabase.from("products").select(projection)
+    .eq("active", true)
+    .eq("is_website_published", true);
+}
 
 function withShopColors(product: Product): Product {
   const available = product.colors.filter((color) => color.stockQuantity > 0);
@@ -349,10 +347,8 @@ function toShopProduct(row: ProductWithRelations): Product {
  * category.
  */
 export async function getProducts(category?: Product["category"]): Promise<Product[]> {
-  const rows = await readFromSupabase(`getProducts:${category ?? "all"}`, (supabase) => {
-    let query = supabase
-      .from("products")
-      .select(PRODUCT_SELECT)
+  const rows = await readFromSupabase(`getProducts:${category ?? "all"}`, async (supabase) => {
+    let query = publicProducts(supabase, await catalogueProjection())
       .order("created_at", { ascending: false });
     if (category) query = query.eq("category", category);
     return query;
@@ -401,19 +397,14 @@ export async function searchProducts(query: string): Promise<Product[]> {
     parent_id: string | null;
   };
 
+  const projection = await catalogueProjection();
   const [nameResult, descriptionResult, colorResult, categoryResult] = await Promise.all([
-    supabase
-      .from("products")
-      .select(PRODUCT_SELECT)
+    publicProducts(supabase, projection)
       .ilike("name", pattern)
-      .eq("active", true)
-      .limit(100),
-    supabase
-      .from("products")
-      .select(PRODUCT_SELECT)
+      .limit(100).overrideTypes<ProductWithRelations[], { merge: false }>(),
+    publicProducts(supabase, projection)
       .ilike("description", pattern)
-      .eq("active", true)
-      .limit(100),
+      .limit(100).overrideTypes<ProductWithRelations[], { merge: false }>(),
     supabase
       .from("product_colors")
       .select("product_id")
@@ -502,20 +493,14 @@ export async function searchProducts(query: string): Promise<Product[]> {
   const emptyResult = Promise.resolve({ data: [], error: null });
   const [categoryProducts, colorProducts] = await Promise.all([
     categoryIds.size > 0
-      ? supabase
-          .from("products")
-          .select(PRODUCT_SELECT)
+      ? publicProducts(supabase, projection)
           .in("category_id", [...categoryIds])
-          .eq("active", true)
-          .limit(100)
+          .limit(100).overrideTypes<ProductWithRelations[], { merge: false }>()
       : emptyResult,
     colorProductIds.length > 0
-      ? supabase
-          .from("products")
-          .select(PRODUCT_SELECT)
+      ? publicProducts(supabase, projection)
           .in("id", colorProductIds)
-          .eq("active", true)
-          .limit(100)
+          .limit(100).overrideTypes<ProductWithRelations[], { merge: false }>()
       : emptyResult,
   ]);
 
@@ -549,10 +534,8 @@ export async function getProductBySlug(
   slug: string,
   category?: Product["category"],
 ): Promise<Product | null> {
-  const rows = await readFromSupabase(`getProductBySlug:${slug}`, (supabase) => {
-    let query = supabase
-      .from("products")
-      .select(PRODUCT_SELECT)
+  const rows = await readFromSupabase(`getProductBySlug:${slug}`, async (supabase) => {
+    let query = publicProducts(supabase, await catalogueProjection())
       .eq("slug", slug);
     /* The category guard is not redundant with the route: slugs are unique across
        the whole catalogue, so without it a shoe slug resolves on the bags route. */
@@ -579,9 +562,7 @@ export async function getProductBySlug(
  */
 export async function getProductSlugs(category?: Product["category"]): Promise<string[]> {
   const rows = await readFromSupabase(`getProductSlugs:${category ?? "all"}`, (supabase) => {
-    let query = supabase
-      .from("products")
-      .select("slug, product_colors!inner(id)");
+    let query = publicProducts(supabase, "slug, product_colors!inner(id)");
     if (category) query = query.eq("category", category);
     return query;
   });
@@ -627,7 +608,7 @@ export async function getProductsByCategory(
       "category:client",
       `Could not create the Supabase client for category products: ${
         error instanceof Error ? error.message : "unknown error"
-      }. Falling back to mock data.`,
+      }. Catalogue data unavailable.`,
     );
     return fallback();
   }
@@ -646,7 +627,7 @@ export async function getProductsByCategory(
     if (colorError) {
       reportOnce(
         `error:getProductsByCategory:colors:${colorError.code ?? colorError.message ?? "unknown"}`,
-        `Could not read colour filters (${colorError.code ?? "no code"}: ${colorError.message}). Falling back to mock data.`,
+        `Could not read colour filters (${colorError.code ?? "no code"}: ${colorError.message}). Catalogue data unavailable.`,
       );
       return fallback();
     }
@@ -667,12 +648,9 @@ export async function getProductsByCategory(
 
   const rows = await readFromSupabase(
     `getProductsByCategory:${categorySlug}:${filterKey}`,
-    (supabase) => {
-      let query = supabase
-        .from("products")
-        .select(PRODUCT_SELECT)
-        .in("category_id", categoryIds)
-        .eq("active", true);
+    async (supabase) => {
+      let query = publicProducts(supabase, await catalogueProjection())
+        .in("category_id", categoryIds);
 
       if (colorProductIds) {
         query = query.in("id", colorProductIds);
@@ -731,7 +709,7 @@ export async function getCategoryColorOptions(
       "category-colors:client",
       `Could not create the Supabase client for category colours: ${
         error instanceof Error ? error.message : "unknown error"
-      }. Falling back to mock data.`,
+      }. Catalogue data unavailable.`,
     );
     return fallback();
   }
@@ -739,16 +717,13 @@ export async function getCategoryColorOptions(
   const categoryIds = await resolveCategoryScope(supabase, categorySlug);
   if (categoryIds === null) return fallback();
 
-  const { data, error } = await supabase
-    .from("products")
-    .select("product_colors!inner(color_name, color_hex)")
-    .in("category_id", categoryIds)
-    .eq("active", true);
+  const { data, error } = await publicProducts(supabase, "product_colors!inner(color_name, color_hex)")
+    .in("category_id", categoryIds);
 
   if (error) {
     reportOnce(
       `error:getCategoryColorOptions:${error.code ?? error.message ?? "unknown"}`,
-      `Could not read category colours (${error.code ?? "no code"}: ${error.message}). Falling back to mock data.`,
+      `Could not read category colours (${error.code ?? "no code"}: ${error.message}). Catalogue data unavailable.`,
     );
     return fallback();
   }
@@ -777,10 +752,8 @@ export async function getCategoryColorOptions(
  * column, because `featured = true` alone has no stable order.
  */
 export async function getFeaturedProducts(): Promise<Product[]> {
-  const rows = await readFromSupabase("getFeaturedProducts", (supabase) =>
-    supabase
-      .from("products")
-      .select(PRODUCT_SELECT)
+  const rows = await readFromSupabase("getFeaturedProducts", async (supabase) =>
+    publicProducts(supabase, await catalogueProjection())
       .eq("featured", true)
       .order("created_at", { ascending: false }),
   );
@@ -798,10 +771,8 @@ export async function getFeaturedProducts(): Promise<Product[]> {
  * comes from new stock, not from rotation.
  */
 export async function getNewArrivals(limit: number): Promise<Product[]> {
-  const rows = await readFromSupabase(`getNewArrivals:${limit}`, (supabase) =>
-    supabase
-      .from("products")
-      .select(PRODUCT_SELECT)
+  const rows = await readFromSupabase(`getNewArrivals:${limit}`, async (supabase) =>
+    publicProducts(supabase, await catalogueProjection())
       .order("created_at", { ascending: false })
       .limit(Math.max(0, limit)),
   );

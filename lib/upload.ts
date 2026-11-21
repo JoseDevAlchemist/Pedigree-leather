@@ -50,14 +50,14 @@ export function slugify(value: string): string {
 }
 
 /** The object key for a product photo. Use the draft colour ID until it has a name. */
-export function imagePath(
+function imagePath(
   productId: string,
   colorId: string,
   colorName: string,
   angle: Angle,
 ): string {
   const color = slugify(colorName) || slugify(colorId);
-  return `${productId}/${color}-${angle}.webp`;
+  return `${productId}/${color}-${angle}-${crypto.randomUUID()}.webp`;
 }
 
 /** Encode photos before upload so the filename and content type match the bytes. */
@@ -102,8 +102,7 @@ export function publicImagePath(bucket: string, path: string): string {
  * the wrong type, or too big. A round trip that returns a 400 with a Postgres error
  * text is a worse error message than a sentence, and it costs the user a wait.
  *
- * `upsert: true` maps onto Supabase's storage upsert, so replacing a photo in a slot
- * overwrites rather than creating a second object.
+ * Each upload has a fresh key so the live photo stays intact until Save succeeds.
  */
 export async function uploadProductImage(
   file: File,
@@ -137,8 +136,7 @@ export async function uploadProductImage(
   const path = imagePath(productId, colorId, colorName, angle);
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, webp, {
-    /* Replace whatever is in this slot. See the note on `imagePath`. */
-    upsert: true,
+    upsert: false,
     contentType: "image/webp",
     cacheControl: "31536000",
   });
@@ -147,10 +145,10 @@ export async function uploadProductImage(
     /* The most common cause by far, and the least obvious from the message. */
     if (/row-level security|permission denied/i.test(error.message)) {
       throw new Error(
-        "The storage policy rejected this upload. Sign in again, and check that 002_storage.sql has been run.",
+        "You do not have permission to upload this photo. Sign in again and retry.",
       );
     }
-    throw error;
+    throw new Error("Storage could not save the photo. Please retry.");
   }
 
   return publicImageUrl(path);
