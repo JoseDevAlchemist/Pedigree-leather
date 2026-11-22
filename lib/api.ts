@@ -23,23 +23,9 @@ import type { Product } from "@/lib/types";
  * Demo data is available only when explicitly enabled outside production.
  * Catalogue errors in the deployed shop leave the affected results empty.
  *
- * Caching
- * ---------------------------------------------------------------------------
- * These reads are mostly static-page reads, so they happen at build time and are
- * baked into the prerendered HTML — the route list should show `○` for `/`,
- * `/bags`, `/shoes` and the product pages. The filtered `/category/[slug]` reads
- * are request-time because the filter state lives in the URL. A product added in
- * the admin gets its page on request (`dynamicParams` defaults to true) but does
- * not appear in an already built grid until the next build. That is the right trade
- * for a shop whose catalogue changes a few times a month, and the wrong one the
- * moment it changes hourly — the fix is a `revalidateTag` call, and
- * `lib/actions/products.ts` already calls `revalidatePath` for the shop routes after
- * every write, so a `next build` is not the only way they update.
- *
- * If any of those routes ever shows up as `ƒ` in the build output, something on this
- * path has started calling `cookies()`. That is what happened when these reads used
- * the session-aware client instead of `lib/supabase/public.ts`, and it is the single
- * thing to check.
+ * Only explicit anonymous product projections enter the storefront cache.
+ * Prices and stock in these projections are display snapshots. Checkout reads
+ * authoritative availability and prices through the order reservation RPC.
  */
 
 /** Newest first, comparing as dates so a non-`Z` offset sorts correctly. */
@@ -224,7 +210,7 @@ async function readFromSupabase(
   }>,
 ): Promise<ProductWithRelations[] | null> {
   try {
-    const supabase = createPublicClient();
+    const supabase = createPublicClient("catalogue");
     const { data, error } = await run(supabase);
 
     if (error) {
@@ -274,7 +260,7 @@ const catalogueProjection = cache(async () => {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") === "https://scvscxbxfpjqbqkfkset.supabase.co") {
     return PRODUCT_SELECT;
   }
-  const probe = await publicProducts(createPublicClient(), PRODUCT_SELECT).limit(0);
+  const probe = await publicProducts(createPublicClient("catalogue"), PRODUCT_SELECT).limit(0);
   const error = probe.error;
   if ((error?.code === "PGRST200" && error.message.includes("product_color_sizes"))
     || (error?.code === "42703" && error.message.includes("stock_tracking_mode"))) {
@@ -444,7 +430,7 @@ export async function getProductsByCategory(
 
   let supabase: ReturnType<typeof createPublicClient>;
   try {
-    supabase = createPublicClient();
+    supabase = createPublicClient("catalogue");
   } catch (error) {
     reportOnce(
       "category:client",
@@ -545,7 +531,7 @@ export async function getCategoryColorOptions(
 
   let supabase: ReturnType<typeof createPublicClient>;
   try {
-    supabase = createPublicClient();
+    supabase = createPublicClient("catalogue");
   } catch (error) {
     reportOnce(
       "category-colors:client",

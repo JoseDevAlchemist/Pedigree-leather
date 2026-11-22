@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { storefrontCache } from "@/lib/storefront-cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -26,20 +27,6 @@ async function imageExtension(file: File) {
   if (file.type === "image/webp" && bytes.toString("ascii", 0, 4) === "RIFF" &&
       bytes.toString("ascii", 8, 12) === "WEBP") return "webp";
   return null;
-}
-
-function refreshStore(section: string) {
-  if (section === "delivery" || section === "orders") {
-    revalidatePath("/checkout");
-    return;
-  }
-
-  if (section === "payments") return;
-  revalidatePath("/(shop)", "layout");
-  if (section === "seo" || section === "system") {
-    revalidatePath("/sitemap.xml");
-    revalidatePath("/robots.txt");
-  }
 }
 
 export async function saveSettingsAction(section: string, version: string | null, values: SettingsValues, uploads: FormData) {
@@ -125,7 +112,11 @@ export async function saveSettingsAction(section: string, version: string | null
         : "Could not save settings. Check the settings migration and try again.";
       return { ok: false as const, error: message };
     }
-    if (Object.keys(core).length || Object.keys(preferences).length) refreshStore(section);
+    if (Object.keys(core).length || Object.keys(preferences).length) {
+      updateTag(storefrontCache.settings.tag);
+      if (section === "delivery" || section === "orders") revalidatePath("/checkout");
+      if (section === "seo") revalidatePath("/sitemap.xml");
+    }
     if (section === "inventory" && Object.keys(privateSettings).length) revalidatePath("/admin/products");
     for (const slug of Object.keys(policies)) revalidatePath(`/legal/${slug}`);
     return {
@@ -141,7 +132,9 @@ export async function saveSettingsAction(section: string, version: string | null
 
 export async function refreshStorefrontAction() {
   await requireRole("owner");
-  refreshStore("system");
+  for (const rule of Object.values(storefrontCache)) updateTag(rule.tag);
+  revalidatePath("/(shop)", "layout");
+  revalidatePath("/sitemap.xml");
 }
 
 export async function revokeOtherSessionsAction() {

@@ -11,6 +11,11 @@ import ts from "typescript";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const require = createRequire(import.meta.url);
 const modules = new Map();
+const invalidations = [];
+const writes = [];
+let workflowRole = "owner";
+let workflowError = null;
+let publishedOverride = null;
 
 function load(file) {
   if (modules.has(file)) return modules.get(file);
@@ -24,8 +29,35 @@ function load(file) {
         return createElement("a", props, children);
       };
     }
+    if (id === "next/cache") return { revalidatePath: path => invalidations.push(path), updateTag: tag => invalidations.push(tag) };
+    if (id === "@/lib/roles") return { requireRole: async role => {
+      assert.equal(role, "owner");
+      if (workflowRole !== "owner") throw new Error("Denied");
+      return { email: "owner@fixture.test" };
+    } };
+    if (id === "@/lib/supabase/admin") return { createAdminClient: () => ({
+      async rpc(name, args) {
+        assert.equal(name, "save_legal_policy");
+        writes.push(args);
+        if (workflowError) return { error: workflowError };
+        return { data: {
+          revision: "15", draft: null, published: "Fixture copy",
+          publishedAt: null, publishedBy: null, canRestore: true,
+        } };
+      },
+    }) };
     if (id === "next/navigation") return { notFound: () => assert.fail("Unexpected missing legal page") };
-    if (id === "@/lib/supabase/public") return { createPublicClient: () => assert.fail("Approved policies must render without a database read") };
+    if (id === "@/lib/supabase/public") return { createPublicClient: () => ({
+      from(table) {
+        assert.equal(table, "legal_pages");
+        return {
+          select(columns) { assert.equal(columns, "title, content"); return this; },
+          eq(column) { assert.equal(column, "slug"); return this; },
+          not(...filter) { assert.deepEqual(filter, ["published_at", "is", null]); return this; },
+          async maybeSingle() { return { data: publishedOverride }; },
+        };
+      },
+    }) };
     const base = id.startsWith("@/") ? join(root, id.slice(2)) : resolve(dirname(file), id);
     const local = [`${base}.ts`, `${base}.tsx`, join(base, "index.ts")].find(existsSync);
     return local ? load(local) : require(id);
@@ -81,4 +113,48 @@ test("policy markdown renders HTML-like input as escaped text", () => {
   const { LegalMarkdown } = load(join(root, "components/legal/LegalMarkdown.tsx"));
   const html = renderToStaticMarkup(createElement(LegalMarkdown, { content: "<script>alert(1)</script>" }));
   assert.equal(html, "<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>");
+});
+
+test("a published override retains heading navigation and replaces the file text", async () => {
+  publishedOverride = {
+    title: policies.termsTitle,
+    content: "**Effective date:** 22 November 2026\n\n## 1. Products, descriptions and availability\n\nApproved **replacement**.",
+  };
+  try {
+    const html = await render("terms");
+    assert.match(html, /href="#products"/);
+    assert.match(html, /id="products"/);
+    assert.match(html, /Approved <strong>replacement<\/strong>\./);
+    assert.doesNotMatch(html, /Welcome to Pedigree Leather/);
+  } finally {
+    publishedOverride = null;
+  }
+});
+
+test("the Settings action restricts writes and invalidates only the affected publication", async () => {
+  const { saveLegalPolicy } = load(join(root, "lib/actions/legal-policies.ts"));
+  const request = { slug: "privacy", action: "draft", revision: null, content: "Private edit" };
+  workflowRole = "worker";
+  try {
+    await assert.rejects(saveLegalPolicy(request), /Denied/);
+    assert.equal(writes.length, 0);
+  } finally {
+    workflowRole = "owner";
+  }
+
+  assert.equal((await saveLegalPolicy(request)).ok, true);
+  assert.deepEqual(invalidations, []);
+  assert.equal(writes[0].p_actor, "owner@fixture.test");
+  assert.equal(writes[0].p_baseline, policies.getLegalBaseline("privacy"));
+
+  workflowError = { code: "40001" };
+  try {
+    assert.match((await saveLegalPolicy({ ...request, action: "publish" })).error, /Reload/);
+    assert.deepEqual(invalidations, []);
+  } finally {
+    workflowError = null;
+  }
+  assert.equal((await saveLegalPolicy({ ...request, action: "publish" })).ok, true);
+  assert.equal((await saveLegalPolicy({ ...request, action: "restore", content: null })).ok, true);
+  assert.deepEqual(invalidations, ["storefront:legal:privacy", "/legal/privacy", "storefront:legal:privacy", "/legal/privacy"]);
 });

@@ -113,19 +113,5 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = {
-  /* Everything except static assets and image optimisation output, which cannot
-     be an admin page and would only add latency. Running on `_next/image` in
-     particular would mean a Supabase round trip for every thumbnail. */
-  matcher: [
-    /*
-     * Everything except:
-     *  - _next/static  (build output)
-     *  - _next/image   (the image optimiser)
-     *  - favicon.ico   and any file with an extension (.*\\.)
-     *  - payment webhooks, which are called by providers with no session and
-     *    must not depend on a Supabase Auth round trip
-     */
-    "/((?!_next/static|_next/image|favicon.ico|api/mpesa/callback|api/flutterwave/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
-  ],
-};
+// Only the administration tree and its APIs use session cookies.
+export const config = { matcher: ["/admin/:path*", "/api/admin/:path*"] };

@@ -5,6 +5,7 @@ import { publicPreferences, type PreferenceValues } from "@/lib/settings-schema"
 
 import { DEFAULT_USD_EXCHANGE_RATE } from "@/lib/exchange-rate";
 import { createPublicClient } from "@/lib/supabase/public";
+import type { Database } from "@/lib/supabase/types";
 
 function rethrow(error: unknown, context: string): never {
   const code = (error as { code?: string } | null)?.code ?? "";
@@ -60,15 +61,22 @@ export interface ShopSettings {
   storefront_preferences: PreferenceValues;
 }
 
-export const getShopSettings = cache(async function getShopSettings(): Promise<ShopSettings> {
-  const supabase = createPublicClient();
+type ShopSettingsRow = Database["public"]["Tables"]["shop_settings"]["Row"];
+
+const storefrontFields = "id, shop_name, phone, whatsapp, email, address, google_maps_url, delivery_flat_rate, free_delivery_threshold, pickup_available, instagram_handle, instagram_url, exchange_rate_kes_to_usd, storefront_preferences, updated_at, exchange_rate_updated_at";
+
+async function readShopSettings(scope: "fresh" | "settings"): Promise<ShopSettings> {
+  const supabase = createPublicClient(scope);
 
   const { data, error } = await supabase
     .from("shop_settings")
-    .select("*")
+    .select(scope === "settings" ? storefrontFields : "*")
     .eq("id", "default")
-    .single();
+    .single()
+    .overrideTypes<ShopSettingsRow, { merge: false }>();
 
+  // Allow a preview to render using an older settings schema without caching that projection.
+  if (scope === "settings" && error?.code === "42703") return readShopSettings("fresh");
   if (error) rethrow(error, "load the shop settings");
   const preferences = publicPreferences.safeParse(data.storefront_preferences);
   return {
@@ -76,11 +84,14 @@ export const getShopSettings = cache(async function getShopSettings(): Promise<S
     storefront_preferences: preferences.success ? preferences.data : {},
     exchange_rate_kes_to_usd: data.exchange_rate_kes_to_usd ?? DEFAULT_USD_EXCHANGE_RATE,
   };
-});
+}
+
+export const getShopSettings = cache(() => readShopSettings("fresh"));
+export const getStorefrontShopSettings = cache(() => readShopSettings("settings"));
 
 export async function getStorefrontPreferences(): Promise<PreferenceValues> {
   try {
-    return (await getShopSettings()).storefront_preferences;
+    return (await getStorefrontShopSettings()).storefront_preferences;
   } catch {
     return {};
   }

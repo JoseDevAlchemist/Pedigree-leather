@@ -1,6 +1,8 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { NextResponse } from "next/server";
 
+const freshResponse = { headers: { "Cache-Control": "no-store" } };
+
 export async function GET() {
   try {
     const supabase = createPublicClient();
@@ -13,8 +15,8 @@ export async function GET() {
 
     if (error) throw new Error(error.message);
 
-    return NextResponse.json(data || []);
+    return NextResponse.json(data || [], freshResponse);
   } catch {
-    return NextResponse.json({ error: "Delivery zones are unavailable." }, { status: 503 });
+    return NextResponse.json({ error: "Delivery zones are unavailable." }, { ...freshResponse, status: 503 });
   }
 }

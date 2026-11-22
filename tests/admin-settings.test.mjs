@@ -21,6 +21,7 @@ function load(path, dependencies = {}) {
 
 const schema = load("lib/settings-schema.ts");
 const sections = load("lib/settings-sections.ts");
+const cacheRules = load("lib/storefront-cache.ts");
 const timestamp = "2026-11-22T19:00:00.001234+00:00";
 const savedTimestamp = "2026-11-22T19:01:00.004321+00:00";
 
@@ -39,7 +40,11 @@ function settingsFixture({ role = "owner", version = timestamp, configured = fal
     },
   };
   const actions = load("lib/actions/settings.ts", {
-    "next/cache": { revalidatePath: path => operations.push(["revalidate", path]) },
+    "next/cache": {
+      revalidatePath: path => operations.push(["revalidate", path]),
+      updateTag: tag => operations.push(["tag", tag]),
+    },
+    "@/lib/storefront-cache": cacheRules,
     "@/lib/roles": {
       requireRole(expected) {
         assert.equal(expected, "owner");
@@ -77,7 +82,7 @@ test("saving a rate patches only the shared currency field", async () => {
       p_actor: "owner@example.test", p_version: timestamp,
       p_core: { exchange_rate_kes_to_usd: 145.25 }, p_preferences: {}, p_private: {}, p_policies: {},
     }],
-    ["revalidate", "/(shop)"],
+    ["tag", "storefront:settings"],
   ]);
   const { getDisplayPrices } = load("lib/format.ts");
   assert.equal(getDisplayPrices({ basePrice: 14525, discountPercent: 0, exchangeRate: 145.25 }).usd, "$100.00");
@@ -142,6 +147,8 @@ function checkoutFixture({ deliveryEnabled = true, pickupAvailable = true, zones
     maybeSingle() { return { data: { id: orderId } }; },
   };
   const actions = load("lib/actions/orders.ts", {
+    "next/cache": { updateTag: () => assert.fail("An idempotent retry must not invalidate the catalogue") },
+    "@/lib/storefront-cache": cacheRules,
     "@/lib/orders-api": {
       createOrder: async payload => { orders.push(payload); return { created: false, orderId }; },
       getOrderById: async () => assert.fail("No customer notification should run"),

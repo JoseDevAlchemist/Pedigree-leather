@@ -500,6 +500,7 @@ export type Database = {
           title: string
           content: string
           updated_at: string | null
+          published_at: string | null
         }
         Insert: {
           slug: string
@@ -550,6 +551,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      read_legal_policy_editor: {
+        Args: { p_actor: string; p_slug: string }
+        Returns: Json
+      }
+      save_legal_policy: {
+        Args: { p_actor: string; p_slug: string; p_title: string; p_action: string; p_revision: string | null; p_content: string | null; p_baseline: string }
+        Returns: Json
+      }
       read_website_settings: {
         Args: { p_actor: string; p_section: string }
         Returns: Json

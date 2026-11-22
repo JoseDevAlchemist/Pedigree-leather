@@ -56,8 +56,8 @@ export interface ShopConfig {
 export async function getShopConfig({ strict = false } = {}): Promise<ShopConfig> {
   try {
     // Dynamic import to avoid circular dependency
-    const { getShopSettings } = await import("@/lib/settings-api");
-    const settings = await getShopSettings();
+    const { getShopSettings, getStorefrontShopSettings } = await import("@/lib/settings-api");
+    const settings = await (strict ? getShopSettings() : getStorefrontShopSettings());
     const preferences = settings.storefront_preferences;
 
     return {

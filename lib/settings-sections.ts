@@ -63,7 +63,7 @@ export const settingsSections: Section[] = [
       { title: "Checkout information", fields: [["checkout_instructions", "Customer-facing instructions", "textarea"], ["preparation_time", "Estimated preparation time"]] },
     ],
     confirm: true,
-    notes: ["Published policies are maintained in the approved legal source files.", "Checkout currently supports guest purchases. Order numbering and confirmations follow the current order workflow. Cart expiration and abandoned-cart notifications require additional integration."],
+    notes: ["Checkout currently supports guest purchases. Order numbering and confirmations follow the current order workflow. Cart expiration and abandoned-cart notifications require additional integration."],
     links: [["Manage orders", "/admin/orders"], ["View current return and exchange policy", "/legal/returns"], ["View current cancellation terms", "/legal/cancellation"]],
   },
   {

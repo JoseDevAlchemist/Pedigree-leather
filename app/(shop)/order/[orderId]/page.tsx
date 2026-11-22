@@ -11,6 +11,8 @@ import { OrderTimeline } from "@/components/shop/OrderTimeline";
    Order confirmation page (Server Component)
    --------------------------------------------------------------------------- */
 
+export const revalidate = 0;
+
 export default async function OrderConfirmationPage({
   params,
 }: {

@@ -7,7 +7,8 @@
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAdminUser, requireRole } from "@/lib/roles";
-import { revalidatePath } from "next/cache";
+import { storefrontCache } from "@/lib/storefront-cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getOrderById } from "@/lib/orders-api";
 
 const statusSchema = z.enum([
@@ -220,11 +221,7 @@ async function cancelOrder(orderId: string, note: string, user: { email: string;
   revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/" + orderId);
   revalidatePath("/order/" + orderId);
-  revalidatePath("/");
-  revalidatePath("/category/[slug]", "page");
-  for (const category of ["bags", "shoes", "belts"]) {
-    revalidatePath("/" + category + "/[slug]", "page");
-  }
+  updateTag(storefrontCache.catalogue.tag);
   try {
     const { notifyStatusChange } = await import("@/lib/whatsapp");
     const order = await getOrderById(orderId);
