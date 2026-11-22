@@ -34,6 +34,16 @@ export interface ShopConfig {
   deliveryFlatRate: number;
   freeDeliveryThreshold: number;
   pickupAvailable: boolean;
+  deliveryEnabled: boolean;
+  pickupAddress?: string | null;
+  pickupHours?: string | null;
+  pickupInstructions?: string | null;
+  deliveryEstimate?: string | null;
+  preparationTime?: string | null;
+  checkoutInstructions?: string | null;
+  taxDisplayNote?: string | null;
+  operatingHours?: string | null;
+  supportEmail?: string | null;
   instagramHandle: string | null;
   instagramUrl: string | null;
 }
@@ -43,11 +53,12 @@ export interface ShopConfig {
  * Falls back to the constants above if DB is unavailable.
  * Use this in Server Components and server actions instead of importing SHOP/DELIVERY directly.
  */
-export async function getShopConfig(): Promise<ShopConfig> {
+export async function getShopConfig({ strict = false } = {}): Promise<ShopConfig> {
   try {
     // Dynamic import to avoid circular dependency
     const { getShopSettings } = await import("@/lib/settings-api");
     const settings = await getShopSettings();
+    const preferences = settings.storefront_preferences;
 
     return {
       shopName: settings.shop_name,
@@ -59,10 +70,21 @@ export async function getShopConfig(): Promise<ShopConfig> {
       deliveryFlatRate: settings.delivery_flat_rate,
       freeDeliveryThreshold: settings.free_delivery_threshold,
       pickupAvailable: settings.pickup_available,
+      deliveryEnabled: preferences.delivery_enabled ?? true,
+      pickupAddress: preferences.pickup_address,
+      pickupHours: preferences.pickup_hours,
+      pickupInstructions: preferences.pickup_instructions,
+      deliveryEstimate: preferences.delivery_estimate,
+      preparationTime: preferences.preparation_time,
+      checkoutInstructions: preferences.checkout_instructions,
+      taxDisplayNote: preferences.tax_display_note,
+      operatingHours: preferences.operating_hours,
+      supportEmail: preferences.support_email,
       instagramHandle: settings.instagram_handle,
       instagramUrl: settings.instagram_url,
     };
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     // Fallback to constants
     return {
       shopName: SHOP.name,
@@ -74,6 +96,7 @@ export async function getShopConfig(): Promise<ShopConfig> {
       deliveryFlatRate: DELIVERY.flatRateNairobi,
       freeDeliveryThreshold: DELIVERY.freeDeliveryThreshold,
       pickupAvailable: DELIVERY.pickupAvailable,
+      deliveryEnabled: true,
       instagramHandle: "@pedigreeleather",
       instagramUrl: "https://instagram.com/pedigreeleather",
     };

@@ -4,7 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Menu, MessageCircle, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { NAV_ITEMS } from "@/lib/navigation";
 import type { Category } from "@/lib/types";
@@ -21,16 +21,23 @@ type NavbarProps = {
    * to the static items in `lib/navigation.ts` — the shell never crashes because
    * the category fetch failed.
    */
+  brandName?: string;
+  logoUrl?: string;
   categories?: readonly Category[];
   parentCategories?: readonly Category[];
 };
 
-function isActive(href: string, pathname: string): boolean {
+const subscribeToHydration = () => () => {};
+
+function isActive(href: string, pathname: string | null): boolean {
+  if (pathname === null) return false;
   return href === "/" ? pathname === href : pathname.startsWith(href);
 }
 
-export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
+export function Navbar({ categories, parentCategories, brandName, logoUrl }: NavbarProps = {}) {
   const pathname = usePathname();
+  // A prerendered route can have a different pathname before browser hydration.
+  const activePathname = useSyncExternalStore(subscribeToHydration, () => pathname, () => null);
   const router = useRouter();
   const reduceMotion = useReducedMotion();
 
@@ -66,7 +73,7 @@ export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
   const categoryLinks = parentCategories ?? [];
   const usingCategories = categoryLinks.length > 0;
   const staticLinks = NAV_ITEMS.filter(
-    (item) => !usingCategories || (item.href !== "/bags" && item.href !== "/shoes"),
+    (item) => !usingCategories || (item.href !== "/category/bags" && item.href !== "/category/shoes"),
   );
 
   type NavEntry = {
@@ -294,17 +301,18 @@ export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
         >
           <Link
             href="/"
+            prefetch={false}
             className="-m-1 flex items-center gap-2 rounded-full p-1 transition-transform duration-150 ease-out active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent sm:gap-3"
           >
-            <BrandMark priority />
-            <Wordmark className="text-lg sm:text-xl md:text-2xl" />
+            <BrandMark priority src={logoUrl} />
+            <Wordmark name={brandName} className="text-lg sm:text-xl md:text-2xl" />
           </Link>
 
           {/* Desktop navigation */}
           <nav aria-label="Main" className="hidden md:block">
             <ul className="flex items-center gap-1">
               {links.map((item) => {
-                const active = isActive(item.href, pathname);
+                const active = isActive(item.href, activePathname);
                 const hasChildren = item.children && item.children.length > 0;
                 const isOpenDropdown = openDropdown === item.key;
 
@@ -341,7 +349,7 @@ export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
                           <div className="w-48 rounded-xl border border-border bg-card py-2 shadow-panel">
                             <ul>
                               {item.children.map((child) => {
-                                const childActive = isActive(`/category/${child.slug}`, pathname);
+                                const childActive = isActive(`/category/${child.slug}`, activePathname);
                                 return (
                                   <li key={child.id}>
                                     <Link
@@ -447,6 +455,7 @@ export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
 
             <Link
               href="/contact"
+              prefetch={false}
               aria-label="Contact us"
               className="hidden size-11 shrink-0 items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 hover:text-accent active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:flex"
             >
@@ -554,8 +563,8 @@ export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
             >
               <div className="flex h-16 shrink-0 items-center justify-between gap-3 px-5">
                 <span className="flex items-center gap-3">
-                  <BrandMark />
-                  <Wordmark className="text-lg" />
+                  <BrandMark src={logoUrl} />
+                  <Wordmark name={brandName} className="text-lg" />
                 </span>
                 <button
                   ref={closeRef}
@@ -571,7 +580,7 @@ export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
               <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-3 py-2">
                 <ul className="flex flex-col gap-1">
                   {links.map((item) => {
-                    const active = isActive(item.href, pathname);
+                    const active = isActive(item.href, activePathname);
                     const hasChildren = item.children && item.children.length > 0;
 
                     if (hasChildren) {
@@ -595,7 +604,7 @@ export function Navbar({ categories, parentCategories }: NavbarProps = {}) {
                           </Link>
                           <ul className="mt-1 pl-4 border-l border-background/20">
                             {item.children.map((child) => {
-                              const childActive = isActive(`/category/${child.slug}`, pathname);
+                              const childActive = isActive(`/category/${child.slug}`, activePathname);
                               return (
                                 <li key={child.id}>
                                   <Link

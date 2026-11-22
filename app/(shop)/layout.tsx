@@ -1,61 +1,84 @@
+import { CartDrawerProvider } from "@/components/cart/CartDrawerProvider";
+import { SharedImageTransitionProvider } from "@/components/motion/SharedImageTransition";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { ContactWidgetWrapper } from "@/components/layout/ContactWidgetWrapper";
 import { getCategories, getParentCategories } from "@/lib/categories-api";
-import { getUsdExchangeRate } from "@/lib/settings-api";
+import { brandingUrl, getShopSettings, getStorefrontPreferences } from "@/lib/settings-api";
 import { ExchangeRateProvider } from "@/components/product/ExchangeRateContext";
 import { Toaster } from "sonner";
+import type { Metadata } from "next";
+import { DEFAULT_USD_EXCHANGE_RATE } from "@/lib/exchange-rate";
+import { metadata as defaults } from "@/app/layout";
 
-/**
- * The shop shell — everything a customer sees around the page.
- *
- * A route group, so `(shop)` never appears in a URL: `/`, `/bags`, `/shoes` and
- * `/contact` are exactly where they were. Its only job is to be the one place the
- * navbar, the footer and the floating WhatsApp button are mounted.
- *
- * Splitting this out of the root layout is what keeps `/admin` clean. The
- * alternative — one layout with a `pathname.startsWith("/admin")` branch — imports
- * the cart drawer, the image transition and the WhatsApp button into every admin
- * page, and the admin is exactly where none of those belong.
- *
- * The providers stay in the root layout above this one, because they must survive
- * navigation within the shop. See the note there.
- *
- * `WhatsAppButton` also checks the pathname itself and hides itself on `/admin`.
- * That check is now redundant with the route group and is kept anyway, for one
- * reason: it is the only thing standing between a customer prompt and a future
- * admin page someone adds directly under `app/` instead of under `app/(admin)/`.
- * Two cheap guards beat one that has to be remembered.
- */
+// POS managers can update the shared rate outside this deployment.
+export const revalidate = 300;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getStorefrontPreferences();
+  const title = settings.seo_title;
+  const description = settings.seo_description;
+  const image = brandingUrl(settings.social);
+  const favicon = brandingUrl(settings.favicon);
+  return {
+    title: title ? { default: title, template: "%s | Pedigree Leather" } : defaults.title,
+    description: description || defaults.description,
+    robots: settings.allow_indexing === false ? { index: false, follow: false } : defaults.robots,
+    openGraph: {
+      ...defaults.openGraph,
+      title: settings.sharing_title || title || defaults.openGraph?.title,
+      description: settings.sharing_description || description || defaults.openGraph?.description,
+      images: image ? [image] : defaults.openGraph?.images,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: settings.sharing_title || title || defaults.twitter?.title,
+      description: settings.sharing_description || description || defaults.twitter?.description,
+      images: image ? [image] : defaults.twitter?.images,
+    },
+    ...(favicon ? { icons: { icon: favicon, shortcut: favicon, apple: favicon } } : {}),
+    ...(settings.search_verification ? { verification: { google: settings.search_verification } } : {}),
+  };
+}
+
+
 export default async function ShopLayout({
   children,
 }: LayoutProps<"/">) {
-  const [categories, parentCategories, exchangeRate] = await Promise.all([
+  const [categories, parentCategories, settings] = await Promise.all([
     getCategories(),
     getParentCategories(),
-    getUsdExchangeRate(),
+    getShopSettings().catch(() => null),
   ]);
 
+  const preferences = settings?.storefront_preferences;
   return (
-    <>
-      <ExchangeRateProvider rate={exchangeRate}>
-        <Navbar categories={categories} parentCategories={parentCategories} />
-        {children}
-      </ExchangeRateProvider>
-      {/* Below the page, above nothing. `body` is a flex column and every page's
-          `<main>` is `flex-1`, so the footer sits at the bottom of the viewport on
-          short pages and below the fold on long ones instead of floating
-          mid-page. */}
-      <Footer />
-      {/* Outside the providers: it needs neither the cart nor the image
-          transition, and it must render even if a page above it throws. */}
-      <ContactWidgetWrapper />
+    <CartDrawerProvider>
+      <SharedImageTransitionProvider>
+        <ExchangeRateProvider rate={settings?.exchange_rate_kes_to_usd ?? DEFAULT_USD_EXCHANGE_RATE}>
+          <Navbar categories={categories} parentCategories={parentCategories}
+            brandName={settings?.shop_name} logoUrl={brandingUrl(preferences?.logo)} />
+          {preferences?.announcement_enabled && preferences.announcement && (
+            <p className="bg-primary px-4 py-2 text-center text-sm text-background">{preferences.announcement}</p>
+          )}
+          {preferences?.maintenance_message && (
+            <p className="border-b border-border bg-card px-4 py-2 text-center text-sm">{preferences.maintenance_message}</p>
+          )}
+          {children}
+        </ExchangeRateProvider>
+        {/* Below the page, above nothing. `body` is a flex column and every page's
+            `<main>` is `flex-1`, so the footer sits at the bottom of the viewport on
+            short pages and below the fold on long ones instead of floating
+            mid-page. */}
+        <Footer />
+        <ContactWidgetWrapper />
 
-      {/* `sonner` is used by the card's quick-add and by checkout. The library
-          renders nothing until its `<Toaster />` is mounted, so this is the only
-          thing that makes those calls visible. Top-centre keeps it clear of the
-          floating WhatsApp/contact button in the bottom-right. */}
-      <Toaster position="top-center" closeButton />
-    </>
+        {/* `sonner` is used by the card's quick-add and by checkout. The library
+            renders nothing until its `<Toaster />` is mounted, so this is the only
+            thing that makes those calls visible. Top-centre keeps it clear of the
+            floating WhatsApp/contact button in the bottom-right. */}
+        <Toaster position="top-center" closeButton />
+      </SharedImageTransitionProvider>
+    </CartDrawerProvider>
   );
 }

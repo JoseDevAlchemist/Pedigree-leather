@@ -67,6 +67,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string | null
+          updated_at: string
           fee: number
           id: string
           name: string
@@ -94,6 +95,10 @@ export type Database = {
         Row: {
           color_hex: string
           color_name: string
+          color_id: string | null
+          size_id: string | null
+          size_system: string | null
+          size_label: string | null
           id: string
           line_total: number
           order_id: string
@@ -104,6 +109,10 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          color_id?: string | null
+          size_id?: string | null
+          size_system?: string | null
+          size_label?: string | null
           color_hex: string
           color_name: string
           id?: string
@@ -116,6 +125,10 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          color_id?: string | null
+          size_id?: string | null
+          size_system?: string | null
+          size_label?: string | null
           color_hex?: string
           color_name?: string
           id?: string
@@ -265,6 +278,18 @@ export type Database = {
           },
         ]
       }
+      product_color_sizes: {
+        Row: { id: string; color_id: string; size_system: string; size_label: string; stock_quantity: number; archived: boolean }
+        Insert: { id?: string; color_id: string; size_system: string; size_label: string; stock_quantity?: number; archived?: boolean }
+        Update: { stock_quantity?: number; archived?: boolean }
+        Relationships: [{
+          foreignKeyName: "product_color_sizes_color_id_fkey"
+          columns: ["color_id"]
+          isOneToOne: false
+          referencedRelation: "product_colors"
+          referencedColumns: ["id"]
+        }]
+      }
       product_colors: {
         Row: {
           color_hex: string
@@ -334,6 +359,7 @@ export type Database = {
       }
       products: {
         Row: {
+          stock_tracking_mode: "color" | "size"
           active: boolean
           base_price: number
           barcode: string | null
@@ -351,6 +377,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          stock_tracking_mode?: "color" | "size"
           active?: boolean
           base_price: number
           barcode?: string | null
@@ -368,6 +395,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          stock_tracking_mode?: "color" | "size"
           active?: boolean
           base_price?: number
           barcode?: string | null
@@ -403,6 +431,8 @@ export type Database = {
       }
       shop_settings: {
         Row: {
+          storefront_preferences: Json
+          exchange_rate_updated_at: string | null
           address: string
           delivery_flat_rate: number
           email: string | null
@@ -450,6 +480,18 @@ export type Database = {
           updated_at?: string | null
           whatsapp?: string
         }
+        Relationships: []
+      }
+      website_admin_preferences: {
+        Row: { id: string; preferences: Json }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      shop_settings_audit: {
+        Row: { id: number; changed_at: string; actor: string; changes: Json }
+        Insert: { actor: string; changes: Json }
+        Update: never
         Relationships: []
       }
       legal_pages: {
@@ -508,6 +550,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      read_website_settings: {
+        Args: { p_actor: string; p_section: string }
+        Returns: Json
+      }
+      save_website_settings: {
+        Args: { p_actor: string; p_version: string | null; p_core: Json; p_preferences: Json; p_private: Json; p_policies: Json }
+        Returns: string | null
+      }
+      website_cancel_order: {
+        Args: { p_order_id: string; p_actor_email: string; p_actor_role: string; p_note: string }
+        Returns: boolean
+      }
+      website_create_order: {
+        Args: { p_request_id: string; p_order: Json; p_items: Json }
+        Returns: { order_id: string; order_number: string; created: boolean }[]
+      }
+      website_edit_product: {
+        Args: { p_product_id: string; p_edit: Json }
+        Returns: string
+      }
       decrement_color_stock: {
         Args: { color_id: string; qty: number }
         Returns: number

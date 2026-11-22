@@ -22,3 +22,16 @@ export function originalProductImageUrl(src: string): string {
 
   return STORAGE_ORIGIN + PUBLIC_OBJECT + src;
 }
+
+const RESPONSIVE_OBJECT = /-r([1-9]\d*)x([1-9]\d*)\.webp(?=[?#]|$)/;
+
+/** Only uploads with both objects use this suffix. Existing photos stay direct. */
+export function productPhotoVariant(src: string) {
+  const match = RESPONSIVE_OBJECT.exec(src);
+  if (!match) return null;
+  return {
+    url: src.replace(RESPONSIVE_OBJECT, "-card.webp"),
+    cardWidth: Number(match[1]),
+    originalWidth: Number(match[2]),
+  };
+}

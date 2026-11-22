@@ -23,9 +23,10 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { anglesForCategory, toAdminProduct } from "@/lib/mappers";
-import type { AdminProduct, AdminProductRow } from "@/lib/mappers";
-import type { Tables, TablesUpdate } from "@/lib/supabase/types";
+import { anglesForCategory, productEditSnapshot, toAdminProduct } from "@/lib/mappers";
+import type { AdminProduct, AdminProductRow, EditableAdminProduct } from "@/lib/mappers";
+import type { TablesUpdate } from "@/lib/supabase/types";
+import type { ValidatedProductEdit } from "@/lib/validation";
 import type { Angle, ColorVariant, Product } from "@/lib/types";
 
 /**
@@ -177,69 +178,69 @@ export interface ProductInput {
    * admin can add, remove and arrange slots freely and the list order is what
    * becomes `product_images.sort_order`. Empty slots never reach this type.
    *
-   * Keyed by *index* rather than by colour id because a colour the form just
-   * created does not have an id yet — the ids are minted by Postgres on insert.
-   * `updateProduct` deletes and re-inserts every colour anyway, so the ids on the
-   * incoming rows are not the ids being written.
+   * New product colours receive their IDs from Postgres.
    */
   images: Record<number, { angle: Angle; url: string }[]>;
 }
 
-/**
- * Every product the admin can see, including inactive ones.
- *
- * `search` matches name or slug, case-insensitively. `ilike` with the wildcards
- * inline rather than `like` with a parameter: PostgREST has no `ilike` operator
- * that takes a separate pattern argument, so `%` has to be part of the value.
- * The value is a bound parameter, not concatenated SQL, so there is no injection
- * here — the wildcards are in the pattern string only.
- */
+const ADMIN_PRODUCT_WITH_SIZES = "*, product_colors(*, product_color_sizes(*), product_images(*))";
+const ADMIN_PRODUCT_WITH_COLOURS = "*, product_colors(*, product_images(*))";
+
+function missingProductSizes(error: { code: string; message: string } | null) {
+  return error?.code === "PGRST200" && error.message.includes("product_color_sizes");
+}
+
+/** Every product, including drafts. Search accepts names and internal codes. */
 export async function listProducts(filters?: {
   category?: Product["category"];
   search?: string;
 }): Promise<AdminProduct[]> {
   const supabase = createAdminClient();
 
-  let query = supabase
-    .from("products")
-    .select(
-      "*, product_colors(*, product_images(*))",
-    )
-    .order("created_at", { ascending: false });
+  const buildQuery = (projection: string) => {
+    let query = supabase.from("products").select(projection).order("created_at", { ascending: false });
 
-  if (filters?.category) {
-    query = query.eq("category", filters.category);
+    if (filters?.category) {
+      query = query.eq("category", filters.category);
+    }
+
+    const search = filters?.search?.trim();
+    if (search) {
+      /* `*` inside an ilike pattern is a literal star. Someone searching for a
+         product called "Ngong*" should get the bag named Ngong, not everything. */
+      const pattern = search.replace(/[\\%_]/g, (char) => `\\${char}`);
+      query = query.or(`name.ilike.${JSON.stringify(`%${pattern}%`)},barcode.ilike.${JSON.stringify(`%${pattern}%`)}`);
+    }
+
+    return query.overrideTypes<AdminProductRow[], { merge: false }>();
+  };
+
+  let { data, error } = await buildQuery(ADMIN_PRODUCT_WITH_SIZES);
+  if (missingProductSizes(error)) {
+    ({ data, error } = await buildQuery(ADMIN_PRODUCT_WITH_COLOURS));
   }
-
-  const search = filters?.search?.trim();
-  if (search) {
-    /* `*` inside an ilike pattern is a literal star. Someone searching for a
-       product called "Ngong*" should get the bag named Ngong, not everything. */
-    const pattern = search.replace(/[\\%_]/g, (char) => `\\${char}`);
-    query = query.ilike("name", `%${pattern}%`);
-  }
-
-  const { data, error } = await query;
   if (error) rethrow(error, "list products");
 
-  return (data as AdminProductRow[]).map(toAdminProduct);
+  return (data ?? []).map(toAdminProduct);
 }
 
 /** One product by id, or `null`. Same shape as `listProducts`, one row. */
-export async function getProduct(id: string): Promise<AdminProduct | null> {
+export async function getProduct(id: string): Promise<EditableAdminProduct | null> {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
-    .from("products")
-    .select("*, product_colors(*, product_images(*))")
-    .eq("id", id)
-    .maybeSingle();
+  const read = (projection: string) => supabase.from("products").select(projection).eq("id", id).maybeSingle().overrideTypes<AdminProductRow, { merge: false }>();
+  let { data, error } = await read(ADMIN_PRODUCT_WITH_SIZES);
+  if (missingProductSizes(error)) {
+    ({ data, error } = await read(ADMIN_PRODUCT_WITH_COLOURS));
+  }
 
   /* `maybeSingle` returns null for zero rows and *errors* for more than one, which
      is the behaviour we want: a duplicate id means the data is wrong and should not
      be papered over. */
   if (error) rethrow(error, "read one product");
-  return data ? toAdminProduct(data as AdminProductRow) : null;
+  if (!data) return null;
+  const row = data;
+  return { ...toAdminProduct(row), editSnapshot: productEditSnapshot(row) };
 }
 
 /**
@@ -328,83 +329,14 @@ export async function createProduct(
   return created;
 }
 
-/**
- * Update a product and replace its colours and images.
- *
- * Colours are deleted and re-inserted rather than diffed. That is the brief's
- * suggestion and it is the right one at this size: a colourway is a name, a hex
- * and some photographs, the whole set is a handful of rows, and the admin edits
- * one product at a time. A diff would need to reconcile renames against
- * unchanged rows and would be a lot of code to avoid deleting six rows.
- *
- * The `UNIQUE (color_id, angle)` constraint does the real work here: after the
- * delete, the inserts cannot collide with each other, so a retried save is
- * idempotent rather than failing halfway.
- */
-export async function updateProduct(id: string, input: ProductInput): Promise<AdminProduct> {
-  const supabase = createAdminClient();
-
-  const { error: updateError } = await supabase
-    .from("products")
-    .update({
-      name: input.name,
-      slug: input.slug,
-      description: input.description,
-      category: input.category,
-      category_id: input.categoryId,
-      base_price: input.basePrice,
-      base_price_usd: input.basePriceUsd ?? null,
-      barcode: input.barcode,
-      publish_to_pos: input.publishToPos,
-      discount_percent: input.discountPercent,
-      featured: input.featured,
-      active: input.active,
-    })
-    .eq("id", id);
-
-  if (updateError) rethrow(updateError, "update the product");
-
-  /* Images go with the colours, so this one call clears both. ON DELETE CASCADE
-     from product_colors is what does it — see 001_initial.sql. */
-  const { error: deleteError } = await supabase
-    .from("product_colors")
-    .delete()
-    .eq("product_id", id);
-
-  if (deleteError) rethrow(deleteError, "replace its colours");
-
-  const colors = input.colors.map((color, index) => ({
-    product_id: id,
-    color_name: color.name,
-    color_hex: color.hex,
-    sort_order: index,
-    stock_quantity: color.stockQuantity,
-  }));
-
-  const { data: createdColors, error: colorsError } = await supabase
-    .from("product_colors")
-    .insert(colors)
-    .select("id, sort_order");
-
-  if (colorsError) throw colorsError;
-
-  const imageRows = createdColors.flatMap((color) =>
-    (input.images[color.sort_order] ?? []).map((image, slot) => ({
-      color_id: color.id,
-      angle: image.angle,
-      image_url: image.url,
-      sort_order: slot,
-    })),
-  );
-
-  if (imageRows.length > 0) {
-    const { error: imagesError } = await supabase.from("product_images").insert(imageRows);
-    if (imagesError) throw imagesError;
-  }
-
-  const updated = await getProduct(id);
-  if (!updated) throw new Error(`Updated product ${id} but could not read it back.`);
-  return updated;
+/** All edit writes succeed or roll back together inside the reviewed RPC. */
+export async function updateProduct(id: string, input: ValidatedProductEdit): Promise<string> {
+  const { data, error } = await createAdminClient().rpc("website_edit_product", {
+    p_product_id: id,
+    p_edit: input,
+  });
+  if (error) throw error;
+  return data;
 }
 
 /** Delete a product. Colours and images cascade; nothing else is touched. */

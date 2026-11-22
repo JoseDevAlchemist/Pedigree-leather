@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ProductForm } from "@/components/admin/ProductForm";
 import { getProduct } from "@/lib/admin-api";
-import { requireAdmin } from "@/lib/supabase/guards";
+import { requireAdminRole } from "@/lib/supabase/guards";
 import { listCategoriesAction } from "@/lib/actions/categories";
 import type { Category } from "@/lib/types";
 
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
  * the failure mode of treating "not found" as "new".
  */
 export default async function EditProductPage({ params }: PagePropsForEdit) {
-  await requireAdmin();
+  await requireAdminRole("owner");
 
   const { id } = await params;
   const product = await getProduct(id);
@@ -52,7 +52,7 @@ export default async function EditProductPage({ params }: PagePropsForEdit) {
           month: "long",
           year: "numeric",
         })}
-        {product.active ? "" : " · hidden from the shop"}
+        {product.isWebsitePublished ? (product.active ? " · Published" : " · Hidden") : " · Draft"}
       </p>
 
       <ProductForm mode="edit" initialData={product} categories={categories} />

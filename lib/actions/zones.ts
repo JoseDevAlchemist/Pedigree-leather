@@ -1,142 +1,44 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/roles";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/types";
 
-export interface DeliveryZone {
-  id: string;
-  name: string;
-  fee: number;
-  active: boolean;
-  sort_order: number;
-  created_at: string;
-}
+export type DeliveryZone = Database["public"]["Tables"]["delivery_zones"]["Row"];
 
 const zoneSchema = z.object({
-  name: z.string().min(1, "Zone name is required"),
-  fee: z.coerce.number().min(0, "Fee must be positive"),
-  active: z.boolean().default(true),
-  sort_order: z.coerce.number().default(0),
+  name: z.string().trim().min(1).max(100),
+  fee: z.number().int().min(0).max(100_000_000),
+  active: z.boolean(),
+  sort_order: z.number().int().min(0).max(100_000),
 });
 
 export async function listZones(): Promise<DeliveryZone[]> {
   await requireRole("owner");
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("delivery_zones")
-    .select("*")
-    .order("sort_order", { ascending: true });
-
-  if (error) throw new Error(error.message);
-
-  return (data || []) as DeliveryZone[];
+  const db = await createClient();
+  const { data, error } = await db.from("delivery_zones").select("*").order("sort_order").order("name");
+  if (error) throw error;
+  return data;
 }
 
-export async function createZoneAction(
-  formData: FormData
-): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  try {
-    await requireRole("owner");
-    const supabase = createAdminClient();
+export async function saveZoneAction(input: unknown, editing: { id: string; updated_at: string } | null) {
+  await requireRole("owner");
+  const parsed = zoneSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: "Enter a zone name, a whole-shilling fee and a valid sort order." };
+  const identity = z.object({ id: z.uuid(), updated_at: z.iso.datetime({ offset: true }) }).nullable().safeParse(editing);
+  if (!identity.success) return { ok: false as const, error: "Invalid delivery zone." };
 
-    const rawData = {
-      name: formData.get("name"),
-      fee: formData.get("fee"),
-      active: formData.get("active") === "true",
-      sort_order: formData.get("sort_order") ? Number(formData.get("sort_order")) : 0,
-    };
+  const db = await createClient();
+  const target = identity.data;
+  const query = target
+    ? db.from("delivery_zones").update(parsed.data).eq("id", target.id).eq("updated_at", target.updated_at)
+    : db.from("delivery_zones").insert(parsed.data);
+  const { data, error } = await query.select("*").maybeSingle();
 
-    const parsed = zoneSchema.safeParse(rawData);
-    if (!parsed.success) {
-      return { ok: false, error: parsed.error.issues[0].message };
-    }
-
-    const { data, error } = await supabase
-      .from("delivery_zones")
-      .insert(parsed.data)
-      .select("id")
-      .single();
-
-    if (error) throw new Error(error.message);
-
-    revalidatePath("/admin/settings");
-    revalidatePath("/admin/settings/zones");
-    revalidatePath("/checkout");
-
-    return { ok: true, id: data.id };
-  } catch (error) {
-    console.error("[createZoneAction] Error:", error);
-    return { ok: false, error: error instanceof Error ? error.message : "Something went wrong" };
-  }
-}
-
-export async function updateZoneAction(
-  formData: FormData
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  try {
-    await requireRole("owner");
-    const supabase = createAdminClient();
-
-    const id = formData.get("id") as string;
-    if (!id) return { ok: false, error: "Zone ID is required" };
-
-    const rawData = {
-      name: formData.get("name"),
-      fee: formData.get("fee"),
-      active: formData.get("active") === "true",
-      sort_order: formData.get("sort_order") ? Number(formData.get("sort_order")) : 0,
-    };
-
-    const parsed = zoneSchema.partial().safeParse(rawData);
-    if (!parsed.success) {
-      return { ok: false, error: parsed.error.issues[0].message };
-    }
-
-    const { error } = await supabase
-      .from("delivery_zones")
-      .update(parsed.data)
-      .eq("id", id);
-
-    if (error) throw new Error(error.message);
-
-    revalidatePath("/admin/settings");
-    revalidatePath("/admin/settings/zones");
-    revalidatePath("/checkout");
-
-    return { ok: true };
-  } catch (error) {
-    console.error("[updateZoneAction] Error:", error);
-    return { ok: false, error: error instanceof Error ? error.message : "Something went wrong" };
-  }
-}
-
-export async function deleteZoneAction(
-  formData: FormData
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  try {
-    await requireRole("owner");
-    const supabase = createAdminClient();
-
-    const id = formData.get("id") as string;
-    if (!id) return { ok: false, error: "Zone ID is required" };
-
-    const { error } = await supabase
-      .from("delivery_zones")
-      .delete()
-      .eq("id", id);
-
-    if (error) throw new Error(error.message);
-
-    revalidatePath("/admin/settings");
-    revalidatePath("/admin/settings/zones");
-    revalidatePath("/checkout");
-
-    return { ok: true };
-  } catch (error) {
-    console.error("[deleteZoneAction] Error:", error);
-    return { ok: false, error: error instanceof Error ? error.message : "Something went wrong" };
-  }
+  if (error) return { ok: false as const, error: "Could not save the delivery zone. Check the settings migration and try again." };
+  if (!data) return { ok: false as const, error: "This zone changed in another session. Reload before saving." };
+  revalidatePath("/checkout");
+  return { ok: true as const, zone: data };
 }

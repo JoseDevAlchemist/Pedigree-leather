@@ -42,11 +42,11 @@ export async function getCurrentAdminUser(): Promise<AdminUser | null> {
     .eq("email", user.email)
     .single();
 
-  if (error || !adminUser) return null;
+  if (error || !adminUser || (adminUser.role !== "owner" && adminUser.role !== "worker")) return null;
 
   return {
     email: adminUser.email,
-    role: adminUser.role as Role,
+    role: adminUser.role,
     displayName: adminUser.display_name,
   };
 }

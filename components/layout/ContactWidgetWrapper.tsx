@@ -16,7 +16,7 @@ export async function ContactWidgetWrapper() {
       instagramUrl={config.instagramUrl || "https://instagram.com/pedigreeleather"}
       phoneNumber={config.phone.replace(/\D/g, "")}
       phoneDisplay={config.phone}
-      email={config.email || "hello@pedigree.co.ke"}
+      email={config.supportEmail || config.email || "hello@pedigree.co.ke"}
     />
   );
 }

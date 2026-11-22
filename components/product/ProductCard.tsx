@@ -13,9 +13,6 @@ import { effectivePrice, formatPrice, hasDiscount } from "@/lib/format";
 import { useCartStore } from "@/lib/store/cart";
 import type { CartItem, Product } from "@/lib/types";
 
-import { useHoverAngleRoll, CROSSFADE_MS } from "@/hooks/useHoverAngleRoll";
-import { useInViewAutoRoll } from "@/hooks/useInViewAutoRoll";
-import { useHasHover } from "@/hooks/useMediaQuery";
 import { useSharedImageTransition } from "@/components/motion/SharedImageTransition";
 import { AngleDots } from "@/components/product/AngleDots";
 import { ColorSwatches } from "@/components/product/ColorSwatches";
@@ -45,6 +42,8 @@ type ProductCardProps = {
    * component.
    */
   className?: string;
+  priority?: boolean;
+  showDiscountBadge?: boolean;
 };
 
 /**
@@ -65,7 +64,7 @@ type ProductCardProps = {
  * 141px without wrapping the price mid-number. From `sm` up it is the roomier
  * card the desktop grid was designed around.
  */
-export function ProductCard({ product, className = "" }: ProductCardProps) {
+export function ProductCard({ product, className = "", priority = false, showDiscountBadge = true }: ProductCardProps) {
   const reduceMotion = useReducedMotion();
   const { capture } = useSharedImageTransition();
   const imageRef = useRef<HTMLDivElement>(null);
@@ -110,64 +109,21 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
     toast.success("Added to cart");
   };
 
-  /* Two roll triggers, both always running, chosen by what the input device can
-     do rather than by viewport width. A phone has no pointer to hover with, so
-     it gets the in-view roll; anything with a real cursor gets the hybrid one.
-     `hasHover` is false on the server and the first client render, so both hooks
-     start inert and settle on the second — see `useMediaQuery`. */
-  const hasHover = useHasHover();
-
-  /* The card itself, for the in-view roll on a phone. Separate from
-     `imageRef`, which measures the picture for the hover zones: a card is taller
-     than its image, and the two want different boxes. */
-  const cardRef = useRef<HTMLLIElement | null>(null);
-
-  const hover = useHoverAngleRoll({
-    angleCount,
-    angles: product.angles,
-    mode: "hybrid",
-    /* Zones describe the picture, so they are measured against the picture —
-       the card is taller than its image and the bottom third of the photo would
-       otherwise land in the middle of the card. */
-    surfaceRef: imageRef,
-  });
-
-  const inView = useInViewAutoRoll({
-    angleCount,
-    enabled: !hasHover,
-    targetRef: cardRef,
-  });
-
-  /* The arrow keys on the stretched link are the one input that is neither a
-     hover nor a scroll, so their result is held separately and takes precedence
-     while it lasts. `null` means "no override, follow the roll". Leaving the
-     card clears it, which hands control back to the roll — and the roll's own
-     reset to front, with its slower 250ms fade, is what the shopper sees. */
-  const [manualAngleIndex, setManualAngleIndex] = useState<number | null>(null);
-
-  const rollAngleIndex = hasHover ? hover.currentAngleIndex : inView.currentAngleIndex;
-
-  const angleIndex = manualAngleIndex ?? rollAngleIndex;
-  /* `angleAt` inlined: this value is derived from the roll hook's
-     `currentAngleIndex`, and the React lint rules read anything named
-     `current*` on a hook result as a ref and reject passing it to a function
-     during render. Same clamp either way. */
+  const [angleIndex, setAngleIndex] = useState(0);
   const angle = product.angles[angleIndex] ?? product.angles[0];
-
-  /* Slower only for the roll's own reset to front; a keyboard step or an in-view
-     roll is an ordinary change of view. */
-  const fadeMs = manualAngleIndex === null ? hover.fadeMs : CROSSFADE_MS;
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const swiped = useRef(false);
 
   const stepManually = (delta: number) => {
-    setManualAngleIndex((index) => stepIndex(index ?? rollAngleIndex, delta, angleCount));
-  };
-
-  const handleMouseLeave = () => {
-    setManualAngleIndex(null);
-    hover.handlers.onMouseLeave();
+    setAngleIndex((index) => stepIndex(index, delta, angleCount));
   };
 
   const handleOpen = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (swiped.current && event.detail > 0) {
+      swiped.current = false;
+      event.preventDefault();
+      return;
+    }
     /* Let the browser handle modified clicks — they open a new tab, and a new
        tab must not inherit this tab's measured rect. */
     if (
@@ -184,14 +140,10 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
 
   return (
     <motion.li
-      ref={cardRef}
       variants={cardVariants}
       initial="rest"
       whileHover={reduceMotion ? undefined : "hover"}
       transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-      onMouseEnter={hover.handlers.onMouseEnter}
-      onMouseMove={hover.handlers.onMouseMove}
-      onMouseLeave={handleMouseLeave}
       className={`group relative flex flex-col rounded-2xl bg-card shadow-card ${className}`}
     >
       {/* First in the DOM so the shadow paints behind everything else here. */}
@@ -213,28 +165,13 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
         className="relative group aspect-square overflow-hidden rounded-2xl"
         style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.06)" }}
       >
-        {/* One layer per view that has been shown, cross-faded. Keyed on colour
-            and angle together, so changing colour mid-roll restarts cleanly.
-
-            `AnimatePresence` is what makes this a crossfade rather than a swap:
-            the outgoing view stays mounted until its opacity has reached zero,
-            so the two pictures overlap. Without it, `motion.div` would replace
-            the element immediately and the change would read as a jump. Mode
-            `sync` rather than `wait` — the incoming view must start fading in
-            while the outgoing one is still fading out, or each step costs twice
-            the duration.
-
-            `initial={false}` matters twice over: the front view does not fade in
-            on page load, and neither does it animate when a card scrolls into
-            view on a phone, which would otherwise mean every card in the grid
-            faded in at once on arrival. */}
         <AnimatePresence initial={false} mode="sync">
           <motion.div
             key={`${color.id}-${angle}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : fadeMs / 1000, ease: "easeOut" }}
+            transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
             className="absolute inset-0"
           >
             <ProductImage
@@ -246,6 +183,9 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
               colorName={color.name}
               productName={product.name}
               angle={angle}
+              loading={priority ? "eager" : "lazy"}
+              fetchPriority={priority && angleIndex === 0 ? "high" : undefined}
+              sizes="(min-width: 1024px) 270px, (min-width: 768px) 33vw, 50vw"
             />
           </motion.div>
         </AnimatePresence>
@@ -269,7 +209,7 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
           <span className="sr-only">{`Add ${product.name} to cart`}</span>
         </button>
 
-        {hasDiscount(product.discountPercent) ? (
+        {showDiscountBadge && hasDiscount(product.discountPercent) ? (
           <DiscountBadge
             discountPercent={product.discountPercent}
             className="absolute top-2 left-2 sm:top-3 sm:left-3"
@@ -323,11 +263,10 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
           <ColorSwatches
             colors={product.colors}
             activeColorId={color.id}
-            onSelect={(colorId) =>
-              setColorIndex(
-                product.colors.findIndex((entry) => entry.id === colorId),
-              )
-            }
+            onSelect={(colorId) => {
+              setColorIndex(product.colors.findIndex((entry) => entry.id === colorId));
+              setAngleIndex(0);
+            }}
             className="relative z-10 shrink-0"
           />
         </div>
@@ -339,7 +278,22 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
           the href so a shoe card does not try to open a bag page. */}
       <Link
         href={productHref(product.category, product.slug)}
+        prefetch={false}
         onClick={handleOpen}
+        onPointerDown={(event) => {
+          swiped.current = false;
+          touchStart.current = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
+        }}
+        onPointerCancel={() => { touchStart.current = null; }}
+        onPointerUp={(event) => {
+          const start = touchStart.current;
+          touchStart.current = null;
+          if (!start) return;
+          const delta = event.clientX - start.x;
+          if (Math.abs(delta) < 35 || Math.abs(delta) <= Math.abs(event.clientY - start.y)) return;
+          swiped.current = true;
+          stepManually(delta < 0 ? 1 : -1);
+        }}
         onKeyDown={(event) => {
           if (event.key === "ArrowRight") {
             event.preventDefault();
@@ -349,7 +303,7 @@ export function ProductCard({ product, className = "" }: ProductCardProps) {
             stepManually(-1);
           }
         }}
-        className="absolute inset-0 z-[1] rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="absolute inset-0 z-[1] touch-pan-y rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <span className="sr-only">
           {`${product.name}, ${formatPrice(product.basePrice)}. View details.`}

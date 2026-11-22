@@ -23,15 +23,17 @@ import Image from "next/image";
 
 export function BrandMark({
   priority = false,
+  src = "/pedigree-logo.webp",
   className = "",
 }: {
   /** Only for the navbar's instance, which is above the fold. */
   priority?: boolean;
+  src?: string;
   className?: string;
 }) {
   return (
     <Image
-      src="/pedigree-logo.png"
+      src={src}
       alt=""
       width={40}
       height={40}
@@ -41,12 +43,12 @@ export function BrandMark({
   );
 }
 
-export function Wordmark({ className = "" }: { className?: string }) {
+export function Wordmark({ className = "", name = "Pedigree Leather" }: { className?: string; name?: string }) {
   return (
     <span
       className={`font-serif leading-none font-semibold tracking-tight text-background ${className}`}
     >
-      Pedigree Leather
+      {name}
     </span>
   );
 }

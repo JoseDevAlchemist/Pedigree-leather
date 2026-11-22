@@ -33,7 +33,15 @@ export type Angle =
  * is `null`, so the placeholder knows to draw rather than the app crashing on a
  * missing key. Views outside `Product.angles` are not read for this product.
  */
+export interface SizeVariant {
+  id: string;
+  label: string;
+  system: string;
+  stockQuantity: number;
+}
+
 export interface ColorVariant {
+  sizes?: SizeVariant[];
   id: string;
   name: string;
   /** Swatch + placeholder fill, e.g. "#8B4513". */
@@ -66,7 +74,8 @@ export interface Product {
   /** 0 for no discount. Otherwise 1–99. Applied to `basePrice` and `basePriceUsd` proportionally. */
   discountPercent: number;
   colors: ColorVariant[];
-  category: "bag" | "shoe";
+  category: "bag" | "shoe" | "belt";
+  stockTrackingMode?: "color" | "size";
   /** The admin-managed category this product belongs to, if any. */
   categoryId?: string | null;
   /**
@@ -124,6 +133,8 @@ export interface CartItem {
   slug: string;
   name: string;
   colorId: string;
+  sizeId?: string;
+  sizeLabel?: string;
   colorName: string;
   colorHex: string;
   /** Price in KES for one unit, discount already applied. */
@@ -132,7 +143,7 @@ export interface CartItem {
   basePrice: number;
   quantity: number;
   /**
-   * Units available in this colour when the line was added. Checkout compares
+   * Units available for this colour and size when the line was added. Checkout compares
    * the requested quantity against it before creating an order.
    */
   stockQuantity: number;

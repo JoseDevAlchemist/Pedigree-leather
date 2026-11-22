@@ -1,12 +1,14 @@
 import { MetadataRoute } from "next";
 import { getProducts } from "@/lib/api";
+import { getStorefrontPreferences } from "@/lib/settings-api";
 import { getCategories } from "@/lib/categories-api";
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const products = await getProducts();
-  const categories = await getCategories();
+  const settings = await getStorefrontPreferences();
+  if (settings.allow_indexing === false) return [];
+  const [products, categories] = await Promise.all([getProducts(), getCategories()]);
 
   const productUrls = products.map((product) => ({
     url: `${siteUrl}/${product.category}s/${product.slug}`,

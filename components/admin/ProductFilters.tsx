@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
  */
 
 /** Kept in step with the `category` prop on `listProducts`. */
-type Filter = "all" | "bag" | "shoe";
+type Filter = "all" | "bag" | "shoe" | "belt";
 
 /**
  * How long to wait after the last keystroke before searching.
@@ -36,6 +36,7 @@ const CHIPS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "bag", label: "Bags" },
   { value: "shoe", label: "Shoes" },
+  { value: "belt", label: "Belts" },
 ];
 
 export function ProductFilters({

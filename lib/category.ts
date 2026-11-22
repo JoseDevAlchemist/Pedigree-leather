@@ -15,6 +15,7 @@ import type { Product } from "@/lib/types";
 export const CATEGORY_SEGMENT: Record<Product["category"], string> = {
   bag: "bags",
   shoe: "shoes",
+  belt: "belts",
 };
 
 /** `/bags` or `/shoes`. */

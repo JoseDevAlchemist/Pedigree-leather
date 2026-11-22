@@ -34,7 +34,7 @@ export default function ShopError({
             Try again
           </button>
           <Link
-            href="/bags"
+            href="/category/bags"
             className="inline-flex h-12 w-full items-center justify-center rounded-full border border-primary px-8 text-sm font-semibold text-primary transition-colors duration-200 ease-out hover:bg-primary hover:text-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-auto"
           >
             Back to bags

@@ -2,7 +2,7 @@
  * Money helpers.
  *
  * Prices are whole shillings everywhere in the UI — Kenya has no practice of
- * quoting cents on leather goods, and decimal noise would make the discount
+ * quoting cents on leather products, and decimal noise would make the discount
  * arithmetic look wrong. One formatter, so the card, the detail page and the
  * cart footer can never disagree.
  */

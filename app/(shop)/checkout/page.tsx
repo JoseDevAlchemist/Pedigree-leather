@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Truck, MapPin, Package, CheckCircle, Loader2 } from "lucide-react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-import { useCartStore, useCartSubtotal } from "@/lib/store/cart";
+import { useCartDrawer } from "@/components/cart/CartDrawerProvider";
+import { cartLineKey, useCartStore, useCartSubtotal } from "@/lib/store/cart";
 import { formatPrice } from "@/lib/format";
 import { originalProductImageUrl } from "@/lib/product-image-url";
 import { createOrderAction } from "@/lib/actions/orders";
@@ -21,36 +22,25 @@ import {
 import { toast } from "sonner";
 
 interface ShopConfig {
-  shopName: string;
-  phone: string;
-  whatsapp: string;
-  email: string | null;
   address: string;
-  googleMapsUrl: string | null;
+  deliveryEnabled: boolean;
   deliveryFlatRate: number;
   freeDeliveryThreshold: number;
   pickupAvailable: boolean;
+  pickupAddress?: string;
+  pickupHours?: string;
+  pickupInstructions?: string;
+  deliveryEstimate?: string;
+  preparationTime?: string;
+  checkoutInstructions?: string;
+  taxDisplayNote?: string;
 }
 
 interface DeliveryZone {
   id: string;
   name: string;
   fee: number;
-  active: boolean;
-  sort_order: number;
 }
-
-const FALLBACK_CONFIG: ShopConfig = {
-  shopName: "Pedigree Leather",
-  phone: "+254143354741",
-  whatsapp: "254143354741",
-  email: "hello@pedigree.co.ke",
-  address: "Rosslyn Luxury Mall, Annex 2, Shop RLM 48, Nairobi, Kenya",
-  googleMapsUrl: "#",
-  deliveryFlatRate: 300,
-  freeDeliveryThreshold: 25000,
-  pickupAvailable: true,
-};
 
 /* ---------------------------------------------------------------------------
    Zod schema (mirrors the server action)
@@ -85,11 +75,13 @@ type CheckoutForm = z.infer<typeof checkoutSchema>;
 export default function CheckoutPage() {
   const router = useRouter();
   const items = useCartStore((state) => state.items);
+  const { isCartHydrated } = useCartDrawer();
+  const hasItems = items.length > 0;
+  const checkoutReady = isCartHydrated && hasItems;
   const subtotal = useCartSubtotal();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [deliveryFee, setDeliveryFee] = useState(0);
-  const [discountTotal, setDiscountTotal] = useState(0);
-  const [shopConfig, setShopConfig] = useState<ShopConfig>(FALLBACK_CONFIG);
+  const [shopConfig, setShopConfig] = useState<ShopConfig | null>(null);
+  const [configError, setConfigError] = useState(false);
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string>("");
 
@@ -102,51 +94,25 @@ export default function CheckoutPage() {
    * looked like the payment page "reloading".
    */
   const orderPlacedRef = useRef(false);
+  const checkoutAttempt = useRef<{ payload: string; id: string } | null>(null);
 
   // Redirect if the cart is genuinely empty (not because we just checked out).
   useEffect(() => {
-    if (items.length === 0 && !orderPlacedRef.current) {
-      router.replace("/bags");
+    if (isCartHydrated && !hasItems && !orderPlacedRef.current) {
+      router.replace("/category/bags");
       toast.info("Your cart is empty. Add something first.");
     }
-  }, [items, router]);
+  }, [hasItems, isCartHydrated, router]);
 
-  // Fetch shop config and zones on mount
-  useEffect(() => {
-    async function fetchConfig() {
-      try {
-        const [configRes, zonesRes] = await Promise.all([
-          fetch("/api/shop-config", { cache: "no-store" }),
-          fetch("/api/delivery-zones", { cache: "no-store" }),
-        ]);
-        if (configRes.ok) {
-          const config = await configRes.json();
-          setShopConfig(config);
-        }
-        if (zonesRes.ok) {
-          const zonesData = await zonesRes.json();
-          setZones(zonesData.filter((z: DeliveryZone) => z.active));
-        }
-      } catch {
-        // Use fallbacks
-      }
-    }
-    fetchConfig();
-  }, []);
-
-  // Calculate discount total from cart items
-  useEffect(() => {
-    const discount = items.reduce((sum, item) => {
-      return sum + (item.basePrice - item.unitPrice) * item.quantity;
-    }, 0);
-    setDiscountTotal(discount);
-  }, [items]);
+  const discountTotal = items.reduce((sum, item) =>
+    sum + (item.basePrice - Math.round(item.unitPrice)) * item.quantity, 0);
+  const beforeDiscount = subtotal + discountTotal;
 
   const {
     control,
     register,
+    setValue,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<CheckoutForm>({
     resolver: zodResolver(checkoutSchema),
@@ -160,26 +126,39 @@ export default function CheckoutPage() {
     },
   });
 
-  // Calculate delivery fee based on method, subtotal, and selected zone
   useEffect(() => {
-    const method = watch("deliveryMethod");
-    if (method === "delivery") {
-      if (selectedZoneId) {
-        const zone = zones.find((z) => z.id === selectedZoneId);
-        if (zone) {
-          setDeliveryFee(subtotal >= shopConfig.freeDeliveryThreshold ? 0 : zone.fee);
-        } else {
-          setDeliveryFee(subtotal >= shopConfig.freeDeliveryThreshold ? 0 : shopConfig.deliveryFlatRate);
-        }
-      } else {
-        setDeliveryFee(subtotal >= shopConfig.freeDeliveryThreshold ? 0 : shopConfig.deliveryFlatRate);
-      }
-    } else {
-      setDeliveryFee(0);
-    }
-  }, [subtotal, watch, selectedZoneId, zones, shopConfig]);
+    if (!checkoutReady) return;
 
-  const total = subtotal - discountTotal + deliveryFee;
+    const controller = new AbortController();
+    const options = { cache: "no-store", signal: controller.signal } as const;
+    async function fetchConfig() {
+      try {
+        const [configRes, zonesRes] = await Promise.all([
+          fetch("/api/shop-config", options),
+          fetch("/api/delivery-zones", options),
+        ]);
+        if (!configRes.ok || !zonesRes.ok) throw new Error("Checkout settings unavailable");
+        const [config, availableZones]: [ShopConfig, DeliveryZone[]] = await Promise.all([
+          configRes.json(), zonesRes.json(),
+        ]);
+        if (controller.signal.aborted) return;
+        if (!config.deliveryEnabled && config.pickupAvailable) setValue("deliveryMethod", "pickup");
+        setZones(availableZones);
+        setShopConfig(config);
+      } catch {
+        if (!controller.signal.aborted) setConfigError(true);
+      }
+    }
+    void fetchConfig();
+    return () => controller.abort();
+  }, [checkoutReady, setValue]);
+
+  const deliveryMethod = useWatch({ control, name: "deliveryMethod" });
+  const selectedZone = zones.find((zone) => zone.id === selectedZoneId);
+  const deliveryFee = shopConfig?.deliveryEnabled && deliveryMethod === "delivery" && subtotal < shopConfig.freeDeliveryThreshold
+    ? selectedZone?.fee ?? shopConfig.deliveryFlatRate
+    : 0;
+  const total = subtotal + deliveryFee;
 
   /**
    * Runs only after react-hook-form has validated the form.
@@ -191,7 +170,7 @@ export default function CheckoutPage() {
    * same job without either problem.
    */
   const onValid = async (data: CheckoutForm) => {
-    if (isSubmitting) return;
+    if (!checkoutReady || !shopConfig || isSubmitting) return;
 
     /* The line's stock was captured when it was added. Check it before the round
        trip so the shopper gets an immediate, specific answer rather than a generic
@@ -215,16 +194,10 @@ export default function CheckoutPage() {
       // Prepare cart items for the server action
       const cartItemsForServer = items.map((item) => ({
         productId: item.productId,
-        slug: item.slug,
-        name: item.name,
         colorId: item.colorId,
-        colorName: item.colorName,
-        colorHex: item.colorHex,
-        unitPrice: item.unitPrice,
-        basePrice: item.basePrice,
+        sizeId: item.sizeId,
+        unitPrice: Math.round(item.unitPrice),
         quantity: item.quantity,
-        stockQuantity: item.stockQuantity,
-        image: item.image,
       }));
 
       const formData = new FormData();
@@ -236,16 +209,16 @@ export default function CheckoutPage() {
       formData.append("deliveryMethod", data.deliveryMethod);
       formData.append("deliveryAddress", data.deliveryAddress || "");
       formData.append("notes", data.notes || "");
-      if (selectedZoneId) {
+      if (data.deliveryMethod === "delivery" && selectedZoneId) {
         const zone = zones.find((z) => z.id === selectedZoneId);
-        if (zone) {
-          formData.append("zoneId", zone.id);
-          formData.append("zoneName", zone.name);
-        }
+        if (zone) formData.append("zoneId", zone.id);
       }
       formData.append("cartItems", JSON.stringify(cartItemsForServer));
-      formData.append("subtotal", subtotal.toString());
-      formData.append("discountTotal", discountTotal.toString());
+      const payload = JSON.stringify(Array.from(formData.entries()));
+      if (checkoutAttempt.current?.payload !== payload) {
+        checkoutAttempt.current = { payload, id: crypto.randomUUID() };
+      }
+      formData.append("requestId", checkoutAttempt.current.id);
 
       const result = await createOrderAction(formData);
 
@@ -268,7 +241,27 @@ export default function CheckoutPage() {
     setIsSubmitting(false);
   };
 
-  const handleCheckoutSubmit = handleSubmit(onValid);
+  if (!checkoutReady) {
+    return (
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          Checkout
+        </h1>
+        <p className="mt-2 text-muted" role="status">
+          {isCartHydrated ? "Loading…" : "Loading your cart…"}
+        </p>
+      </main>
+    );
+  }
+
+  if (!shopConfig || (!shopConfig.deliveryEnabled && !shopConfig.pickupAvailable)) {
+    const unavailable = configError || Boolean(shopConfig);
+    return (
+      <main id="main" className="mx-auto min-h-60 max-w-4xl px-4 py-12">
+        <p role={unavailable ? "alert" : "status"}>{unavailable ? "Checkout is currently unavailable. Please try again later." : "Loading checkout options…"}</p>
+      </main>
+    );
+  }
 
   return (
     <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
@@ -279,7 +272,7 @@ export default function CheckoutPage() {
         <p className="mt-2 text-muted">Enter your details and choose how you&apos;d like to receive your order.</p>
       </header>
 
-      <form onSubmit={handleCheckoutSubmit} noValidate className="space-y-8">
+      <form onSubmit={(event) => void handleSubmit(onValid)(event)} noValidate className="space-y-8">
         {/* Mobile: form first, summary below. Desktop: two columns */}
         <div className="grid gap-8 lg:grid-cols-12">
           {/* Form section - 7 cols on desktop, full width on mobile */}
@@ -399,9 +392,11 @@ export default function CheckoutPage() {
                 Delivery
               </h2>
 
+              {shopConfig.checkoutInstructions && <p className="whitespace-pre-line text-sm text-muted">{shopConfig.checkoutInstructions}</p>}
+              {shopConfig.preparationTime && <p className="text-sm text-muted">Estimated preparation time · {shopConfig.preparationTime}</p>}
               <div className="grid gap-4" role="radiogroup" aria-label="Delivery method">
                 {/* Delivery option */}
-                <label className="relative cursor-pointer">
+                {shopConfig.deliveryEnabled && <label className="relative cursor-pointer">
                   <input
                     {...register("deliveryMethod")}
                     type="radio"
@@ -412,13 +407,13 @@ export default function CheckoutPage() {
                   <div
                     className={`
                       relative flex items-start gap-3 rounded-xl border-2 p-4 transition-all duration-200
-                      ${watch("deliveryMethod") === "delivery"
+                      ${deliveryMethod === "delivery"
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/40"}
                     `}
                   >
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors" aria-hidden="true">
-                      {watch("deliveryMethod") === "delivery" && (
+                      {deliveryMethod === "delivery" && (
                         <CheckCircle className="size-4 text-primary" />
                       )}
                     </div>
@@ -428,20 +423,13 @@ export default function CheckoutPage() {
                         <span className="font-medium text-foreground">Deliver to my address</span>
                       </div>
                       <p className="mt-1 text-sm text-muted">
-                        {(() => {
-                          if (selectedZoneId) {
-                            const zone = zones.find((z) => z.id === selectedZoneId);
-                            if (zone) return `KES ${zone.fee.toLocaleString("en-KE")}`;
-                          }
-                          return `KES ${shopConfig.deliveryFlatRate.toLocaleString("en-KE")}`;
-                        })()}
-                        {subtotal >= shopConfig.freeDeliveryThreshold && (
-                          <span className="text-primary font-medium"> (Free over KES {shopConfig.freeDeliveryThreshold.toLocaleString("en-KE")})</span>
-                        )}
+                        {subtotal >= shopConfig.freeDeliveryThreshold
+                          ? "Free delivery"
+                          : formatPrice(selectedZone?.fee ?? shopConfig.deliveryFlatRate)}
                       </p>
                     </div>
                   </div>
-                </label>
+                </label>}
 
                 {/* Pickup option */}
                 {shopConfig.pickupAvailable && (
@@ -456,13 +444,13 @@ export default function CheckoutPage() {
                     <div
                       className={`
                         relative flex items-start gap-3 rounded-xl border-2 p-4 transition-all duration-200
-                        ${watch("deliveryMethod") === "pickup"
+                        ${deliveryMethod === "pickup"
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/40"}
                       `}
                     >
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors" aria-hidden="true">
-                        {watch("deliveryMethod") === "pickup" && (
+                        {deliveryMethod === "pickup" && (
                           <CheckCircle className="size-4 text-primary" />
                         )}
                       </div>
@@ -478,8 +466,12 @@ export default function CheckoutPage() {
                 )}
               </div>
 
+              {deliveryMethod === "delivery" && shopConfig.deliveryEstimate && (
+                <p className="text-sm text-muted">Estimated delivery · {shopConfig.deliveryEstimate}</p>
+              )}
+
               {/* Zone dropdown (only shown when delivery is selected) */}
-              {watch("deliveryMethod") === "delivery" && zones.length > 0 && (
+              {deliveryMethod === "delivery" && zones.length > 0 && (
                 <div className="space-y-2">
                   <label htmlFor="deliveryZone" className="block text-sm font-medium text-foreground">
                     Delivery zone <span className="text-primary" aria-hidden="true">*</span>
@@ -506,7 +498,7 @@ export default function CheckoutPage() {
               )}
 
               {/* Delivery address (only shown when delivery is selected) */}
-              {watch("deliveryMethod") === "delivery" && (
+              {deliveryMethod === "delivery" && (
                 <div className="space-y-2">
                   <label htmlFor="deliveryAddress" className="block text-sm font-medium text-foreground">
                     Delivery address <span className="text-primary" aria-hidden="true">*</span>
@@ -534,13 +526,15 @@ export default function CheckoutPage() {
               )}
 
               {/* Pickup info (only shown when pickup is selected) */}
-              {watch("deliveryMethod") === "pickup" && shopConfig.pickupAvailable && (
+              {deliveryMethod === "pickup" && shopConfig.pickupAvailable && (
                 <div className="rounded-lg border border-border bg-background/50 p-4">
                   <div className="flex items-start gap-3">
                     <MapPin className="mt-1 size-5 shrink-0 text-accent" aria-hidden="true" />
                     <div>
                       <p className="font-medium text-foreground">Pickup location</p>
-                      <p className="mt-1 text-sm text-muted">{shopConfig.address}</p>
+                      <p className="mt-1 text-sm text-muted">{shopConfig.pickupAddress || shopConfig.address}</p>
+                      {shopConfig.pickupHours && <p className="mt-1 whitespace-pre-line text-sm text-muted">{shopConfig.pickupHours}</p>}
+                      {shopConfig.pickupInstructions && <p className="mt-1 whitespace-pre-line text-sm text-muted">{shopConfig.pickupInstructions}</p>}
                       <p className="mt-2 text-sm text-primary">
                         We&apos;ll notify you when your order is ready for pickup.
                       </p>
@@ -592,7 +586,7 @@ export default function CheckoutPage() {
               {/* Items */}
               <ul className="divide-y divide-border" role="list" aria-label="Order items">
                 {items.map((item) => (
-                  <li key={`${item.productId}:${item.colorId}`} className="py-3 flex gap-3">
+                  <li key={cartLineKey(item.productId, item.colorId, item.sizeId)} className="py-3 flex gap-3">
                     {/* Thumbnail */}
                     <div
                       className="size-16 shrink-0 rounded-lg overflow-hidden"
@@ -627,14 +621,14 @@ export default function CheckoutPage() {
                           }}
                           aria-hidden="true"
                         />
-                        {item.colorName}
+                        {item.colorName}{item.sizeLabel ? ` · ${item.sizeLabel}` : ""}
                         <span className="text-muted/50">×</span>
                         <span className="tabular-nums">{item.quantity}</span>
                       </p>
                     </div>
 
                     <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                      {formatPrice(item.unitPrice * item.quantity)}
+                      {formatPrice(Math.round(item.unitPrice) * item.quantity)}
                     </p>
                   </li>
                 ))}
@@ -644,7 +638,7 @@ export default function CheckoutPage() {
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-muted">Subtotal</dt>
-                  <dd className="font-medium tabular-nums text-foreground">{formatPrice(subtotal)}</dd>
+                  <dd className="font-medium tabular-nums text-foreground">{formatPrice(beforeDiscount)}</dd>
                 </div>
 
                 {discountTotal > 0 && (
@@ -673,6 +667,7 @@ export default function CheckoutPage() {
                     {formatPrice(total)}
                   </dd>
                 </div>
+                {shopConfig.taxDisplayNote && <p className="text-right text-xs text-muted">{shopConfig.taxDisplayNote}</p>}
                 <p className="mt-2 text-xs text-center text-muted">
                   Your order will be confirmed on the next step.
                 </p>

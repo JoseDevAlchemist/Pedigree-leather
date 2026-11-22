@@ -9,7 +9,8 @@
 
 import { z } from "zod";
 import { createOrder, getOrderById } from "@/lib/orders-api";
-import { getActiveDeliveryZone } from "@/lib/settings-api";
+import { allowsDeferredPayment } from "@/lib/payments/config";
+import { getActiveDeliveryZone, getShopSettings, hasActiveDeliveryZones } from "@/lib/settings-api";
 import { getShopConfig } from "@/lib/shop-config";
 import { kenyanPhoneSchema } from "@/lib/validation";
 
@@ -27,7 +28,6 @@ const deliverySchema = z.object({
   method: z.enum(["delivery", "pickup"]),
   address: z.string().optional(),
   zoneId: z.string().uuid().optional(),
-  zoneName: z.string().optional(),
 });
 
 const notesSchema = z.object({
@@ -42,9 +42,8 @@ const checkoutSchema = z.object({
 
 const paymentMethodSchema = z.object({
   orderId: z.string().uuid("Invalid order"),
-  method: z.enum(["mpesa", "mpesa_manual", "card", "pay_on_delivery"]),
+  method: z.enum(["mpesa_manual", "pay_on_delivery"]),
   reference: z.string().trim().max(80).optional(),
-  markPaid: z.boolean().optional(),
 });
 
 type PaymentMethodValue = z.infer<typeof paymentMethodSchema>["method"];
@@ -67,7 +66,6 @@ export async function createOrderAction(
         method: formData.get("deliveryMethod"),
         address: formData.get("deliveryAddress") || "",
         zoneId: formData.get("zoneId") || undefined,
-        zoneName: formData.get("zoneName") || undefined,
       },
       notes: formData.get("notes") || "",
     };
@@ -80,73 +78,56 @@ export async function createOrderAction(
 
     const { customer, delivery, notes } = parsed.data;
 
-    // Get cart items from the request (they come from the client component)
-    const cartItemsJson = formData.get("cartItems") as string;
-    const subtotal = Number(formData.get("subtotal"));
-    const discountTotal = Number(formData.get("discountTotal"));
+    const requestId = z.uuid().parse(formData.get("requestId"));
+    const lines = z.array(z.object({
+      productId: z.uuid(),
+      colorId: z.uuid(),
+      sizeId: z.uuid().optional(),
+      unitPrice: z.number().int().min(0).max(10_000_000),
+      quantity: z.number().int().min(1).max(10),
+    })).min(1).max(100);
+    const cartItems = lines.parse(JSON.parse(String(formData.get("cartItems"))));
+    // The RPC checks every quoted unit price against the locked catalogue.
+    const subtotal = cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
-    if (!cartItemsJson) {
-      return { ok: false, error: "Cart is empty" };
-    }
-
-    const cartItems = JSON.parse(cartItemsJson) as {
-      productId: string;
-      slug: string;
-      name: string;
-      colorId: string;
-      colorName: string;
-      colorHex: string;
-      unitPrice: number;
-      basePrice: number;
-      quantity: number;
-      stockQuantity: number;
-      image: string | null;
-    }[];
-
-    if (cartItems.length === 0) {
-      return { ok: false, error: "Cart is empty" };
-    }
-
-    // Get shop config for delivery settings
-    const shopConfig = await getShopConfig();
-
-    // Calculate delivery fee
+    const shopConfig = await getShopConfig({ strict: true });
     let deliveryFee = 0;
-    let zoneName = delivery.zoneName || null;
-    /* `kenyanPhoneSchema` has already transformed this to +254... — see
-       `lib/validation.ts`. Keep one canonical value for the order and the
-       WhatsApp messages rather than normalising twice. */
+    let zoneName: string | null = null;
+    let zoneId: string | null = null;
     const normalizedPhone = customer.phone;
 
-    if (delivery.method === "delivery") {
-      const address = delivery.address?.trim() || "";
-      if (!address || address.length < 10) {
-        return { ok: false, error: "Please enter a delivery address (at least 10 characters)" };
-      }
-      if (subtotal >= shopConfig.freeDeliveryThreshold) {
-        deliveryFee = 0;
-      } else if (delivery.zoneId) {
-        // The client sends the chosen zone, never the fee. Reading the fee
-        // from the database is what stops a crafted request from shipping to
-        // Karen for KES 0.
-        const zone = await getActiveDeliveryZone(delivery.zoneId);
-        if (!zone) {
-          return {
-            ok: false,
-            error: "That delivery zone is no longer available. Please choose another.",
-          };
-        }
-        deliveryFee = zone.fee;
-        zoneName = zone.name;
-      } else {
-        deliveryFee = shopConfig.deliveryFlatRate;
-      }
+    if (delivery.method === "pickup" && !shopConfig.pickupAvailable) {
+      return { ok: false, error: "Store pickup is currently unavailable. Choose another fulfilment method." };
     }
 
-    const total = subtotal - discountTotal + deliveryFee;
+    if (delivery.method === "delivery") {
+      if (!shopConfig.deliveryEnabled) {
+        return { ok: false, error: "Delivery is currently unavailable. Choose another fulfilment method." };
+      }
+      if ((delivery.address?.trim().length ?? 0) < 10) {
+        return { ok: false, error: "Please enter a delivery address (at least 10 characters)" };
+      }
+
+      let fee = shopConfig.deliveryFlatRate;
+      if (delivery.zoneId) {
+        const zone = await getActiveDeliveryZone(delivery.zoneId);
+        if (!zone) {
+          return { ok: false, error: "That delivery zone is no longer available. Please choose another." };
+        }
+        fee = zone.fee;
+        zoneId = zone.id;
+        zoneName = zone.name;
+      } else if (await hasActiveDeliveryZones()) {
+        return { ok: false, error: "Please select an available delivery zone." };
+      }
+      deliveryFee = subtotal >= shopConfig.freeDeliveryThreshold ? 0 : fee;
+    }
+
+    const total = subtotal + deliveryFee;
 
     // Call the server-only API
     const result = await createOrder({
+      requestId,
       customer: {
         name: customer.name.trim(),
         email: customer.email?.trim() || null,
@@ -156,13 +137,13 @@ export async function createOrderAction(
       deliveryAddress: delivery.method === "delivery" ? (delivery.address?.trim() || null) : null,
       items: cartItems,
       subtotal,
-      discountTotal,
       deliveryFee,
-      total,
       notes: notes?.trim() || null,
-      zoneId: delivery.zoneId || null,
-      zoneName: zoneName,
+      zoneId,
+      zoneName,
     });
+
+    if (!result.created) return { ok: true, orderId: result.orderId };
 
     // Fetch the created order to get the order number for WhatsApp
     const createdOrder = await getOrderById(result.orderId);
@@ -178,7 +159,10 @@ export async function createOrderAction(
             customer_name: customer.name.trim(),
             total,
             delivery_method: delivery.method,
-            items: cartItems.map((item) => ({ name: item.name, quantity: item.quantity })),
+            items: createdOrder.items.map((item) => ({
+              name: [item.product_name, [item.size_system, item.size_label].filter(Boolean).join(" ")].filter(Boolean).join(" · "),
+              quantity: item.quantity,
+            })),
             delivery_address: delivery.method === "delivery" ? delivery.address?.trim() : null,
             delivery_fee: deliveryFee,
           }),
@@ -190,7 +174,7 @@ export async function createOrderAction(
             delivery_method: delivery.method,
             delivery_address: delivery.method === "delivery" ? delivery.address?.trim() : null,
             delivery_fee: deliveryFee,
-            shop_address: config.address,
+            shop_address: config.pickupAddress || config.address,
           }),
         ]);
       }
@@ -210,7 +194,7 @@ export async function createOrderAction(
 export async function markPaymentMethodAction(
   orderId: string,
   method: PaymentMethodValue,
-  options: { reference?: string; markPaid?: boolean } = {},
+  options: { reference?: string } = {},
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const parsed = paymentMethodSchema.safeParse({
@@ -227,14 +211,14 @@ export async function markPaymentMethodAction(
       };
     }
 
-    const { reference, markPaid } = parsed.data;
+    const { reference } = parsed.data;
     const supabase = (await import("@/lib/supabase/admin")).createAdminClient();
 
     /* Read first so a public guest action cannot regress an already-paid order
        or mark an unknown id as paid. */
     const { data: currentOrder, error: orderError } = await supabase
       .from("orders")
-      .select("status, payment_status")
+      .select("status, payment_status, delivery_method")
       .eq("id", orderId)
       .single();
 
@@ -242,7 +226,7 @@ export async function markPaymentMethodAction(
       return { ok: false, error: "Order not found." };
     }
 
-    if (currentOrder.payment_status === "paid") {
+    if (currentOrder.payment_status === "paid" || currentOrder.payment_status === "refunded") {
       return { ok: false, error: "This order has already been paid." };
     }
 
@@ -250,16 +234,22 @@ export async function markPaymentMethodAction(
       return { ok: false, error: "This order has been cancelled." };
     }
 
+    if (method === "pay_on_delivery") {
+      const preferences = (await getShopSettings()).storefront_preferences;
+      if (!allowsDeferredPayment(preferences, currentOrder.delivery_method)) {
+        return { ok: false, error: "Payment at collection or delivery is unavailable for this order." };
+      }
+    }
+
     const update: {
       payment_method: PaymentMethodValue;
       checkout_request_id: null;
       payment_reference?: string | null;
-      payment_status?: "pending" | "paid";
+      payment_status?: "pending";
       paid_at?: string | null;
-      status?: string;
     } = {
       payment_method: method,
-      /* A customer choosing Till or card is abandoning any in-flight STK
+      /* A customer choosing Till or pay on delivery is abandoning any in-flight STK
          request. Clearing this prevents a late Safaricom callback from
          settling an order they no longer intend to pay by STK. */
       checkout_request_id: null,
@@ -279,57 +269,26 @@ export async function markPaymentMethodAction(
       update.payment_reference = code;
       update.payment_status = "pending";
       update.paid_at = null;
-    } else if (method === "card" && markPaid) {
-      /* TEMPORARY demo path until real card keys are configured. The client
-         still validates the form; this only persists the outcome so the test
-         order does not stay stuck in pending. */
-      update.payment_reference =
-        reference?.toUpperCase() || `CARD-DEMO-${Date.now()}`;
-      update.payment_status = "paid";
-      update.paid_at = new Date().toISOString();
-      update.status =
-        currentOrder.status === "pending_payment"
-          ? "paid"
-          : currentOrder.status;
     } else if (method === "pay_on_delivery") {
       update.payment_status = "pending";
       update.payment_reference = null;
       update.paid_at = null;
     }
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("orders")
       .update(update)
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .neq("status", "cancelled")
+      .eq("payment_status", currentOrder.payment_status)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       return { ok: false, error: error.message };
     }
 
-    if (
-      method === "card" &&
-      markPaid &&
-      currentOrder.status === "pending_payment"
-    ) {
-      const { error: historyError } = await supabase
-        .from("order_status_history")
-        .insert({
-          order_id: orderId,
-          from_status: currentOrder.status,
-          to_status: "paid",
-          changed_by_email: null,
-          note: "Card demo payment recorded.",
-        });
-
-      if (historyError) {
-        /* The payment is already saved. A missing audit row should not turn a
-           successful demo checkout into an error. */
-        console.error(
-          "[markPaymentMethodAction] history insert failed:",
-          historyError,
-        );
-      }
-    }
+    if (!updated) return { ok: false, error: "The order changed. Reload before selecting a payment method." };
 
     return { ok: true };
   } catch (error) {

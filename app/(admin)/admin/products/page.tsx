@@ -6,53 +6,36 @@ import { Suspense } from "react";
 import { ProductFilters } from "@/components/admin/ProductFilters";
 import { ProductTable } from "@/components/admin/ProductTable";
 import { listProducts } from "@/lib/admin-api";
-import { requireAdmin } from "@/lib/supabase/guards";
+import { requireRole } from "@/lib/roles";
+import { getInventoryPreferences } from "@/lib/admin-inventory-preferences";
+import { inventoryDefaults } from "@/lib/settings-schema";
 
 export const metadata: Metadata = {
   title: "Products",
   robots: { index: false, follow: false },
 };
 
-/**
- * The product list.
- *
- * No pagination: there are twelve products and a filtered view of twelve is a
- * scroll. The moment there are enough that a person would page rather than scroll,
- * this is where `limit`/`offset` go, and the filter chips already carry everything
- * needed to page by.
- *
- * ---------------------------------------------------------------------------
- * Filtering happens in the query, twice
- * ---------------------------------------------------------------------------
- * `listProducts` pushes the category and the search term into Supabase, so the
- * database returns twelve rows rather than twelve hundred. The category counts for
- * the chips come from a second, *unfiltered* call — deliberately unfiltered, because
- * a chip that said "Shoes 0" once a "weekender" search was applied would be a filter
- * that cannot be undone from the UI.
- *
- * That is two round trips on page load. It is the right trade at this size; it is
- * also the obvious thing to over-engineer later, when it should become one
- * `count(*) FILTER (WHERE ...)` aggregate.
- */
 export default async function AdminProductsPage({ searchParams }: PageProps<"/admin/products">) {
-  await requireAdmin();
+  await requireRole("owner");
 
   const params = await searchParams;
   const rawCategory = params.category;
-  const category = rawCategory === "bag" || rawCategory === "shoe" ? rawCategory : undefined;
+  const category = rawCategory === "bag" || rawCategory === "shoe" || rawCategory === "belt" ? rawCategory : undefined;
   const search = typeof params.q === "string" ? params.q : undefined;
 
   /* The visible rows, filtered. */
-  const [products, everything] = await Promise.all([
+  const [products, everything, inventory] = await Promise.all([
     listProducts({ category, search }),
-    /* Only fetched when the chips need different numbers, which is always. */
-    listProducts(),
+    category || search?.trim() ? listProducts() : Promise.resolve(null),
+    getInventoryPreferences(),
   ]);
 
+  const catalogue = everything ?? products;
   const counts = {
-    all: everything.length,
-    bag: everything.filter((product) => product.category === "bag").length,
-    shoe: everything.filter((product) => product.category === "shoe").length,
+    all: catalogue.length,
+    bag: catalogue.filter((product) => product.category === "bag").length,
+    shoe: catalogue.filter((product) => product.category === "shoe").length,
+    belt: catalogue.filter((product) => product.category === "belt").length,
   };
 
   const isFiltered = Boolean(category || search);
@@ -92,7 +75,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
         {products.length === 0 ? (
           <EmptyState isFiltered={isFiltered} />
         ) : (
-          <ProductTable products={products} />
+          <ProductTable products={products} inventory={inventory ?? inventoryDefaults} />
         )}
       </div>
     </div>

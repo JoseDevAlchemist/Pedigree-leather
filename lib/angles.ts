@@ -43,7 +43,7 @@ export const ALL_ANGLES: readonly Angle[] = [
  * shoe has one visible side per photograph, so it starts with a single `side`
  * and spends the slot on `laces` and the `bottom` welt instead.
  */
-export function categoryAngles(category: "bag" | "shoe"): Angle[] {
+export function categoryAngles(category: "bag" | "shoe" | "belt"): Angle[] {
   return category === "shoe"
     ? ["front", "laces", "side", "back", "bottom"]
     : ["front", "side-left", "side-right", "top", "back"];
@@ -55,7 +55,7 @@ export function categoryAngles(category: "bag" | "shoe"): Angle[] {
  * Category defaults first, then the remaining views. Used by the form's "Add
  * image slot" button and by the read path when legacy rows have no sort order.
  */
-export function angleOrder(category: "bag" | "shoe"): Angle[] {
+export function angleOrder(category: "bag" | "shoe" | "belt"): Angle[] {
   const preferred = categoryAngles(category);
   return [
     ...preferred,

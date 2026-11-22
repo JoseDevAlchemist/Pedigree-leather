@@ -59,13 +59,13 @@ export default function NotFound() {
           row on a 375px screen. */}
       <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
         <Link
-          href="/bags"
+          href="/category/bags"
           className="inline-flex h-12 w-full items-center justify-center rounded-full bg-primary px-8 text-sm font-semibold text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-auto"
         >
           Browse bags
         </Link>
         <Link
-          href="/shoes"
+          href="/category/shoes"
           className="inline-flex h-12 w-full items-center justify-center rounded-full border border-primary px-8 text-sm font-semibold text-primary transition-colors duration-200 ease-out hover:bg-primary hover:text-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:w-auto"
         >
           Browse shoes

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
-import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductGrid, visibleCatalogueProducts } from "@/components/product/ProductGrid";
 import { searchProducts } from "@/lib/api";
+import { getStorefrontPreferences } from "@/lib/settings-api";
 
 export const metadata: Metadata = {
   title: "Search",
@@ -17,7 +18,11 @@ export default async function SearchPage({
   const raw = params.q;
   const query = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
 
-  const results = query ? await searchProducts(query) : [];
+  const [matches, settings] = await Promise.all([
+    query ? searchProducts(query) : [],
+    query ? getStorefrontPreferences() : null,
+  ]);
+  const results = visibleCatalogueProducts(matches, settings?.hide_unavailable);
 
   return (
     <main id="main" className="flex-1">

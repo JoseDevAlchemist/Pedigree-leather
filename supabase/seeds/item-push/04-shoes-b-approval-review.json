@@ -1,0 +1,223 @@
+{
+  "file": "04-cn-shoes-b.sql",
+  "prepared_batch_id": "d6b707687348b2230ef6f0ace98815ea100094f6d681ab4e723e99866b9c9b31",
+  "sql_sha256": "6e92f8d4c646eb66ae35e955ba5338d1bd484570bfbf8314b4dd9c8b9df3c1fb",
+  "top_level_category_slug": "shoes",
+  "shoe_size_system": null,
+  "requires_approved_shoe_size_system": true,
+  "product_count": 4,
+  "units": 28,
+  "products": [
+    {
+      "internal_code": "SS-6008",
+      "name": "China Sport",
+      "slug": "ss-6008-428b3a735bb5",
+      "category": "shoe",
+      "price_kes": 11700,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 3
+            },
+            {
+              "label": "43",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "name": "Brown",
+          "quantity": 5,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 51
+        },
+        {
+          "sheet": "CN Working Sheet",
+          "row": 52
+        }
+      ],
+      "proposed_action": "REVIEW",
+      "existing_product_uuid": null,
+      "existing_stock": null
+    },
+    {
+      "internal_code": "SS- SC",
+      "name": "Stark Comfort",
+      "slug": "ss-sc-616e40f1008c",
+      "category": "shoe",
+      "price_kes": 11700,
+      "colours": [
+        {
+          "name": "Green",
+          "quantity": 6,
+          "sizes": [
+            {
+              "label": "39",
+              "quantity": 1
+            },
+            {
+              "label": "40",
+              "quantity": 0
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 53
+        }
+      ],
+      "proposed_action": "REVIEW",
+      "existing_product_uuid": null,
+      "existing_stock": null
+    },
+    {
+      "internal_code": "SS-DC",
+      "name": "Dream Comfort",
+      "slug": "ss-dc-b03f14a2b1f7",
+      "category": "shoe",
+      "price_kes": 11700,
+      "colours": [
+        {
+          "name": "Brown",
+          "quantity": 6,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 54
+        }
+      ],
+      "proposed_action": "REVIEW",
+      "existing_product_uuid": null,
+      "existing_stock": null
+    },
+    {
+      "internal_code": "LSS- 6H061",
+      "name": "New York Tide Boots",
+      "slug": "lss-6h061-2766a10da940",
+      "category": "shoe",
+      "price_kes": 11700,
+      "colours": [
+        {
+          "name": "Dark Brown",
+          "quantity": 3,
+          "sizes": [
+            {
+              "label": "39",
+              "quantity": 0
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            }
+          ]
+        },
+        {
+          "name": "Brown",
+          "quantity": 3,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 55
+        },
+        {
+          "sheet": "CN Working Sheet",
+          "row": 56
+        }
+      ],
+      "proposed_action": "REVIEW",
+      "existing_product_uuid": null,
+      "existing_stock": null
+    }
+  ],
+  "project_ref": "scvscxbxfpjqbqkfkset",
+  "live_verified": false,
+  "previous_batch_reconciled": null,
+  "execution_approved": false,
+  "counts": {
+    "CREATE": 0,
+    "LINK": 0,
+    "REVIEW": 4,
+    "SKIP": 0
+  },
+  "description": "Description of this product will be added later"
+}

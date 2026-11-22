@@ -54,6 +54,7 @@ export async function updateOrderStatusAction(
     }
 
     const { orderId, status, note } = parsed.data;
+    if (status === "cancelled") return await cancelOrder(orderId, note ?? "", user);
     const supabase = createAdminClient();
 
     // Get current order
@@ -100,14 +101,17 @@ export async function updateOrderStatusAction(
       update.paid_at = new Date().toISOString();
     }
 
-    const { error: updateError } = await supabase
+    const { data: updated, error: updateError } = await supabase
       .from("orders")
       .update(update)
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .eq("status", currentStatus)
+      .neq("status", "cancelled")
+      .select("id")
+      .maybeSingle();
 
-    if (updateError) {
-      return { ok: false, error: updateError.message };
-    }
+    if (updateError) return { ok: false, error: updateError.message };
+    if (!updated) return { ok: false, error: "Order status changed. Refresh and try again." };
 
     // Insert into status history
     const { error: historyError } = await supabase
@@ -186,77 +190,57 @@ export async function cancelOrderAction(
       return { ok: false, error: parsed.error.issues[0].message };
     }
 
-    const { orderId, reason } = parsed.data;
-    const supabase = createAdminClient();
-
-    // Get current order
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .select("status")
-      .eq("id", orderId)
-      .single();
-
-    if (orderError || !order) {
-      return { ok: false, error: "Order not found" };
-    }
-
-    const currentStatus = order.status as z.infer<typeof statusSchema>;
-
-    // Worker can only cancel pending_payment or paid
-    if (user.role === "worker" && !["pending_payment", "paid"].includes(currentStatus)) {
-      return { ok: false, error: "Cannot cancel order at this stage" };
-    }
-
-    // Update order status to cancelled
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update({ status: "cancelled" })
-      .eq("id", orderId);
-
-    if (updateError) {
-      return { ok: false, error: updateError.message };
-    }
-
-    // Insert into status history
-    const { error: historyError } = await supabase
-      .from("order_status_history")
-      .insert({
-        order_id: orderId,
-        from_status: currentStatus,
-        to_status: "cancelled",
-        changed_by_email: user.email,
-        note: reason,
-      });
-
-    if (historyError) {
-      console.error("[cancelOrderAction] History error:", historyError);
-    }
-
-    revalidatePath("/admin/orders");
-    revalidatePath(`/admin/orders/${orderId}`);
-
-    // Send cancellation notification (don't fail the action if WhatsApp fails)
-    try {
-      const { notifyStatusChange } = await import("@/lib/whatsapp");
-      const orderDetails = await getOrderById(orderId);
-      if (orderDetails) {
-        await notifyStatusChange({
-          order_number: orderDetails.order_number,
-          customer_name: orderDetails.customer_name,
-          customer_phone: orderDetails.customer_phone,
-          status: "cancelled",
-          delivery_method: orderDetails.delivery_method,
-        });
-      }
-    } catch (whatsappError) {
-      console.error("[WhatsApp] Cancellation notification failed:", whatsappError);
-    }
-
-    return { ok: true };
+    return await cancelOrder(parsed.data.orderId, parsed.data.reason, user);
   } catch (error) {
     console.error("[cancelOrderAction] Error:", error);
     return { ok: false, error: error instanceof Error ? error.message : "Something went wrong" };
   }
+}
+
+async function cancelOrder(orderId: string, note: string, user: { email: string; role: string })
+  : Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createAdminClient();
+  const { data: changed, error } = await supabase.rpc("website_cancel_order", {
+    p_order_id: orderId,
+    p_actor_email: user.email,
+    p_actor_role: user.role,
+    p_note: note,
+  });
+
+  if (error) {
+    if (error.code === "P0002") return { ok: false, error: "Order not found" };
+    if (error.message === "website_cancel_ineligible") {
+      return { ok: false, error: "Cannot cancel order at this stage" };
+    }
+    console.error("[cancelOrderAction] Cancellation failed:", error);
+    return { ok: false, error: "Cancellation could not be completed. Check the order and its inventory." };
+  }
+  if (!changed) return { ok: true };
+
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/orders/" + orderId);
+  revalidatePath("/order/" + orderId);
+  revalidatePath("/");
+  revalidatePath("/category/[slug]", "page");
+  for (const category of ["bags", "shoes", "belts"]) {
+    revalidatePath("/" + category + "/[slug]", "page");
+  }
+  try {
+    const { notifyStatusChange } = await import("@/lib/whatsapp");
+    const order = await getOrderById(orderId);
+    if (order) {
+      await notifyStatusChange({
+        order_number: order.order_number,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        status: "cancelled",
+        delivery_method: order.delivery_method,
+      });
+    }
+  } catch (notifyError) {
+    console.error("[WhatsApp] Cancellation notification failed:", notifyError);
+  }
+  return { ok: true };
 }
 
 export interface AdminOrderSummary {

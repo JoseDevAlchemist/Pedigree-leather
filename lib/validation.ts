@@ -128,7 +128,7 @@ const ANGLES = [
   "laces",
 ] as const satisfies readonly Angle[];
 
-export const productInputSchema = z.object({
+const productFields = z.object({
   name: z
     .string()
     .trim()
@@ -148,10 +148,9 @@ export const productInputSchema = z.object({
   description: z
     .string()
     .trim()
-    .min(1, "Write at least a sentence about this piece")
     .max(600, "That description is too long for a card"),
 
-  category: z.enum(["bag", "shoe"], { message: "Choose a category" }),
+  category: z.enum(["bag", "shoe", "belt"], { message: "Choose a category" }),
   categoryId: z.string().uuid("Invalid category").nullable().optional(),
 
   basePrice: shillings,
@@ -204,6 +203,51 @@ export const productInputSchema = z.object({
       ),
   ),
 });
+
+const hasActiveDescription = (product: { active: boolean; description: string }) =>
+  !product.active || product.description.length > 0;
+const activeDescriptionError = {
+  message: "Write a description before making this product active", path: ["description"],
+};
+
+export const productInputSchema = productFields.refine(hasActiveDescription, activeDescriptionError);
+
+const editableImages = z.array(z.object({
+  angle: z.enum(ANGLES),
+  url: z.string().refine((url) => {
+    if (/^\/(?![\/\\])|^product-images\//.test(url)) return true;
+    return /^https?:\/\//i.test(url) && URL.canParse(url);
+  }, "That is not a valid image URL"),
+})).max(ANGLES.length).refine(
+  (images) => new Set(images.map(({ angle }) => angle)).size === images.length,
+  "A colour can only use each view once",
+);
+
+export const productEditSchema = productFields.omit({ images: true, colors: true }).extend({
+  expected: z.json(),
+  isWebsitePublished: z.boolean().optional(),
+  colors: z.array(colorSchema.omit({ stockQuantity: true }).extend({
+    id: z.uuid().optional(),
+    images: editableImages,
+  })).min(1, "Add at least one colour").max(8).refine(
+    (colors) => new Set(colors.map(({ name }) => name.toLowerCase())).size === colors.length,
+    "Give each colour a distinct name",
+  ).refine(
+    (colors) => {
+      const ids = colors.flatMap(({ id }) => id ? [id] : []);
+      return new Set(ids).size === ids.length;
+    },
+    "A saved colour can only appear once",
+  ),
+}).refine(hasActiveDescription, activeDescriptionError).refine(
+  ({ isWebsitePublished, barcode, slug }) => {
+    const code = barcode?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return !isWebsitePublished || !code || !`-${slug}-`.includes(`-${code}-`);
+  },
+  { message: "Use a public URL slug without the internal product code before publishing", path: ["slug"] },
+);
+
+export type ValidatedProductEdit = z.output<typeof productEditSchema>;
 
 /**
  * A product as the form collects it, before validation.

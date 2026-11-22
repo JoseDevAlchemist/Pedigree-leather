@@ -9,6 +9,7 @@ import { useMemo, useState, useTransition } from "react";
 
 import { deleteProductAction, updateFieldAction } from "@/lib/actions/products";
 import type { AdminProduct } from "@/lib/mappers";
+import type { inventoryDefaults } from "@/lib/settings-schema";
 import { formatPrice } from "@/lib/format";
 import { originalProductImageUrl } from "@/lib/product-image-url";
 
@@ -49,7 +50,7 @@ const COLUMNS: { key: SortKey; label: string; align: "left" | "right"; sortable:
   { key: "createdAt", label: "Added", align: "right", sortable: true },
 ];
 
-export function ProductTable({ products }: { products: AdminProduct[] }) {
+export function ProductTable({ products, inventory }: { products: AdminProduct[]; inventory: typeof inventoryDefaults }) {
   const router = useRouter();
   const toast = useToast();
 
@@ -189,7 +190,7 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
 
               <th scope="col" className="px-4 py-3 text-right">
                 <span className="text-xs font-semibold tracking-wide text-muted uppercase">
-                  Listed
+                  Website
                 </span>
               </th>
 
@@ -216,7 +217,7 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
                   >
                     {product.name}
                   </Link>
-                  <span className="mt-0.5 block text-xs text-muted">{product.slug}</span>
+                  {inventory.show_admin_codes && <span className="mt-0.5 block text-xs text-muted">{product.barcode ?? product.slug}</span>}
 
                   <span className="mt-1 flex items-center gap-2">
                     <Toggle
@@ -262,10 +263,18 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
                   >
                     {product.totalStock}
                   </span>
-                  <span className="mt-0.5 block text-[0.6875rem] text-muted">
-                    {product.colors.length}{" "}
-                    {product.colors.length === 1 ? "colour" : "colours"}
-                  </span>
+                  {inventory.low_stock_threshold > 0 && product.totalStock <= inventory.low_stock_threshold &&
+                    <span className="block text-xs font-semibold text-destructive">{product.totalStock === 0 ? "Out of stock" : "Low stock"}</span>}
+                  {inventory.show_colour_stock && (
+                    <span className="mt-0.5 block min-w-32 text-[0.6875rem] text-muted">
+                      {product.colors.map(colour => `${colour.name} · ${colour.stockQuantity}`).join(", ")}
+                    </span>
+                  )}
+                  {inventory.show_size_stock && product.colors.map(colour => {
+                    const sizes = colour.sizes?.filter(size => size.system.toUpperCase() === "EU");
+                    if (!sizes?.length) return null;
+                    return <span key={colour.id} className="block text-xs text-muted">{colour.name} · EU {sizes.map(size => `${size.label} (${size.stockQuantity})`).join(", ")}</span>;
+                  })}
                 </td>
 
                 <td className="px-4 py-3 text-right align-middle text-xs text-muted tabular-nums">
@@ -280,11 +289,13 @@ export function ProductTable({ products }: { products: AdminProduct[] }) {
                   <span className="flex items-center justify-end gap-1">
                     <Toggle
                       pressed={product.active}
-                      label={`${product.active ? "Hide" : "Show"} ${product.name}`}
+                      label={`${product.active ? "Deactivate" : "Activate"} ${product.name}`}
                       onClick={() => saveField(product.id, "active", !product.active)}
                       disabled={pending === `${product.id}:active`}
                     />
-                    <span className="ml-1 text-xs text-muted">{product.active ? "live" : "hidden"}</span>
+                    <span className="ml-1 text-xs text-muted">
+                      {product.isWebsitePublished ? (product.active ? "Published" : "Hidden") : "Draft"}
+                    </span>
                   </span>
                 </td>
 

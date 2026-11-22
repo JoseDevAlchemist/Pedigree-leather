@@ -27,6 +27,8 @@ export interface ReceiptOrder {
     id: string;
     product_name: string;
     color_name: string;
+    size_system?: string | null;
+  size_label?: string | null;
     color_hex: string;
     unit_price: number;
     quantity: number;
@@ -324,7 +326,7 @@ export function ReceiptPDF({ order }: { order: ReceiptOrder }) {
                 <View
                   style={[styles.colourDot, { backgroundColor: item.color_hex }]}
                 />
-                <Text style={styles.cellMuted}>{item.color_name}</Text>
+                <Text style={styles.cellMuted}>{[item.color_name, [item.size_system, item.size_label].filter(Boolean).join(" ")].filter(Boolean).join(" · ")}</Text>
               </View>
               <Text style={[styles.cellText, styles.colQty]}>
                 {item.quantity}

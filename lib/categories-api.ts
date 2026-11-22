@@ -99,26 +99,9 @@ export const getParentCategories = cache(async (): Promise<Category[]> =>
 /**
  * A single active category by slug, or `null`.
  */
-export async function getCategoryBySlug(slug: string): Promise<Category | null> {
-  const supabase = publicClientOrNull(`getCategoryBySlug:${slug}`);
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error(`[pedigree/categories] getCategoryBySlug:${slug}:`, error);
-    return null;
-  }
-
-  if (!data) return null;
-  return toCategory(data as CategoryRow);
-}
+export const getCategoryBySlug = cache(async (slug: string): Promise<Category | null> =>
+  (await getCategories()).find((category) => category.slug === slug) ?? null,
+);
 
 /* ---------------------------------------------------------------------------
    Admin helpers — service role. Called only from Server Actions.

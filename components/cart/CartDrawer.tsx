@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 
 import { formatPrice } from "@/lib/format";
 import { originalProductImageUrl } from "@/lib/product-image-url";
-import { MAX_QUANTITY_PER_ITEM, useCartStore, useCartCount, useCartSubtotal } from "@/lib/store/cart";
+import { cartLineKey, MAX_QUANTITY_PER_ITEM, useCartStore, useCartCount, useCartSubtotal } from "@/lib/store/cart";
 
 import { useCartDrawer } from "@/components/cart/CartDrawerProvider";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
@@ -153,7 +153,7 @@ export function CartDrawer() {
                   <AnimatePresence initial={false}>
                     {items.map((item) => (
                       <motion.li
-                        key={`${item.productId}:${item.colorId}`}
+                        key={cartLineKey(item.productId, item.colorId, item.sizeId)}
                         layout
                         initial={reduceMotion ? false : { opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -179,12 +179,12 @@ export function CartDrawer() {
                                   className="size-2.5 shrink-0 rounded-full"
                                   style={{ backgroundColor: item.colorHex, boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.12)" }}
                                 />
-                                {item.colorName}
+                                {item.colorName}{item.sizeLabel ? ` · ${item.sizeLabel}` : ""}
                               </p>
                             </div>
 
                             <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                              {formatPrice(item.unitPrice * item.quantity)}
+                              {formatPrice(Math.round(item.unitPrice) * item.quantity)}
                             </p>
                           </div>
 
@@ -200,14 +200,14 @@ export function CartDrawer() {
                                 ),
                               )}
                               onChange={(next) =>
-                                updateQuantity(item.productId, item.colorId, next)
+                                updateQuantity(item.productId, item.colorId, next, item.sizeId)
                               }
-                              label={`Quantity for ${item.name} in ${item.colorName}`}
+                              label={`Quantity for ${item.name} in ${[item.colorName, item.sizeLabel].filter(Boolean).join(" · ")}`}
                             />
 
                             <button
                               type="button"
-                              onClick={() => removeItem(item.productId, item.colorId)}
+                              onClick={() => removeItem(item.productId, item.colorId, item.sizeId)}
                               className="cursor-pointer rounded-full px-2 py-1.5 text-xs font-medium text-muted underline underline-offset-4 transition-colors duration-150 ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                             >
                               Remove
@@ -312,7 +312,7 @@ function EmptyCart({ onClose }: { onClose: () => void }) {
       </div>
 
       <Link
-        href="/bags"
+        href="/category/bags"
         onClick={onClose}
         className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >

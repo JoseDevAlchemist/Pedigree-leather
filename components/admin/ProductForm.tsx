@@ -8,11 +8,11 @@ import { useMemo, useRef, useState } from "react";
 
 import { createProductAction, updateProductAction } from "@/lib/actions/products";
 import { ALL_ANGLES, angleOrder, categoryAngles } from "@/lib/angles";
-import { imagePath, publicImageUrl, uploadProductImage } from "@/lib/upload";
-import type { AdminProduct } from "@/lib/mappers";
+import { uploadProductImage } from "@/lib/upload";
+import type { EditableAdminProduct } from "@/lib/mappers";
 import { originalProductImageUrl } from "@/lib/product-image-url";
 import type { Angle, Category, Product } from "@/lib/types";
-import { productInputSchema } from "@/lib/validation";
+import { productEditSchema, productInputSchema } from "@/lib/validation";
 
 import { useToast } from "@/components/admin/Toast";
 
@@ -80,16 +80,6 @@ function fileProblem(file: File): string | null {
   return null;
 }
 
-/**
- * Stamp a URL so a replaced photograph is not served from a stale cache.
- *
- * Replacing a photo can reuse an object key that is cached for a year. The
- * version makes both the raw preview URL and the transformed URL unique.
- */
-function withCacheBuster(url: string): string {
-  return `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
-}
-
 /** The basename of a stored URL, for slots filled in an earlier session. */
 function fileNameFromUrl(url: string): string {
   return decodeURIComponent(url.split("?")[0].split("/").pop() ?? "");
@@ -131,7 +121,7 @@ export function ProductForm({
   categories = [],
 }: {
   mode: "create" | "edit";
-  initialData?: AdminProduct;
+  initialData?: EditableAdminProduct;
   /** Server-fetched active categories for the category select. */
   categories?: readonly Category[];
 }) {
@@ -161,6 +151,7 @@ export function ProductForm({
     initialData ? String(initialData.discountPercent) : "",
   );
   const [featured, setFeatured] = useState(initialData?.featured ?? false);
+  const [isWebsitePublished, setIsWebsitePublished] = useState(initialData?.isWebsitePublished ?? false);
   const [active, setActive] = useState(initialData?.active ?? true);
 
   const [colors, setColors] = useState<ColorDraft[]>(() => {
@@ -193,20 +184,22 @@ export function ProductForm({
         ),
       ) as Partial<Record<Angle, string>>;
 
-      /* Open with exactly the views this colour already has, in the product's
-         order. A legacy colour with no photographs still gets the category's
-         default slots so it can be photographed without an extra click. */
-      const used = initialData.angles.filter((angle) => images[angle]);
-      const extras = ALL_ANGLES.filter(
-        (angle) => images[angle] && !used.includes(angle),
-      );
+      const preferredAngles = angleOrder(initialData.category);
+      const savedPhotos = initialData.editSnapshot.colors.find(({ id }) => id === color.id)?.images ?? [];
+      const used = savedPhotos
+        .flatMap(({ angle, order }) => {
+          const index = preferredAngles.findIndex((candidate) => candidate === angle);
+          return index >= 0 && images[preferredAngles[index]] ? [{ order, index }] : [];
+        })
+        .sort((a, b) => a.order - b.order || a.index - b.index)
+        .map(({ index }) => preferredAngles[index]);
 
       return {
         key: color.id,
         name: color.name,
         hex: color.hex,
         stockQuantity: String(color.stockQuantity),
-        slots: used.length > 0 ? [...used, ...extras] : defaultAngles,
+        slots: used.length > 0 ? used : defaultAngles,
         images,
       };
     });
@@ -303,7 +296,7 @@ export function ProductForm({
         key,
         name: "",
         hex: "#8B4513",
-        stockQuantity: "1",
+        stockQuantity: mode === "edit" ? "0" : "1",
         slots: categoryAngles(category),
         images: {},
       },
@@ -397,13 +390,6 @@ export function ProductForm({
     }
 
     const id = (productId.current ??= crypto.randomUUID());
-    const target = publicImageUrl(imagePath(id, color.key, color.name, angle));
-    const pathInUse = colors.some(
-      (entry) =>
-        entry.key !== colorKey &&
-        Object.values(entry.images).some((url) => url?.split("?")[0] === target),
-    );
-    if (pathInUse) return "This filename is already used by another colour. Choose a distinct colour name.";
 
     /* Show the pick immediately — a blob preview and its name — so the file can
        be confirmed before the upload has even finished. */
@@ -422,14 +408,14 @@ export function ProductForm({
           delete previews[angle];
           return {
             ...entry,
-            images: { ...entry.images, [angle]: withCacheBuster(url) },
+            images: { ...entry.images, [angle]: url },
             fileNames: { ...entry.fileNames, [angle]: file.name },
             previews,
           };
         }),
       );
     } catch (error) {
-      return `${file.name}: ${error instanceof Error ? error.message : "Upload failed."}`;
+      return `Upload failed for ${file.name}. ${error instanceof Error ? error.message : "Try again."}`;
     } finally {
       URL.revokeObjectURL(previewUrl);
       updateColor(colorKey, { uploading: undefined, previews: {} });
@@ -527,10 +513,6 @@ export function ProductForm({
       discountPercent,
       featured,
       active,
-      /* Only the fields the server wants. `key`, `images`, `uploading` and
-         `error` are all local UI state and are deliberately dropped here — sending
-         them would make the action's schema depend on this component's internal
-         shape. */
       colors: colors.map((color) => ({
         name: color.name,
         hex: color.hex,
@@ -541,7 +523,21 @@ export function ProductForm({
 
     /* Validated here so the person is told before a round trip, and again in the
        action because that is the one that has to be trusted. */
-    const parsed = productInputSchema.safeParse(payload);
+    const edit = mode === "edit" && initialData;
+    const editPayload = edit && {
+      ...payload,
+      expected: edit.editSnapshot,
+      isWebsitePublished,
+      colors: colors.map((color, index) => ({
+        id: edit.colors.find(({ id }) => id === color.key)?.id,
+        name: color.name,
+        hex: color.hex,
+        images: images[index],
+      })),
+    };
+    const parsed = edit
+      ? productEditSchema.safeParse(editPayload)
+      : productInputSchema.safeParse(payload);
     if (!parsed.success) {
       const field = parsed.error.issues[0]?.path.join(".") ?? "form";
       setErrors({ [field]: parsed.error.issues[0]?.message ?? "Something is wrong." });
@@ -551,10 +547,9 @@ export function ProductForm({
 
     setIsSaving(true);
 
-    const result =
-      mode === "create"
-        ? await createProductAction(parsed.data, productId.current)
-        : await updateProductAction(initialData!.id, parsed.data);
+    const result = edit
+      ? await updateProductAction(edit.id, parsed.data)
+      : await createProductAction(parsed.data, productId.current);
 
     if (result.ok) {
       toast.success(mode === "create" ? "Product created" : "Product saved", name);
@@ -593,7 +588,7 @@ export function ProductForm({
             error={errors.slug}
             required
             hint={`The shop will show this product at /${
-              category === "shoe" ? "shoes" : "bags"
+              category === "belt" ? "belts" : category === "shoe" ? "shoes" : "bags"
             }/${slug || "…"}`}
           >
             <input
@@ -741,6 +736,16 @@ export function ProductForm({
             <Switch checked={publishToPos} onChange={setPublishToPos} label="Publish to POS" />
             <Switch checked={featured} onChange={setFeatured} label="Featured" />
             <Switch checked={active} onChange={setActive} label="Active" />
+            {mode === "edit" && (
+              <Switch
+                checked={isWebsitePublished}
+                onChange={(publish) => {
+                  setIsWebsitePublished(publish);
+                  if (publish) setActive(true);
+                }}
+                label="Publish to website"
+              />
+            )}
           </div>
         </fieldset>
 
@@ -751,10 +756,15 @@ export function ProductForm({
 
           <p className="-mt-2 text-xs text-muted">JPEG, PNG or WebP, up to 4 MB each.</p>
 
+          {mode === "edit" && (
+            <p className="text-xs text-muted">Saved colours are retained. Adjust stock in POS inventory. New colours start at zero stock.</p>
+          )}
+
           {colors.map((color, index) => (
             <ColorBlock
               key={color.key}
               color={color}
+              stockReadOnly={mode === "edit"}
               index={index}
               total={colors.length}
               labelHref={
@@ -765,7 +775,7 @@ export function ProductForm({
               }
               errors={errors}
               onChange={(patch) => updateColor(color.key, patch)}
-              onRemove={() => removeColor(color.key)}
+              onRemove={initialData?.colors.some(({ id }) => id === color.key) ? undefined : () => removeColor(color.key)}
               uploadsDisabled={isUploadingImages || isSaving}
               onUpload={(angle, file) => void handleUploads(color, [file], angle)}
               onUploadBatch={(files) => void handleUploads(color, files)}
@@ -865,6 +875,7 @@ function legacyCategoryFor(
   const root = current ?? category;
   const label = `${root.slug} ${root.name}`.toLowerCase();
 
+  if (/belt/.test(label)) return "belt";
   return /shoe|sneaker|boot|sandal|loafer|heel/.test(label) ? "shoe" : "bag";
 }
 
@@ -874,6 +885,7 @@ function ColorBlock({
   index,
   total,
   labelHref,
+  stockReadOnly,
   errors,
   onChange,
   onRemove,
@@ -888,9 +900,10 @@ function ColorBlock({
   index: number;
   total: number;
   labelHref?: string;
+  stockReadOnly: boolean;
   errors: Record<string, string>;
   onChange: (patch: Partial<ColorDraft>) => void;
-  onRemove: () => void;
+  onRemove?: () => void;
   uploadsDisabled: boolean;
   onUpload: (angle: Angle, file: File) => void;
   onUploadBatch: (files: File[]) => void;
@@ -975,6 +988,7 @@ function ColorBlock({
             min={0}
             step={1}
             value={color.stockQuantity}
+            readOnly={stockReadOnly}
             onChange={(event) => onChange({ stockQuantity: event.target.value })}
             className={`${inputClass(Boolean(errors[`colors.${index}.stockQuantity`]))} mt-1 w-24`}
           />
@@ -999,7 +1013,7 @@ function ColorBlock({
         {/* Never lets the form reach zero colours, because the schema requires at
             least one and a form that can produce a state it will refuse to save is a
             dead end. */}
-        {total > 1 ? (
+        {total > 1 && onRemove ? (
           <button
             type="button"
             onClick={onRemove}

@@ -12,8 +12,8 @@ import {
   updateProductField as updateProductFieldRow,
 } from "@/lib/admin-api";
 import type { ProductInput, QuickField } from "@/lib/admin-api";
-import { requireAdminUser } from "@/lib/supabase/guards";
-import { firstError, productInputSchema, quickFieldEditSchema } from "@/lib/validation";
+import { requireAdminRole, requireAdminUser } from "@/lib/supabase/guards";
+import { firstError, productEditSchema, productInputSchema, quickFieldEditSchema } from "@/lib/validation";
 
 /**
  * ============================================================================
@@ -50,11 +50,22 @@ export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string
  * diagnosed from the server log, not from a toast.
  */
 function explain(error: unknown, context: string): string {
+  if (error instanceof ValidationError) return error.message;
+
   const databaseError = error instanceof Error ? error.cause ?? error : error;
   const { code = "", message = String(databaseError) } =
     (databaseError ?? {}) as { code?: string; message?: string };
 
   console.error(`[admin/products] ${context}:`, error);
+
+  if (message === "website_edit_stale") return "This product changed after you opened it. Reopen the editor before saving.";
+  if (message === "website_colour_removal_disabled") return "Saved colours are retained to protect POS history. You can remove individual photos.";
+  if (message === "website_invalid_colour") return "A colour no longer belongs to this product. Reopen the editor and try again.";
+  if (message === "website_image_association_failed") return "The photographs could not be linked. No product changes were saved.";
+  if (code === "P0002") return "This product no longer exists.";
+  if (context === "updateProduct" && (code === "PGRST202" || code === "42883")) {
+    return "Safe product editing is unavailable until the database update is installed. No product changes were saved.";
+  }
 
   if (code === "23505" || /duplicate key value violates unique constraint/i.test(message)) {
     if (/idx_products_barcode/.test(message)) {
@@ -70,15 +81,16 @@ function explain(error: unknown, context: string): string {
   }
 
   if (code === "23503" || /foreign key violation/i.test(message)) {
-    return "That product is still referenced by something else. Try deleting it from the products list instead.";
+    if (context === "deleteProduct") return "This product has linked records and cannot be deleted.";
+    return "A selected category or linked record prevented this save. Reopen the editor and check the product details.";
   }
 
   if (code === "23514" || /violates check constraint/i.test(message)) {
     return "One of the values is outside what the database allows. Check the category, price and discount.";
   }
 
-  if (/row-level security/i.test(message)) {
-    return "The database refused this change. Check that 001_initial.sql has been run and that you are signed in.";
+  if (code === "42501" || /row-level security|permission denied/i.test(message)) {
+    return "You do not have permission to make this change.";
   }
 
   return "Something went wrong saving that. The details are in the server log.";
@@ -88,9 +100,10 @@ function explain(error: unknown, context: string): string {
 async function guarded<T>(
   what: string,
   run: () => Promise<T>,
+  authorize = requireAdminUser,
 ): Promise<ActionResult<T>> {
   try {
-    await requireAdminUser();
+    await authorize();
     return { ok: true, data: await run() };
   } catch (error) {
     /* A thrown redirect from `requireAdminUser` is not an error to report — it is
@@ -146,15 +159,15 @@ export async function updateProductAction(
   input: unknown,
 ): Promise<ActionResult<unknown>> {
   return guarded("updateProduct", async () => {
-    if (!id) throw new ValidationError("No product was named to update.");
+    if (!z.uuid().safeParse(id).success) throw new ValidationError("Invalid product ID.");
 
-    const parsed = productInputSchema.safeParse(input);
+    const parsed = productEditSchema.safeParse(input);
     if (!parsed.success) {
       const { message } = firstError(parsed.error);
       throw new ValidationError(message);
     }
 
-    const updated = await updateProductRow(id, parsed.data as ProductInput);
+    const updated = await updateProductRow(id, parsed.data);
     revalidateShop();
     /* The product's own page is prerendered at build, so an edited photograph —
        or price, or description — would otherwise sit stale there until the next
@@ -162,7 +175,7 @@ export async function updateProductAction(
        which is what makes a new upload show on the product page without one. */
     revalidateProductPage(parsed.data.category, parsed.data.slug);
     return updated;
-  });
+  }, () => requireAdminRole("owner"));
 }
 
 export async function deleteProductAction(id: string): Promise<ActionResult<null>> {
@@ -228,7 +241,7 @@ export async function updateFieldAction(
 
 /** Read-side helpers the admin's client components call. Auth-checked like writes. */
 export async function listProductsAction(filters?: {
-  category?: "bag" | "shoe";
+  category?: "bag" | "shoe" | "belt";
   search?: string;
 }): Promise<ActionResult<unknown>> {
   return guarded("listProducts", async () => listProducts(filters));
@@ -271,6 +284,6 @@ function revalidateShop() {
 }
 
 /** The shop path a product lives at, from its category and slug. */
-function revalidateProductPage(category: "bag" | "shoe", slug: string) {
-  revalidatePath(`/${category === "shoe" ? "shoes" : "bags"}/${slug}`);
+function revalidateProductPage(category: "bag" | "shoe" | "belt", slug: string) {
+  revalidatePath(`/${category === "belt" ? "belts" : category === "shoe" ? "shoes" : "bags"}/${slug}`);
 }

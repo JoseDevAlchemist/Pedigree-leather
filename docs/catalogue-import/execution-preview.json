@@ -1,0 +1,1146 @@
+{
+  "workbook_sha256": "a299523b77936493abe5079d45a1687b6405ec75a4d0fcc3b0a832d54dc89aa5",
+  "totals": {
+    "source_rows": 142,
+    "planned_products": 0,
+    "planned_creates": 0,
+    "planned_links": 0,
+    "planned_stock_reconciliations": 0,
+    "claimed_rows": 0,
+    "blocked_rows": 142,
+    "numeric_units_in_planned_products": 0
+  },
+  "products": [],
+  "blocked_rows": [
+    {
+      "sheet": "VN",
+      "row": 4,
+      "issues": [
+        "missing_price",
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 5,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 6,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 7,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 8,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 9,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 10,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 11,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 12,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 13,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 14,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 15,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 16,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution",
+        "conflicting_price_for_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 17,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution",
+        "conflicting_price_for_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 18,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution",
+        "conflicting_price_for_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 19,
+      "issues": [
+        "zero_price",
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution",
+        "conflicting_price_for_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 20,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 21,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 22,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 23,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 24,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 25,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 26,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 27,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 28,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 29,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 30,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 31,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 32,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 33,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 34,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 35,
+      "issues": [
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 36,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 37,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 38,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "VN",
+      "row": 39,
+      "issues": [
+        "no_quantity_cells",
+        "duplicate_code_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 5,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 6,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 7,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 8,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 9,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 10,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 11,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 12,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 13,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 14,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 15,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 16,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 19,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 20,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 21,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 22,
+      "issues": [
+        "missing_colour"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 23,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 24,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 25,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 26,
+      "issues": [
+        "invalid_quantity"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 27,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 28,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 29,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 30,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 31,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 32,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 33,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 34,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 35,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 36,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 39,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 40,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 41,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 42,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 43,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 44,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 45,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 46,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 47,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 48,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 49,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 50,
+      "issues": [
+        "missing_pedigree_code",
+        "same_name_uncoded_variant_requires_resolution"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 51,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 52,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 53,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 54,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 55,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 56,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 59,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 60,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 61,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 62,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 63,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 64,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 65,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 66,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 67,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 68,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 69,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 70,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 71,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 72,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 73,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 74,
+      "issues": [],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 75,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 76,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 77,
+      "issues": [
+        "missing_recorded_name",
+        "invalid_catalogue_price",
+        "no_quantity_cells"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 78,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 79,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 80,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 81,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 82,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 83,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 84,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 85,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 86,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 87,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 88,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 89,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 90,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 91,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 92,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 93,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 94,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 95,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 96,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 97,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 98,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 99,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 100,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 101,
+      "issues": [
+        "missing_recorded_name"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 104,
+      "issues": [
+        "missing_recorded_name",
+        "no_quantity_cells",
+        "belt_discriminator_required"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 107,
+      "issues": [
+        "missing_recorded_name",
+        "footwear_quantity_without_size"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 108,
+      "issues": [
+        "missing_recorded_name",
+        "footwear_quantity_without_size"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 109,
+      "issues": [
+        "missing_recorded_name",
+        "footwear_quantity_without_size"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 112,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 113,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 114,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 115,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 116,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 117,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 118,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 119,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 120,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 121,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    },
+    {
+      "sheet": "CN Working Sheet",
+      "row": 122,
+      "issues": [
+        "recorded_name_is_code"
+      ],
+      "reason": "review_manifest_required"
+    }
+  ]
+}

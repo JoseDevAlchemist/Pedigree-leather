@@ -5,18 +5,6 @@ import { Check, MapPin, Truck, MessageCircle, Clock, Package, AlertCircle, Refre
 
 import { getStatusLabel, getAllStatusSteps, getStatusStep } from "@/lib/order-status-labels";
 
-interface ShopConfig {
-  shopName: string;
-  phone: string;
-  whatsapp: string;
-  email: string | null;
-  address: string;
-  googleMapsUrl: string | null;
-  deliveryFlatRate: number;
-  freeDeliveryThreshold: number;
-  pickupAvailable: boolean;
-}
-
 interface OrderWithItems {
   id: string;
   order_number: string;
@@ -62,10 +50,10 @@ interface OrderHistory {
 
 interface OrderTimelineProps {
   order: OrderWithItems;
-  shopConfig: ShopConfig;
+  pickupAddress: string;
 }
 
-export function OrderTimeline({ order, shopConfig }: OrderTimelineProps) {
+export function OrderTimeline({ order, pickupAddress }: OrderTimelineProps) {
   const [currentOrder, setCurrentOrder] = useState<OrderWithItems>(order);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
@@ -286,7 +274,7 @@ export function OrderTimeline({ order, shopConfig }: OrderTimelineProps) {
               <MapPin className="mt-1 size-5 shrink-0 text-accent" aria-hidden="true" />
               <div>
                 <p className="font-medium text-foreground">Ready for pickup at</p>
-                <p className="mt-1 text-sm text-muted">{shopConfig.address}</p>
+                <p className="mt-1 text-sm text-muted">{pickupAddress}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">

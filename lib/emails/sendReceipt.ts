@@ -1,3 +1,4 @@
+import { getNotificationSettings } from "@/lib/notification-settings";
 import "server-only";
 
 import { createElement, type ReactElement } from "react";
@@ -43,6 +44,10 @@ export async function sendReceiptEmail(
       `[receipt] RESEND_API_KEY is not set; skipping receipt for ${order.order_number}.`,
     );
     return { ok: false, error: "RESEND_API_KEY is not configured" };
+  }
+
+  if (!(await getNotificationSettings())?.notify_payment_receipt) {
+    return { ok: false, error: "Receipt email is disabled." };
   }
 
   try {

@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { ProductGridSkeleton } from "@/components/product/ProductCardSkeleton";
 import { getProducts } from "@/lib/api";
+import { effectivePrice } from "@/lib/format";
+import { getStorefrontPreferences } from "@/lib/settings-api";
 
 /**
  * The shop, as a catalogue.
@@ -22,12 +24,13 @@ import { getProducts } from "@/lib/api";
  * whole shop.
  */
 
-export const metadata: Metadata = {
-  /* The root layout's title template appends "| Pedigree Leather", so this
-     renders as "Shop All | Pedigree Leather", like every other page's title. */
-  title: "Shop All",
-  description: "Browse our full collection of handcrafted leather bags and shoes.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getStorefrontPreferences();
+  return {
+    title: settings.seo_title ? { absolute: settings.seo_title } : "Shop All",
+    description: settings.seo_description || "Browse our full collection of handcrafted leather bags and shoes.",
+  };
+}
 
 /**
  * The grid, in its own Suspense boundary.
@@ -40,24 +43,36 @@ export const metadata: Metadata = {
  */
 async function Catalogue() {
   /* Read through the api seam so this page never learns where data comes from. */
-  const products = await getProducts();
+  const [products, settings] = await Promise.all([getProducts(), getStorefrontPreferences()]);
+  const sort = settings.homepage_sort;
+  const direction = sort === "price_asc" ? 1 : sort === "price_desc" ? -1 : 0;
+  const visible = direction || settings.feature_first
+    ? [...products].sort((a, b) => {
+      const featured = settings.feature_first ? Number(b.featured) - Number(a.featured) : 0;
+      return featured || direction * (
+        effectivePrice(a.basePrice, a.discountPercent) - effectivePrice(b.basePrice, b.discountPercent)
+      );
+    })
+    : products;
 
   return (
     <ProductGrid
-      products={products}
+      products={visible}
       emptyMessage="No products are listed right now. Please check back soon."
     />
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const settings = await getStorefrontPreferences();
   return (
     <main id="main" className="flex-1">
       <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-20 lg:px-8">
         <header className="max-w-3xl">
           <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            Our Catalogue
+            {settings.hero_title || "Our Catalogue"}
           </h1>
+          {settings.hero_description && <p className="mt-3 text-muted">{settings.hero_description}</p>}
         </header>
 
         <div className="mt-8 sm:mt-10">

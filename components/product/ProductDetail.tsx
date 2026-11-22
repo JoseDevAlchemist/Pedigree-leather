@@ -52,6 +52,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
     return product.colors.find((entry) => entry.stockQuantity > 0)?.id ?? "";
   });
   const [angleIndex, setAngleIndex] = useState(0);
+  const [sizeId, setSizeId] = useState("");
   const [quantity, setQuantity] = useState(1);
 
   /* The wrapper carries the arrival morph. It was once also the element with
@@ -118,9 +119,11 @@ export function ProductDetail({ product }: ProductDetailProps) {
     };
   }, [reduceMotion, snapshot]);
 
+  const size = color?.sizes?.find((entry) => entry.id === sizeId);
+  const stock = product.stockTrackingMode === "size" ? size?.stockQuantity ?? 0 : color?.stockQuantity ?? 0;
   const maxQuantity = Math.min(
     MAX_QUANTITY,
-    Math.max(1, color?.stockQuantity ?? 1),
+    Math.max(1, stock),
   );
 
   if (!color) return null;
@@ -130,6 +133,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
     if (!next) return;
 
     setActiveColorId(next.id);
+    setSizeId("");
     setAngleIndex(0);
     /* Lowering the ceiling must lower the current value with it, or a shopper
        could carry a quantity of 4 into a colour that has 1 left. */
@@ -152,10 +156,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
     colorId: color.id,
     colorName: color.name,
     colorHex: color.hex,
-    unitPrice: effectivePrice(product.basePrice, product.discountPercent),
+    unitPrice: Math.round(effectivePrice(product.basePrice, product.discountPercent)),
     basePrice: product.basePrice,
     quantity,
-    stockQuantity: color.stockQuantity,
+    stockQuantity: stock,
+    sizeId: size?.id,
+    sizeLabel: size ? `${size.system} ${size.label}` : undefined,
     /* `angleAt` clamps, so a stale index from a previous product can never
        address an angle this product does not have. */
     image: color.images[angleAt(angleIndex, product.angles)] ?? color.images.front ?? null,
@@ -244,8 +250,29 @@ export function ProductDetail({ product }: ProductDetailProps) {
               />
             </section>
 
+            {product.stockTrackingMode === "size" && (
+              <label className="grid max-w-xs gap-2 text-sm font-medium">
+                Shoe size
+                <select
+                  className="h-12 rounded-md border border-border bg-background px-3 text-foreground focus-visible:outline-2 focus-visible:outline-accent"
+                  value={sizeId}
+                  onChange={(event) => {
+                    setSizeId(event.target.value);
+                    setQuantity(1);
+                  }}
+                >
+                  <option value="">Choose a size</option>
+                  {color.sizes?.map((entry) => (
+                    <option key={entry.id} value={entry.id} disabled={entry.stockQuantity === 0}>
+                      {entry.system} {entry.label}{entry.stockQuantity === 0 ? " · Sold out" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
             <div className="flex w-full flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-              {!soldOut && (
+              {!soldOut && stock > 0 && (
                 <QuantityStepper
                   value={quantity}
                   onChange={setQuantity}
@@ -253,7 +280,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 />
               )}
 
-              <AddToCartButton item={cartItem} />
+              <AddToCartButton item={cartItem} needsSize={product.stockTrackingMode === "size" && !size} />
             </div>
           </motion.div>
         </div>

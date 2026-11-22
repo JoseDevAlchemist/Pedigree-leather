@@ -29,7 +29,7 @@ export type NavItem = {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/", label: "Home" },
-  { href: "/bags", label: "Bags" },
-  { href: "/shoes", label: "Shoes" },
+  { href: "/category/bags", label: "Bags" },
+  { href: "/category/shoes", label: "Shoes" },
   { href: "/contact", label: "Contact" },
 ];

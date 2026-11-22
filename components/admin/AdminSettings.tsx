@@ -1,377 +1,157 @@
 "use client";
 
-import { useState, FormEvent } from "react";
-import { Save, Shield, Package, Settings } from "lucide-react";
-import { updateCurrencySettingsAction, updateShopInfoAction, updateDeliverySettingsAction } from "@/lib/actions/settings";
-import { useToast } from "@/components/admin/Toast";
+import { useRef, useState, type FormEvent } from "react";
+import { useUnsavedSettings } from "@/hooks/useUnsavedSettings";
+import { getDisplayPrices } from "@/lib/format";
+import { saveSettingsAction } from "@/lib/actions/settings";
+import { settingsSections } from "@/lib/settings-sections";
+import type { SettingKey, SettingsValues } from "@/lib/settings-schema";
 
-import type { ShopSettings } from "@/lib/settings-api";
+const inputClass = "mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
-interface AdminSettingsProps {
-  settings: ShopSettings;
-}
+export function AdminSettings({ section, initialValues, initialVersion, rateUpdated, brandingBase, stkConfigured, notificationProviders }: {
+  section: string;
+  initialValues: SettingsValues;
+  initialVersion: string | null;
+  rateUpdated?: string | null;
+  brandingBase?: string;
+  stkConfigured?: boolean;
+  notificationProviders?: { email: boolean; whatsapp: boolean };
+}) {
+  const config = settingsSections.find(item => item.id === section)!;
+  const [saved, setSaved] = useState(initialValues);
+  const [values, setValues] = useState(initialValues);
+  const [version, setVersion] = useState(initialVersion);
+  const [rateDate, setRateDate] = useState(rateUpdated);
+  const [files, setFiles] = useState<Partial<Record<SettingKey, File>>>({});
+  const [status, setStatus] = useState<{ error: boolean; message: string }>();
+  const [saving, setSaving] = useState(false);
+  const [fileRevision, setFileRevision] = useState(0);
+  const submitLock = useRef(false);
+  const changes = Object.fromEntries(Object.entries(values).filter(([key, value]) => value !== saved[key as SettingKey]));
+  const dirty = Object.keys(changes).length > 0 || Object.keys(files).length > 0;
 
-export function AdminSettings({ settings: initialSettings }: AdminSettingsProps) {
-  const toast = useToast();
-  const [saving, setSaving] = useState<"info" | "delivery" | "currency" | false>(false);
-  const [infoForm, setInfoForm] = useState({
-    shop_name: initialSettings.shop_name,
-    phone: initialSettings.phone,
-    whatsapp: initialSettings.whatsapp,
-    email: initialSettings.email || "",
-    address: initialSettings.address,
-    google_maps_url: initialSettings.google_maps_url || "",
-    instagram_handle: initialSettings.instagram_handle || "",
-    instagram_url: initialSettings.instagram_url || "",
-  });
-  const [deliveryForm, setDeliveryForm] = useState({
-    delivery_flat_rate: initialSettings.delivery_flat_rate,
-    free_delivery_threshold: initialSettings.free_delivery_threshold,
-    pickup_available: initialSettings.pickup_available,
-  });
+  useUnsavedSettings(dirty, saving);
 
-  const handleInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setInfoForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleDeliveryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, type, value, checked } = e.target;
-    setDeliveryForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : type === "number" ? Number(value) : value,
-    }));
-  };
-
-  const handleInfoSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSaving("info");
-    const formData = new FormData(e.currentTarget);
-    const result = await updateShopInfoAction(formData);
-    setSaving(false);
-    if (result.ok) {
-      toast.success("Shop info saved");
-    } else {
-      toast.error("Failed to save", result.error);
-    }
-  };
-
-  const handleDeliverySubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSaving("delivery");
-    const formData = new FormData(e.currentTarget);
-    const result = await updateDeliverySettingsAction(formData);
-    setSaving(false);
-    if (result.ok) {
-      toast.success("Delivery settings saved");
-    } else {
-      toast.error("Failed to save", result.error);
-    }
-  };
-
-  const handleCurrencySubmit = async (event: FormEvent<HTMLFormElement>) => {
+  async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaving("currency");
-    const result = await updateCurrencySettingsAction(new FormData(event.currentTarget));
-    setSaving(false);
-    if (result.ok) toast.success("Exchange rate saved");
-    else toast.error("Failed to save", result.error);
-  };
+    if (!dirty || submitLock.current || (config.confirm && !window.confirm(`Save changes to ${config.label.toLowerCase()}?`))) return;
+    submitLock.current = true;
+    setSaving(true);
+    setStatus(undefined);
+    const uploads = new FormData();
+    for (const [key, file] of Object.entries(files)) uploads.set(key, file);
+    try {
+      const result = await saveSettingsAction(section, version, changes, uploads);
+      if (!result.ok) {
+        setStatus({ error: true, message: result.error });
+        return;
+      }
+      const next = { ...saved, ...result.values };
+      setSaved(next);
+      setValues(next);
+      setVersion(result.version);
+      if ("exchange_rate_kes_to_usd" in result.values) setRateDate(result.rateUpdated);
+      setFiles({});
+      setFileRevision(revision => revision + 1);
+      setStatus({ error: false, message: "Changes saved." });
+    } catch {
+      setStatus({ error: true, message: "The save could not be confirmed. Reload to check the current values." });
+    } finally {
+      submitLock.current = false;
+      setSaving(false);
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
-            Settings
-          </h1>
-          <p className="text-sm text-muted">
-            Configure shop information, delivery and currency settings
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Shield className="size-4 text-amber-500" aria-hidden="true" />
-          <span className="text-sm text-muted">Owner only</span>
-        </div>
+    <form onSubmit={save} aria-busy={saving} className="space-y-6">
+      {config.groups?.map(group => (
+        <fieldset key={group.title} disabled={saving} className="min-w-0 rounded-lg border border-border bg-card p-4 sm:p-6">
+          <legend className="px-2 font-serif text-xl font-semibold">{group.title}</legend>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {group.fields.map(([key, label, kind = "text"]) => {
+              const value = values[key];
+              const update = (next: SettingsValues[SettingKey]) => setValues(current => ({ ...current, [key]: next }));
+              if (kind === "image") return (
+                <div key={key} className="min-w-0 text-sm">
+                  <label htmlFor={key} className="font-semibold">{label}</label>
+                  <input key={fileRevision} id={key} type="file" accept="image/png,image/jpeg,image/webp" className={inputClass}
+                    onChange={event => {
+                      const file = event.target.files?.[0];
+                      setFiles(current => {
+                        const next = { ...current };
+                        if (file) next[key] = file;
+                        else delete next[key];
+                        return next;
+                      });
+                    }} />
+                  <p className="mt-1 text-xs text-muted">JPEG, PNG or WebP, up to 480 KB each.</p>
+                  {!!value && brandingBase && <a className="mr-3 underline" href={`${brandingBase}/${value}`} target="_blank" rel="noreferrer">Current image</a>}
+                  {!!value && <button type="button" className="underline" onClick={() => {
+                    update(null);
+                    const input = document.getElementById(key);
+                    if (input instanceof HTMLInputElement) input.value = "";
+                    setFiles(current => {
+                      const next = { ...current };
+                      delete next[key];
+                      return next;
+                    });
+                  }}>Use default</button>}
+                </div>
+              );
+              if (kind === "checkbox") return (
+                <label key={key} className="flex items-center gap-3 text-sm font-semibold">
+                  <input type="checkbox" checked={value === true} onChange={event => update(event.target.checked)} disabled={!value && (
+                    key === "stk_enabled" && !stkConfigured ||
+                    key.startsWith("notify_") && !(key === "notify_payment_receipt" ? notificationProviders?.email : notificationProviders?.whatsapp)
+                  )} className="size-4 accent-primary" />
+                  {label}
+                </label>
+              );
+              const numeric = kind === "number" || kind === "decimal";
+              return (
+                <label key={key} className={`min-w-0 text-sm font-semibold ${kind === "textarea" ? "sm:col-span-2" : ""}`}>
+                  {label}
+                  {kind === "sort" ? (
+                    <select className={inputClass} value={String(value ?? "newest")} onChange={event => update(event.target.value)}>
+                      <option value="newest">Newest</option>
+                      <option value="price_asc">Price, low to high</option>
+                      <option value="price_desc">Price, high to low</option>
+                    </select>
+                  ) : kind === "textarea" ? (
+                    <textarea className={inputClass} rows={3} value={String(value ?? "")} onChange={event => update(event.target.value || null)} />
+                  ) : (
+                    <input className={inputClass} type={numeric ? "number" : kind} required={numeric}
+                      min={numeric ? 0 : undefined}
+                      step={numeric ? (kind === "decimal" ? "any" : 1) : undefined}
+                      value={String(value ?? "")}
+                      onChange={event => update(event.target.value === "" ? null : numeric ? event.target.valueAsNumber : event.target.value)} />
+                  )}
+                </label>
+              );
+            })}
+          </div>
+          {section === "currency" && (
+            <div className="mt-4 space-y-1 text-sm text-muted">
+              <p>KES 10,000 converts to {Number(values.exchange_rate_kes_to_usd) > 0
+                ? getDisplayPrices({ basePrice: 10_000, discountPercent: 0, exchangeRate: Number(values.exchange_rate_kes_to_usd) }).usd
+                : "—"}.</p>
+              <p>Rate last changed {rateDate ? `on ${new Intl.DateTimeFormat("en-KE", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Nairobi" }).format(new Date(rateDate))} EAT` : "at an unrecorded time"}.</p>
+            </div>
+          )}
+        </fieldset>
+      ))}
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="submit" disabled={!dirty || saving} className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        <button type="button" disabled={!dirty || saving} className="rounded-md border border-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+          onClick={() => { setValues(saved); setFiles({}); setFileRevision(revision => revision + 1); setStatus(undefined); }}>
+          Reset
+        </button>
+        {dirty && !saving && <span className="text-sm text-muted">Unsaved changes</span>}
       </div>
-
-      {/* Shop Information Section */}
-      <section className="rounded-xl border border-border bg-card p-5" aria-labelledby="shop-info-heading">
-        <h2 id="shop-info-heading" className="font-sans text-lg font-semibold tracking-tight text-foreground mb-4">
-          Shop Information
-        </h2>
-
-        <form onSubmit={handleInfoSubmit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="shop_name" className="block text-sm font-medium text-foreground">
-                Shop name <span className="text-primary" aria-hidden="true">*</span>
-              </label>
-              <input
-                type="text"
-                id="shop_name"
-                name="shop_name"
-                value={infoForm.shop_name}
-                onChange={handleInfoChange}
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-foreground">
-                Phone <span className="text-primary" aria-hidden="true">*</span>
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={infoForm.phone}
-                onChange={handleInfoChange}
-                placeholder="+254 700 000 000"
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="whatsapp" className="block text-sm font-medium text-foreground">
-                WhatsApp number <span className="text-primary" aria-hidden="true">*</span>
-              </label>
-              <input
-                type="text"
-                id="whatsapp"
-                name="whatsapp"
-                value={infoForm.whatsapp}
-                onChange={handleInfoChange}
-                placeholder="254700000000"
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                required
-              />
-              <p className="mt-1 text-xs text-muted">Format: 254XXXXXXXXX (no + or spaces)</p>
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={infoForm.email}
-                onChange={handleInfoChange}
-                placeholder="hello@pedigreeleather.co"
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="address" className="block text-sm font-medium text-foreground">
-              Address <span className="text-primary" aria-hidden="true">*</span>
-            </label>
-            <textarea
-              id="address"
-              name="address"
-              rows={3}
-              value={infoForm.address}
-              onChange={handleInfoChange}
-              className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="google_maps_url" className="block text-sm font-medium text-foreground">
-              Google Maps URL
-            </label>
-            <input
-              type="url"
-              id="google_maps_url"
-              name="google_maps_url"
-              value={infoForm.google_maps_url}
-              onChange={handleInfoChange}
-              placeholder="https://maps.google.com/..."
-              className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <p className="mt-1 text-xs text-muted">Link for the &apos;Get directions&apos; button on contact page</p>
-          </div>
-
-          <div>
-            <label htmlFor="instagram_handle" className="block text-sm font-medium text-foreground">
-              Instagram Handle
-            </label>
-            <input
-              type="text"
-              id="instagram_handle"
-              name="instagram_handle"
-              value={infoForm.instagram_handle}
-              onChange={handleInfoChange}
-              placeholder="@pedigreeleather"
-              className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <p className="mt-1 text-xs text-muted">Without @ symbol (e.g. pedigreeleather)</p>
-          </div>
-
-          <div>
-            <label htmlFor="instagram_url" className="block text-sm font-medium text-foreground">
-              Instagram URL
-            </label>
-            <input
-              type="url"
-              id="instagram_url"
-              name="instagram_url"
-              value={infoForm.instagram_url}
-              onChange={handleInfoChange}
-              placeholder="https://instagram.com/pedigreeleather"
-              className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <p className="mt-1 text-xs text-muted">Full profile URL for the contact widget</p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={saving === "info"}
-            className="inline-flex items-center gap-2 h-11 rounded-full bg-primary px-5 text-sm font-semibold tracking-wide text-background transition-colors duration-150 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent disabled:opacity-50"
-          >
-            {saving === "info" ? (
-              <>
-                <Save className="size-4 animate-spin" aria-hidden="true" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="size-4" aria-hidden="true" />
-                Save shop info
-              </>
-            )}
-          </button>
-        </form>
-      </section>
-
-      <section className="rounded-xl border border-border bg-card p-5" aria-labelledby="currency-heading">
-        <h2 id="currency-heading" className="mb-4 text-lg font-semibold text-foreground">
-          Currency Settings
-        </h2>
-        <form onSubmit={handleCurrencySubmit} className="space-y-4">
-          <div className="max-w-xs">
-            <label htmlFor="usd-exchange-rate" className="mb-1 block text-sm font-medium text-foreground">
-              Exchange Rate (1 USD = ? KES)
-            </label>
-            <input
-              id="usd-exchange-rate"
-              name="exchange_rate_kes_to_usd"
-              type="number"
-              step="any"
-              inputMode="decimal"
-              required
-              defaultValue={initialSettings.exchange_rate_kes_to_usd}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-accent"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={Boolean(saving)}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-background hover:bg-primary-deep disabled:opacity-50"
-          >
-            <Save size={16} aria-hidden="true" />
-            {saving === "currency" ? "Saving…" : "Save exchange rate"}
-          </button>
-        </form>
-      </section>
-
-      {/* Delivery Settings Section */}
-      <section className="rounded-xl border border-border bg-card p-5" aria-labelledby="delivery-heading">
-        <h2 id="delivery-heading" className="font-sans text-lg font-semibold tracking-tight text-foreground mb-4">
-          Delivery Settings
-        </h2>
-
-        <form onSubmit={handleDeliverySubmit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="delivery_flat_rate" className="block text-sm font-medium text-foreground">
-                Flat rate (KES) <span className="text-primary" aria-hidden="true">*</span>
-              </label>
-              <input
-                type="number"
-                id="delivery_flat_rate"
-                name="delivery_flat_rate"
-                value={deliveryForm.delivery_flat_rate}
-                onChange={handleDeliveryChange}
-                min="0"
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="free_delivery_threshold" className="block text-sm font-medium text-foreground">
-                Free delivery threshold (KES) <span className="text-primary" aria-hidden="true">*</span>
-              </label>
-              <input
-                type="number"
-                id="free_delivery_threshold"
-                name="free_delivery_threshold"
-                value={deliveryForm.free_delivery_threshold}
-                onChange={handleDeliveryChange}
-                min="0"
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                required
-              />
-              <p className="mt-1 text-xs text-muted">Orders above this amount get free delivery</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="pickup_available"
-              name="pickup_available"
-              checked={deliveryForm.pickup_available}
-              onChange={handleDeliveryChange}
-              className="h-4 w-4 rounded border-border bg-background text-primary focus:ring-2 focus:ring-primary/20"
-            />
-            <label htmlFor="pickup_available" className="font-medium text-foreground cursor-pointer">
-              Enable shop pickup
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            disabled={saving === "delivery"}
-            className="inline-flex items-center gap-2 h-11 rounded-full bg-primary px-5 text-sm font-semibold tracking-wide text-background transition-colors duration-150 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent disabled:opacity-50"
-          >
-            {saving === "delivery" ? (
-              <>
-                <Save className="size-4 animate-spin" aria-hidden="true" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="size-4" aria-hidden="true" />
-                Save delivery settings
-              </>
-            )}
-          </button>
-        </form>
-      </section>
-
-      {/* Zones link */}
-      <div className="rounded-xl border border-border bg-card p-5 text-center">
-        <Package className="size-12 mx-auto text-muted" aria-hidden="true" />
-        <h3 className="mt-3 font-medium text-foreground">Delivery Zones</h3>
-        <p className="mt-1 text-sm text-muted">
-          Manage delivery zones with different fees for different areas
-        </p>
-        <a
-          href="/admin/settings/zones"
-          className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground transition-colors duration-150 ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-        >
-          Manage zones
-          <Settings className="size-4" aria-hidden="true" />
-        </a>
-      </div>
-    </div>
+      {status && <p role={status.error ? "alert" : "status"} className={status.error ? "text-sm text-red-800" : "text-sm text-foreground"}>{status.message}</p>}
+    </form>
   );
 }
