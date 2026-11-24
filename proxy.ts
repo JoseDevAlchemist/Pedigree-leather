@@ -44,11 +44,29 @@ const ADMIN_PREFIX = "/admin";
 const LOGIN_PATH = "/admin/login";
 
 export async function proxy(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (!url || !anonKey || !serviceRoleKey) {
+    const message = "Admin is temporarily unavailable because its database connection is not configured. Contact the site administrator.";
+    const headers = { "Cache-Control": "no-store" };
+
+    if (request.nextUrl.pathname.startsWith("/api/admin/")) {
+      return NextResponse.json({ error: message }, { status: 503, headers });
+    }
+
+    return new NextResponse(message, {
+      status: 503,
+      headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
