@@ -6,7 +6,9 @@ import { Suspense } from "react";
 import { ProductFilters } from "@/components/admin/ProductFilters";
 import { ProductTable } from "@/components/admin/ProductTable";
 import { listProducts } from "@/lib/admin-api";
-import { requireAdminUser } from "@/lib/supabase/guards";
+import { requireAdminRole } from "@/lib/supabase/guards";
+import { getInventoryPreferences } from "@/lib/admin-inventory-preferences";
+import { inventoryDefaults } from "@/lib/settings-schema";
 
 export const metadata: Metadata = {
   title: "Products",
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminProductsPage({ searchParams }: PageProps<"/admin/products">) {
-  await requireAdminUser();
+  await requireAdminRole("owner");
 
   const params = await searchParams;
   const rawCategory = params.category;
@@ -22,9 +24,10 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
   const search = typeof params.q === "string" ? params.q : undefined;
 
   /* The visible rows, filtered. */
-  const [products, everything] = await Promise.all([
+  const [products, everything, inventory] = await Promise.all([
     listProducts({ category, search }),
     category || search?.trim() ? listProducts() : Promise.resolve(null),
+    getInventoryPreferences(),
   ]);
 
   const catalogue = everything ?? products;
@@ -72,7 +75,7 @@ export default async function AdminProductsPage({ searchParams }: PageProps<"/ad
         {products.length === 0 ? (
           <EmptyState isFiltered={isFiltered} />
         ) : (
-          <ProductTable products={products} />
+          <ProductTable products={products} inventory={inventory ?? inventoryDefaults} />
         )}
       </div>
     </div>

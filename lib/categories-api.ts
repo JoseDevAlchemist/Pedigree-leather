@@ -44,7 +44,7 @@ function toCategory(row: CategoryRow): Category {
  */
 function publicClientOrNull(label: string) {
   try {
-    return createPublicClient();
+    return createPublicClient("categories");
   } catch (error) {
     console.error(`[pedigree/categories] ${label}:`, error);
     return null;
@@ -78,7 +78,7 @@ export const getCategories = cache(async (): Promise<Category[]> => {
 
   const { data, error } = await supabase
     .from("categories")
-    .select("*")
+    .select("id, name, slug, parent_id, display_order, is_active, created_at")
     .eq("is_active", true)
     .order("display_order", { ascending: true })
     .order("name", { ascending: true });
@@ -99,26 +99,9 @@ export const getParentCategories = cache(async (): Promise<Category[]> =>
 /**
  * A single active category by slug, or `null`.
  */
-export async function getCategoryBySlug(slug: string): Promise<Category | null> {
-  const supabase = publicClientOrNull(`getCategoryBySlug:${slug}`);
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error(`[pedigree/categories] getCategoryBySlug:${slug}:`, error);
-    return null;
-  }
-
-  if (!data) return null;
-  return toCategory(data as CategoryRow);
-}
+export const getCategoryBySlug = cache(async (slug: string): Promise<Category | null> =>
+  (await getCategories()).find((category) => category.slug === slug) ?? null,
+);
 
 /* ---------------------------------------------------------------------------
    Admin helpers — service role. Called only from Server Actions.

@@ -1,3 +1,4 @@
+import { getCategories } from "@/lib/categories-api";
 import { cache } from "react";
 import { anglesForCategory, toProduct } from "@/lib/mappers";
 import type { ProductWithRelations } from "@/lib/mappers";
@@ -22,23 +23,9 @@ import type { Product } from "@/lib/types";
  * Demo data is available only when explicitly enabled outside production.
  * Catalogue errors in the deployed shop leave the affected results empty.
  *
- * Caching
- * ---------------------------------------------------------------------------
- * These reads are mostly static-page reads, so they happen at build time and are
- * baked into the prerendered HTML — the route list should show `○` for `/`,
- * `/bags`, `/shoes` and the product pages. The filtered `/category/[slug]` reads
- * are request-time because the filter state lives in the URL. A product added in
- * the admin gets its page on request (`dynamicParams` defaults to true) but does
- * not appear in an already built grid until the next build. That is the right trade
- * for a shop whose catalogue changes a few times a month, and the wrong one the
- * moment it changes hourly — the fix is a `revalidateTag` call, and
- * `lib/actions/products.ts` already calls `revalidatePath` for the shop routes after
- * every write, so a `next build` is not the only way they update.
- *
- * If any of those routes ever shows up as `ƒ` in the build output, something on this
- * path has started calling `cookies()`. That is what happened when these reads used
- * the session-aware client instead of `lib/supabase/public.ts`, and it is the single
- * thing to check.
+ * Only explicit anonymous product projections enter the storefront cache.
+ * Prices and stock in these projections are display snapshots. Checkout reads
+ * authoritative availability and prices through the order reservation RPC.
  */
 
 /** Newest first, comparing as dates so a non-`Z` offset sorts correctly. */
@@ -176,58 +163,13 @@ type CategoryColorRow = {
  * category itself plus its children. `null` means "fall back to mock data";
  * an empty result genuinely means the category page has no products.
  */
-async function resolveCategoryScope(
-  supabase: ReturnType<typeof createPublicClient>,
-  categorySlug: string,
-): Promise<string[] | null> {
-  const { data: category, error: categoryError } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("slug", categorySlug)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (categoryError) {
-    if (isMissingSchema(categoryError)) {
-      reportOnce(
-        MISSING_SCHEMA_KEY,
-        "Supabase has no `categories` table yet, so category pages are falling back to mock data. Run supabase/migrations/021_categories_reconcile.sql, then the shop will read from Supabase.",
-      );
-    } else {
-      reportOnce(
-        `error:resolveCategoryScope:${categoryError.code ?? categoryError.message ?? "unknown"}`,
-        `Supabase read failed (${categoryError.code ?? "no code"}: ${categoryError.message}). Catalogue data unavailable.`,
-      );
-    }
-    return null;
-  }
-
+const resolveCategoryScope = cache(async (categorySlug: string): Promise<string[] | null> => {
+  const categories = await getCategories();
+  const category = categories.find(({ slug }) => slug === categorySlug);
   if (!category) return null;
 
-  const categoryId = (category as { id: string }).id;
-
-  /* One level of children, which is the shape the categories table models. If
-     this read fails we still show the parent's own products: an incomplete grid
-     beats no grid, and the cause is logged once. */
-  const { data: children, error: childrenError } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("parent_id", categoryId);
-
-  if (childrenError) {
-    reportOnce(
-      `error:resolveCategoryScope:children:${childrenError.code ?? childrenError.message ?? "unknown"}`,
-      `Could not read child categories (${childrenError.code ?? "no code"}: ${childrenError.message}). Showing only products assigned directly to the parent.`,
-    );
-  }
-
-  return [
-    categoryId,
-    ...((children ?? []) as { id: string }[]).map((child) => child.id),
-  ];
-}
-
+  return [category.id, ...categories.filter(({ parentId }) => parentId === category.id).map(({ id }) => id)];
+});
 
 /* Reasons already reported, so a broken database produces one line per *cause*
    rather than one line per render or per slug. A `Set` of strings, module scope:
@@ -268,7 +210,7 @@ async function readFromSupabase(
   }>,
 ): Promise<ProductWithRelations[] | null> {
   try {
-    const supabase = createPublicClient();
+    const supabase = createPublicClient("catalogue");
     const { data, error } = await run(supabase);
 
     if (error) {
@@ -314,7 +256,11 @@ const PRODUCT_SELECT = "id,name,slug,description,category,category_id,base_price
 const COLOUR_PRODUCT_SELECT = "id,name,slug,description,category,category_id,base_price,base_price_usd,discount_percent,featured,created_at,product_colors!inner(id,product_id,color_name,color_hex,sort_order,stock_quantity,product_images(id,color_id,angle,image_url,sort_order))";
 
 const catalogueProjection = cache(async () => {
-  const probe = await publicProducts(createPublicClient(), PRODUCT_SELECT).limit(0);
+  // The deployed catalogue uses the verified canonical EU size inventory schema.
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") === "https://scvscxbxfpjqbqkfkset.supabase.co") {
+    return PRODUCT_SELECT;
+  }
+  const probe = await publicProducts(createPublicClient("catalogue"), PRODUCT_SELECT).limit(0);
   const error = probe.error;
   if ((error?.code === "PGRST200" && error.message.includes("product_color_sizes"))
     || (error?.code === "42703" && error.message.includes("stock_tracking_mode"))) {
@@ -358,170 +304,52 @@ export async function getProducts(category?: Product["category"]): Promise<Produ
   return rows.map(toShopProduct).sort((a, b) => byCreatedAtDesc(a, b));
 }
 
-/**
- * Search products by name, description, category, or colour name.
- *
- * PostgREST cannot express one `OR` across a parent table and an embedded
- * relation reliably, so this runs the matching reads separately and merges the
- * product ids. That also keeps user input out of a hand-built `.or()` string:
- * each term goes through the query builder's value encoding.
- *
- * The category match expands to children, so "bags" finds products filed under
- * "Laptop Bags" and "Handbags" too. Colour matching is a plain ILIKE, which is
- * what makes "brown" find a colour stored as "Cognac Brown".
- */
+/** Search all public matching products with one nested product read. */
 export async function searchProducts(query: string): Promise<Product[]> {
   const term = query.trim().slice(0, 120);
   if (!term) return [];
 
-  const pattern = `%${term}%`;
   const lower = term.toLowerCase();
+  const pattern = `%${term.replace(/[\\%_*]/g, (character) => `\\${character}`)}%`;
+  const rows = await readFromSupabase("searchProducts", async (supabase) => {
+    const [projection, categories, colours] = await Promise.all([
+      catalogueProjection(),
+      getCategories(),
+      supabase.from("product_colors").select("product_id").ilike("color_name", pattern).limit(500),
+    ]);
 
-  let supabase: ReturnType<typeof createPublicClient>;
-  try {
-    supabase = createPublicClient();
-  } catch (error) {
-    reportOnce(
-      "search:client",
-      `Could not create the Supabase client for search: ${
-        error instanceof Error ? error.message : "unknown error"
-      }. Falling back to mock search.`,
-    );
-    return searchMockProducts(term);
-  }
-
-  type SearchCategoryRow = {
-    id: string;
-    name: string;
-    slug: string;
-    parent_id: string | null;
-  };
-
-  const projection = await catalogueProjection();
-  const [nameResult, descriptionResult, colorResult, categoryResult] = await Promise.all([
-    publicProducts(supabase, projection)
-      .ilike("name", pattern)
-      .limit(100).overrideTypes<ProductWithRelations[], { merge: false }>(),
-    publicProducts(supabase, projection)
-      .ilike("description", pattern)
-      .limit(100).overrideTypes<ProductWithRelations[], { merge: false }>(),
-    supabase
-      .from("product_colors")
-      .select("product_id")
-      .ilike("color_name", pattern)
-      .limit(500),
-    supabase
-      .from("categories")
-      .select("id, name, slug, parent_id")
-      .eq("is_active", true),
-  ]);
-
-  let failed = 0;
-  let succeeded = 0;
-
-  const note = (
-    label: string,
-    error: { code?: string; message?: string } | null,
-  ) => {
-    if (!error) {
-      succeeded += 1;
-      return;
-    }
-
-    failed += 1;
-
-    if (isMissingSchema(error)) {
-      reportOnce(
-        `search:missing-schema:${label}`,
-        `Search could not read ${label} because a table is missing. Run supabase/migrations/021_categories_reconcile.sql if the categories table is absent.`,
-      );
-      return;
-    }
-
-    reportOnce(
-      `search:error:${label}:${error.code ?? error.message ?? "unknown"}`,
-      `Search read failed for ${label} (${error.code ?? "no code"}: ${error.message}). Partial results will be shown.`,
-    );
-  };
-
-  note("name", nameResult.error);
-  note("description", descriptionResult.error);
-  note("colors", colorResult.error);
-  note("categories", categoryResult.error);
-
-  /* If every read failed, the shop is better served by the same mock catalogue
-     the rest of `lib/api.ts` falls back to than by an empty results page. */
-  if (failed > 0 && succeeded === 0) return searchMockProducts(term);
-
-  const categories = (categoryResult.data ?? []) as SearchCategoryRow[];
-  const categoryIds = new Set(
-    categories
-      .filter(
-        (category) =>
-          category.name.toLowerCase().includes(lower) ||
-          category.slug.toLowerCase().includes(lower),
-      )
-      .map((category) => category.id),
-  );
-
-  /* A parent match includes its children, so searching "bags" finds the
-     products filed under "Laptop Bags" and "Handbags" as well. The loop also
-     handles a deeper tree without assuming exactly two levels. */
-  let addedChild = true;
-  while (addedChild) {
-    addedChild = false;
-    for (const category of categories) {
-      if (
-        category.parent_id &&
-        categoryIds.has(category.parent_id) &&
-        !categoryIds.has(category.id)
-      ) {
-        categoryIds.add(category.id);
-        addedChild = true;
+    const categoryIds = new Set(categories.filter(({ name, slug }) =>
+      name.toLowerCase().includes(lower) || slug.toLowerCase().includes(lower),
+    ).map(({ id }) => id));
+    let addedChild = true;
+    while (addedChild) {
+      addedChild = false;
+      for (const { id, parentId } of categories) {
+        if (parentId && categoryIds.has(parentId) && !categoryIds.has(id)) {
+          categoryIds.add(id);
+          addedChild = true;
+        }
       }
     }
-  }
 
-  const colorProductIds = [
-    ...new Set(
-      ((colorResult.data ?? []) as { product_id: string }[]).map(
-        (row) => row.product_id,
-      ),
-    ),
-  ];
-
-  const emptyResult = Promise.resolve({ data: [], error: null });
-  const [categoryProducts, colorProducts] = await Promise.all([
-    categoryIds.size > 0
-      ? publicProducts(supabase, projection)
-          .in("category_id", [...categoryIds])
-          .limit(100).overrideTypes<ProductWithRelations[], { merge: false }>()
-      : emptyResult,
-    colorProductIds.length > 0
-      ? publicProducts(supabase, projection)
-          .in("id", colorProductIds)
-          .limit(100).overrideTypes<ProductWithRelations[], { merge: false }>()
-      : emptyResult,
-  ]);
-
-  note("category products", categoryProducts.error);
-  note("colour products", colorProducts.error);
-
-  const byId = new Map<string, ProductWithRelations>();
-  const batches = [
-    nameResult.data,
-    descriptionResult.data,
-    categoryProducts.data,
-    colorProducts.data,
-  ];
-
-  for (const batch of batches) {
-    for (const row of (batch ?? []) as ProductWithRelations[]) {
-      if (!byId.has(row.id)) byId.set(row.id, row);
+    if (colours.error) {
+      reportOnce("search:colours", "Search could not load colour matches.");
     }
-  }
+    const productIds = [...new Set((colours.data ?? []).map(({ product_id }) => product_id))];
+    // Quote OR values so punctuation in customer input stays inside the pattern.
+    const quoted = JSON.stringify(pattern);
+    const filters = [`name.ilike.${quoted}`, `description.ilike.${quoted}`];
+    if (categoryIds.size) filters.push(`category_id.in.(${[...categoryIds].map((id) => JSON.stringify(id)).join(",")})`);
+    if (productIds.length) filters.push(`id.in.(${productIds.map((id) => JSON.stringify(id)).join(",")})`);
 
-  return [...byId.values()].map(toShopProduct).sort(byCreatedAtDesc);
+    return publicProducts(supabase, projection)
+      .or(filters.join(","))
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .overrideTypes<ProductWithRelations[], { merge: false }>();
+  });
+
+  return rows === null ? searchMockProducts(term) : rows.map(toShopProduct);
 }
 
 /**
@@ -530,10 +358,10 @@ export async function searchProducts(query: string): Promise<Product[]> {
  * `null` is the contract for "not found": the detail page turns it into a 404, so
  * a caller must never return a stub object here.
  */
-export async function getProductBySlug(
+export const getProductBySlug = cache(async (
   slug: string,
   category?: Product["category"],
-): Promise<Product | null> {
+): Promise<Product | null> => {
   const rows = await readFromSupabase(`getProductBySlug:${slug}`, async (supabase) => {
     let query = publicProducts(supabase, await catalogueProjection())
       .eq("slug", slug);
@@ -551,7 +379,7 @@ export async function getProductBySlug(
   }
 
   return rows.length > 0 ? toShopProduct(rows[0]) : null;
-}
+});
 
 /**
  * Every slug the shop has, for `generateStaticParams`.
@@ -602,7 +430,7 @@ export async function getProductsByCategory(
 
   let supabase: ReturnType<typeof createPublicClient>;
   try {
-    supabase = createPublicClient();
+    supabase = createPublicClient("catalogue");
   } catch (error) {
     reportOnce(
       "category:client",
@@ -613,7 +441,7 @@ export async function getProductsByCategory(
     return fallback();
   }
 
-  const categoryIds = await resolveCategoryScope(supabase, categorySlug);
+  const categoryIds = await resolveCategoryScope(categorySlug);
   if (categoryIds === null) return fallback();
 
   let colorProductIds: string[] | null = null;
@@ -703,7 +531,7 @@ export async function getCategoryColorOptions(
 
   let supabase: ReturnType<typeof createPublicClient>;
   try {
-    supabase = createPublicClient();
+    supabase = createPublicClient("catalogue");
   } catch (error) {
     reportOnce(
       "category-colors:client",
@@ -714,7 +542,7 @@ export async function getCategoryColorOptions(
     return fallback();
   }
 
-  const categoryIds = await resolveCategoryScope(supabase, categorySlug);
+  const categoryIds = await resolveCategoryScope(categorySlug);
   if (categoryIds === null) return fallback();
 
   const { data, error } = await publicProducts(supabase, "product_colors!inner(color_name, color_hex)")

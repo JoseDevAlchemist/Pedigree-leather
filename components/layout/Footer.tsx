@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 
-import { addressLines, displayPhone, email, mailtoHref, phoneHref, whatsappUrl } from "@/lib/contact";
+import { email as defaultEmail, whatsappMessage } from "@/lib/contact";
+import { getShopConfig } from "@/lib/shop-config";
+import { brandingUrl, getStorefrontPreferences } from "@/lib/settings-api";
 import { NAV_ITEMS } from "@/lib/navigation";
 
 import { BrandMark, Wordmark } from "@/components/layout/Brand";
@@ -52,7 +54,17 @@ function StitchRule({ className = "" }: { className?: string }) {
   );
 }
 
-export function Footer() {
+export async function Footer() {
+  const [config, settings] = await Promise.all([getShopConfig(), getStorefrontPreferences()]);
+  const email = config.email || defaultEmail;
+  const addressLines = config.address.split(/\r?\n/);
+  const profiles = [
+    ["Instagram", config.instagramUrl],
+    ["Facebook", settings.facebook_url],
+    ["TikTok", settings.tiktok_url],
+    ["Social profile", settings.other_social_url],
+  ];
+  const mapUrl = config.googleMapsUrl && config.googleMapsUrl !== "#" ? config.googleMapsUrl : null;
   const year = new Date().getFullYear();
 
   return (
@@ -76,15 +88,15 @@ export function Footer() {
           <div className="grid gap-7 md:grid-cols-3 md:gap-8">
           {/* Brand */}
           <div>
-            <Link
+            <Link prefetch={false}
               href="/"
               className="-m-1 flex w-fit items-center gap-3 rounded-full p-1 transition-transform duration-150 ease-out active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
             >
-              <BrandMark />
-              <Wordmark className="text-xl" />
+              <BrandMark src={brandingUrl(settings.logo)} />
+              <Wordmark name={config.shopName} className="text-xl" />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-pretty text-background/70">
-              High-quality leather goods, crafted in Nairobi.
+              High-quality leather products, crafted in Nairobi.
             </p>
           </div>
 
@@ -104,7 +116,7 @@ export function Footer() {
                       </span>
                     </span>
                   ) : (
-                    <Link
+                    <Link prefetch={false}
                       href={item.href}
                       className="inline-block py-1 text-sm text-background/75 transition-colors duration-200 ease-out hover:text-accent focus-visible:rounded focus-visible:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     >
@@ -122,19 +134,19 @@ export function Footer() {
             <ul className="mt-3 space-y-1.5 text-sm">
               <li>
                 <a
-                  href={phoneHref}
+                  href={`tel:+${config.phone.replace(/\D/g, "")}`}
                   className="group flex items-start gap-2.5 text-background/75 transition-colors duration-200 ease-out hover:text-accent focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <Phone
                     aria-hidden="true"
                     className="mt-0.5 size-4 shrink-0 text-accent/70 transition-colors duration-200 group-hover:text-accent"
                   />
-                  {displayPhone}
+                  {config.phone}
                 </a>
               </li>
               <li>
                 <a
-                  href={mailtoHref}
+                  href={`mailto:${email}`}
                   className="group flex items-start gap-2.5 break-words text-background/75 transition-colors duration-200 ease-out hover:text-accent focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <Mail
@@ -166,14 +178,13 @@ export function Footer() {
                       </span>
                     ))}
                   </span>
-                  <a
-                    href="#"
+                  {mapUrl && <a
+                    href={mapUrl}
                     className="text-sm text-background/60 underline underline-offset-2 hover:text-accent transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     aria-label="Get directions to the shop"
                   >
                     Get directions
-                    {/* TODO: Replace with Google Maps link once client sets up Google Business Profile */}
-                  </a>
+                  </a>}
                 </div>
               </li>
             {/* Last item in the contact column rather than a row of its own. WhatsApp is a
@@ -183,7 +194,7 @@ export function Footer() {
                 height. */}
               <li>
                 <a
-                  href={whatsappUrl()}
+                  href={`https://wa.me/${config.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(whatsappMessage)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group mt-2 inline-flex items-center gap-2 rounded-full bg-whatsapp px-4 py-1.5 text-sm font-semibold text-charcoal transition-colors duration-200 ease-out hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -199,18 +210,23 @@ export function Footer() {
           <StitchRule className="mt-6" />
 
           <div className="mt-3 flex flex-col items-start justify-between gap-2 text-xs text-background/55 sm:flex-row sm:items-center">
-          <p>© {year} Pedigree Leather. All rights reserved.</p>
+          <p>© {year} {settings.business_name || config.shopName}. All rights reserved.</p>
           <nav aria-label="Legal" className="flex flex-wrap items-center gap-3">
-            <Link href="/legal/privacy" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <Link prefetch={false} href="/legal/privacy" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
               Privacy
             </Link>
-            <Link href="/legal/terms" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <Link prefetch={false} href="/legal/terms" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
               Terms
             </Link>
-            <Link href="/legal/returns" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <Link prefetch={false} href="/legal/returns" className="transition-colors duration-200 ease-out hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
               Returns
             </Link>
           </nav>
+          {profiles.some(([, href]) => !!href) && (
+            <nav aria-label="Social profiles" className="flex flex-wrap gap-3">
+              {profiles.map(([label, href]) => href && <a key={label} href={href} className="underline underline-offset-2 hover:text-accent">{label}</a>)}
+            </nav>
+          )}
           {/* Editable credit line. Kept as literal text rather than pulled from a
               config object: it is prose, it changes when someone decides to
               change it, and there is exactly one of them. */}

@@ -8,7 +8,6 @@ import {
   Check,
   CheckCircle2,
   Copy,
-  CreditCard,
   Loader2,
   Lock,
   MapPin,
@@ -23,17 +22,9 @@ import { toast } from "sonner";
 import { formatPrice } from "@/lib/format";
 import { markPaymentMethodAction } from "@/lib/actions/orders";
 import {
-  completeCardPlaceholderAction,
   startMpesaPaymentAction,
   submitManualMpesaAction,
 } from "@/lib/actions/payments";
-import {
-  formatCardNumber,
-  formatExpiry,
-  isValidCVC,
-  isValidExpiry,
-  luhnCheck,
-} from "@/lib/payment-utils";
 import {
   KENYAN_PHONE_PREFIX,
   kenyanPhoneLocalDigits,
@@ -53,24 +44,22 @@ export interface PaymentOrder {
   payment_status: string;
 }
 
-type SelectablePaymentMethod = "mpesa" | "mpesa_manual" | "card";
+type SelectablePaymentMethod = "mpesa" | "mpesa_manual";
 type PaymentStatus = "idle" | "waiting" | "failed";
 
 type FieldErrors = Partial<
   Record<
-    "phone" | "manualCode" | "cardName" | "cardNumber" | "cardExpiry" | "cardCvc",
+    "phone" | "manualCode",
     string
   >
 >;
 
 type AvailableMethods = {
   mpesa: boolean;
-  card: boolean;
   payOnDelivery: boolean;
 };
 
 const POLL_INTERVAL_MS = 3_000;
-const PAYMENT_TIMEOUT_MS = 45_000;
 const TIMEOUT_MESSAGE =
   "Payment timeout. We did not receive a confirmation. Please try again.";
 const MPESA_TILL_NUMBER = "5655972";
@@ -193,9 +182,13 @@ function PaymentMethodCard({
 export function PaymentClient({
   order,
   availableMethods,
+  manualInstructions,
+  confirmationWaitSeconds = 45,
 }: {
   order: PaymentOrder;
   availableMethods: AvailableMethods;
+  manualInstructions?: string | null;
+  confirmationWaitSeconds?: number;
 }) {
   const router = useRouter();
   const isPickup = order.delivery_method === "pickup";
@@ -219,10 +212,6 @@ export function PaymentClient({
   );
   const [manualCode, setManualCode] = useState("");
   const [tillCopied, setTillCopied] = useState(false);
-  const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
 
   const isBusy = submitting || paymentStatus === "waiting";
 
@@ -252,21 +241,6 @@ export function PaymentClient({
       if (!/^[A-Z0-9]{8,12}$/i.test(code)) {
         next.manualCode =
           "Enter the 8–12 character confirmation code from the M-Pesa SMS.";
-      }
-    }
-
-    if (method === "card") {
-      if (cardName.trim().split(/\s+/).length < 2) {
-        next.cardName = "Enter the cardholder's full name.";
-      }
-      if (!luhnCheck(cardNumber)) {
-        next.cardNumber = "That card number doesn't look right.";
-      }
-      if (!isValidExpiry(cardExpiry)) {
-        next.cardExpiry = "Enter a valid future expiry date (MM/YY).";
-      }
-      if (!isValidCVC(cardCvc)) {
-        next.cardCvc = "Enter the 3–4 digit security code.";
       }
     }
 
@@ -343,7 +317,7 @@ export function PaymentClient({
       setPaymentStatus("failed");
       setPaymentError(TIMEOUT_MESSAGE);
       toast.error(TIMEOUT_MESSAGE);
-    }, PAYMENT_TIMEOUT_MS);
+    }, confirmationWaitSeconds * 1000);
   }
 
   function resetPaymentState() {
@@ -429,21 +403,6 @@ export function PaymentClient({
         return;
       }
 
-      if (method === "card") {
-        /* Deliberate demo while the real card provider keys are pending. No
-           card data leaves the browser; the server only records the outcome. */
-        await new Promise((resolve) => window.setTimeout(resolve, 1_200));
-        toast.info("Card integration coming soon");
-
-        const result = await completeCardPlaceholderAction(order.id);
-        if (!result.ok) {
-          throw new Error(result.error || "Could not record the demo payment.");
-        }
-
-        toast.success("Demo payment recorded. Thank you!");
-        router.push(`/order/${order.id}`);
-        return;
-      }
     } catch (error) {
       console.error("[payment] Error:", error);
       const message =
@@ -793,6 +752,7 @@ export function PaymentClient({
                     Enter {formatPrice(order.total)} and confirm.
                   </li>
                 </ol>
+                {manualInstructions && <p className="mt-3 whitespace-pre-line text-sm text-muted">{manualInstructions}</p>}
 
                 <div>
                   <label
@@ -866,202 +826,6 @@ export function PaymentClient({
               </div>
             </PaymentMethodCard>
 
-            {availableMethods.card && (
-              <PaymentMethodCard
-                id="card"
-                title="Credit / Debit Card"
-                subtitle="Visa, Mastercard, Amex"
-                icon={CreditCard}
-                selected={method === "card"}
-                disabled={isBusy}
-                onSelect={() => handleSelectMethod("card")}
-              >
-                <div className="space-y-5">
-                  <div>
-                    <label
-                      htmlFor="card-name"
-                      className="block text-sm font-medium text-foreground"
-                    >
-                      Cardholder name
-                    </label>
-                    <input
-                      id="card-name"
-                      type="text"
-                      autoComplete="cc-name"
-                      value={cardName}
-                      onChange={(event) => {
-                        setCardName(event.target.value);
-                        clearError("cardName");
-                      }}
-                      aria-invalid={errors.cardName ? "true" : "false"}
-                      aria-describedby={
-                        errors.cardName ? "card-name-error" : undefined
-                      }
-                      className="mt-2 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                    {errors.cardName && (
-                      <p
-                        id="card-name-error"
-                        role="alert"
-                        className="mt-1.5 flex items-start gap-1.5 text-sm text-destructive"
-                      >
-                        <AlertCircle
-                          className="mt-0.5 size-4 shrink-0"
-                          aria-hidden="true"
-                        />
-                        {errors.cardName}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="card-number"
-                      className="block text-sm font-medium text-foreground"
-                    >
-                      Card number
-                    </label>
-                    <input
-                      id="card-number"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="cc-number"
-                      value={cardNumber}
-                      onChange={(event) => {
-                        setCardNumber(formatCardNumber(event.target.value));
-                        clearError("cardNumber");
-                      }}
-                      aria-invalid={errors.cardNumber ? "true" : "false"}
-                      aria-describedby={
-                        errors.cardNumber ? "card-number-error" : undefined
-                      }
-                      placeholder="4242 4242 4242 4242"
-                      maxLength={23}
-                      className="mt-2 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                    {errors.cardNumber && (
-                      <p
-                        id="card-number-error"
-                        role="alert"
-                        className="mt-1.5 flex items-start gap-1.5 text-sm text-destructive"
-                      >
-                        <AlertCircle
-                          className="mt-0.5 size-4 shrink-0"
-                          aria-hidden="true"
-                        />
-                        {errors.cardNumber}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor="card-expiry"
-                        className="block text-sm font-medium text-foreground"
-                      >
-                        Expiry
-                      </label>
-                      <input
-                        id="card-expiry"
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="cc-exp"
-                        value={cardExpiry}
-                        onChange={(event) => {
-                          setCardExpiry(formatExpiry(event.target.value));
-                          clearError("cardExpiry");
-                        }}
-                        aria-invalid={errors.cardExpiry ? "true" : "false"}
-                        aria-describedby={
-                          errors.cardExpiry ? "card-expiry-error" : undefined
-                        }
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        className="mt-2 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      />
-                      {errors.cardExpiry && (
-                        <p
-                          id="card-expiry-error"
-                          role="alert"
-                          className="mt-1.5 flex items-start gap-1.5 text-sm text-destructive"
-                        >
-                          <AlertCircle
-                            className="mt-0.5 size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                          {errors.cardExpiry}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="card-cvc"
-                        className="block text-sm font-medium text-foreground"
-                      >
-                        Security code
-                      </label>
-                      <input
-                        id="card-cvc"
-                        type="password"
-                        inputMode="numeric"
-                        autoComplete="cc-csc"
-                        value={cardCvc}
-                        onChange={(event) => {
-                          setCardCvc(
-                            event.target.value.replace(/\D/g, "").slice(0, 4),
-                          );
-                          clearError("cardCvc");
-                        }}
-                        aria-invalid={errors.cardCvc ? "true" : "false"}
-                        aria-describedby={
-                          errors.cardCvc ? "card-cvc-error" : undefined
-                        }
-                        placeholder="CVC"
-                        maxLength={4}
-                        className="mt-2 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm tabular-nums text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      />
-                      {errors.cardCvc && (
-                        <p
-                          id="card-cvc-error"
-                          role="alert"
-                          className="mt-1.5 flex items-start gap-1.5 text-sm text-destructive"
-                        >
-                          <AlertCircle
-                            className="mt-0.5 size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                          {errors.cardCvc}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <p className="rounded-xl border border-accent/25 bg-accent/10 px-4 py-3 text-xs leading-relaxed text-foreground/75">
-                    <span className="font-semibold text-foreground">
-                      Demo checkout.
-                    </span>{" "}
-                    No card is charged. Card integration is coming soon.
-                  </p>
-
-                  <button
-                    type="submit"
-                    disabled={isBusy}
-                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold tracking-wide text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:pointer-events-none disabled:bg-muted/50"
-                  >
-                    {submitting && method === "card" ? (
-                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <Lock className="size-4" aria-hidden="true" />
-                    )}
-                    {submitting && method === "card"
-                      ? "Processing…"
-                      : "Pay securely"}
-                  </button>
-                </div>
-              </PaymentMethodCard>
-            )}
           </fieldset>
 
           {availableMethods.payOnDelivery && (
@@ -1072,7 +836,7 @@ export function PaymentClient({
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    Prefer to pay on delivery?
+                    {isPickup ? "Prefer to pay at pickup?" : "Prefer to pay on delivery?"}
                   </p>
                   <p className="mt-0.5 text-xs leading-relaxed text-muted">
                     {isPickup
@@ -1087,7 +851,7 @@ export function PaymentClient({
                 disabled={isBusy}
                 className="shrink-0 rounded-full border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:pointer-events-none disabled:opacity-50"
               >
-                Choose pay on delivery
+                {isPickup ? "Choose pay at pickup" : "Choose pay on delivery"}
               </button>
             </div>
           )}

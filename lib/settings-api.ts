@@ -1,8 +1,11 @@
 import "server-only";
 
+import { cache } from "react";
+import { publicPreferences, type PreferenceValues } from "@/lib/settings-schema";
+
 import { DEFAULT_USD_EXCHANGE_RATE } from "@/lib/exchange-rate";
 import { createPublicClient } from "@/lib/supabase/public";
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/supabase/types";
 
 function rethrow(error: unknown, context: string): never {
   const code = (error as { code?: string } | null)?.code ?? "";
@@ -54,58 +57,54 @@ export interface ShopSettings {
   instagram_url: string | null;
   exchange_rate_kes_to_usd: number;
   updated_at: string | null;
+  exchange_rate_updated_at: string | null;
+  storefront_preferences: PreferenceValues;
 }
 
-export async function getShopSettings(): Promise<ShopSettings> {
-  const supabase = createAdminClient();
+type ShopSettingsRow = Database["public"]["Tables"]["shop_settings"]["Row"];
+
+const storefrontFields = "id, shop_name, phone, whatsapp, email, address, google_maps_url, delivery_flat_rate, free_delivery_threshold, pickup_available, instagram_handle, instagram_url, exchange_rate_kes_to_usd, storefront_preferences, updated_at, exchange_rate_updated_at";
+
+async function readShopSettings(scope: "fresh" | "settings"): Promise<ShopSettings> {
+  const supabase = createPublicClient(scope);
 
   const { data, error } = await supabase
     .from("shop_settings")
-    .select("*")
+    .select(scope === "settings" ? storefrontFields : "*")
     .eq("id", "default")
-    .single();
+    .single()
+    .overrideTypes<ShopSettingsRow, { merge: false }>();
 
-  if (error) {
-    if (error.code === "PGRST116") {
-      // Return defaults if no row exists yet
-      return {
-        id: "default",
-        shop_name: "Pedigree Leather",
-        phone: "+254143354741",
-        whatsapp: "254143354741",
-        email: null,
-        address: "Rosslyn Luxury Mall, Annex 2, Shop RLM 48, Nairobi, Kenya",
-        google_maps_url: null,
-        delivery_flat_rate: 300,
-        free_delivery_threshold: 25000,
-        pickup_available: true,
-        instagram_handle: null,
-        instagram_url: null,
-        exchange_rate_kes_to_usd: DEFAULT_USD_EXCHANGE_RATE,
-        updated_at: null,
-      };
-    }
-    rethrow(error, "fetch shop settings");
+  // Allow a preview to render using an older settings schema without caching that projection.
+  if (scope === "settings" && error?.code === "42703") return readShopSettings("fresh");
+  if (error) rethrow(error, "load the shop settings");
+  const preferences = publicPreferences.safeParse(data.storefront_preferences);
+  return {
+    ...data,
+    storefront_preferences: preferences.success ? preferences.data : {},
+    exchange_rate_kes_to_usd: data.exchange_rate_kes_to_usd ?? DEFAULT_USD_EXCHANGE_RATE,
+  };
+}
+
+export const getShopSettings = cache(() => readShopSettings("fresh"));
+export const getStorefrontShopSettings = cache(() => readShopSettings("settings"));
+
+export async function getStorefrontPreferences(): Promise<PreferenceValues> {
+  try {
+    return (await getStorefrontShopSettings()).storefront_preferences;
+  } catch {
+    return {};
   }
-
-  return { ...data, exchange_rate_kes_to_usd: data.exchange_rate_kes_to_usd ?? DEFAULT_USD_EXCHANGE_RATE };
 }
 
-export async function updateShopSettings(
-  input: Partial<Omit<ShopSettings, "id" | "updated_at">>
-): Promise<ShopSettings> {
-  const supabase = createAdminClient();
+export function brandingBaseUrl() {
+  const origin = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return origin ? `${origin.replace(/\/$/, "")}/storage/v1/object/public/store-branding` : undefined;
+}
 
-  const { data, error } = await supabase
-    .from("shop_settings")
-    .update({ ...input, updated_at: new Date().toISOString() })
-    .eq("id", "default")
-    .select()
-    .single();
-
-  if (error) rethrow(error, "update shop settings");
-
-  return data as ShopSettings;
+export function brandingUrl(path: string | null | undefined) {
+  const base = brandingBaseUrl();
+  return path && base ? `${base}/${path}` : undefined;
 }
 
 export interface DeliveryZoneSummary {
@@ -125,7 +124,7 @@ export interface DeliveryZoneSummary {
 export async function getActiveDeliveryZone(
   zoneId: string,
 ): Promise<DeliveryZoneSummary | null> {
-  const supabase = createAdminClient();
+  const supabase = createPublicClient();
 
   const { data, error } = await supabase
     .from("delivery_zones")
@@ -142,17 +141,9 @@ export async function getActiveDeliveryZone(
   return data as DeliveryZoneSummary;
 }
 
-export async function getUsdExchangeRate(): Promise<number> {
-  try {
-    const { data, error } = await createPublicClient()
-      .from("shop_settings")
-      .select("exchange_rate_kes_to_usd")
-      .eq("id", "default")
-      .maybeSingle();
-    if (error) throw error;
-    return data?.exchange_rate_kes_to_usd ?? DEFAULT_USD_EXCHANGE_RATE;
-  } catch (error) {
-    console.warn("[settings-api] Could not load USD exchange rate:", error);
-    return DEFAULT_USD_EXCHANGE_RATE;
-  }
+export async function hasActiveDeliveryZones(): Promise<boolean> {
+  const { data, error } = await createPublicClient()
+    .from("delivery_zones").select("id").eq("active", true).limit(1);
+  if (error) rethrow(error, "load active delivery zones");
+  return data.length > 0;
 }

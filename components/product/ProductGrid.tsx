@@ -1,4 +1,5 @@
 import { ProductCard } from "@/components/product/ProductCard";
+import { getStorefrontPreferences } from "@/lib/settings-api";
 import type { Product } from "@/lib/types";
 
 type ProductGridProps = {
@@ -45,6 +46,10 @@ export function gridColumnsClass(columns: NonNullable<ProductGridProps["columns"
   return PINNED[columns];
 }
 
+export function visibleCatalogueProducts(products: Product[], hideUnavailable?: boolean) {
+  return hideUnavailable ? products.filter(product => product.colors.some(colour => colour.stockQuantity > 0)) : products;
+}
+
 /**
  * The product grid.
  *
@@ -64,16 +69,16 @@ export function gridColumnsClass(columns: NonNullable<ProductGridProps["columns"
  * A server component — the cards carry their own client boundary for the parts
  * that need state.
  */
-export function ProductGrid({
+export async function ProductGrid({
   products,
   emptyMessage,
   category,
   columns,
   className = "",
 }: ProductGridProps) {
-  const visible = category
-    ? products.filter((product) => product.category === category)
-    : products;
+  const settings = await getStorefrontPreferences();
+  const matching = category ? products.filter(product => product.category === category) : products;
+  const visible = visibleCatalogueProducts(matching, settings.hide_unavailable);
 
   if (visible.length === 0) {
     return (
@@ -83,10 +88,14 @@ export function ProductGrid({
     );
   }
 
+  const firstPhotoIndex = visible.findIndex((product) =>
+    Boolean(product.colors[0]?.images[product.angles[0]]),
+  );
+
   return (
     <ul className={`${gridColumnsClass(columns ?? 4)} ${className}`}>
-      {visible.map((product) => (
-        <ProductCard key={product.id} product={product} />
+      {visible.map((product, index) => (
+        <ProductCard key={product.id} product={product} priority={index === firstPhotoIndex} showDiscountBadge={settings.show_discount_badge} />
       ))}
     </ul>
   );

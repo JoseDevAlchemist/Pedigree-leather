@@ -10,7 +10,10 @@ import "server-only";
 import type { CartItem } from "@/lib/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export type CheckoutLine = Pick<CartItem, "productId" | "colorId" | "sizeId" | "unitPrice" | "quantity">;
+
 export interface OrderInput {
+  requestId: string;
   customer: {
     name: string;
     email: string | null;
@@ -18,11 +21,9 @@ export interface OrderInput {
   };
   deliveryMethod: "delivery" | "pickup";
   deliveryAddress: string | null;
-  items: CartItem[];
+  items: CheckoutLine[];
   subtotal: number;
-  discountTotal: number;
   deliveryFee: number;
-  total: number;
   notes: string | null;
   zoneId: string | null;
   zoneName: string | null;
@@ -35,6 +36,8 @@ export interface OrderItem {
   product_name: string;
   product_slug: string;
   color_name: string;
+  size_system?: string | null;
+  size_label?: string | null;
   color_hex: string;
   unit_price: number;
   quantity: number;
@@ -117,59 +120,22 @@ export async function generateOrderNumber(): Promise<string> {
   return orderNumber;
 }
 
-/**
- * Create an order with items, decrement stock atomically.
- *
- * Uses a transaction-like approach: insert order, insert items, update stock.
- * If any step fails, we attempt to clean up.
- */
-export async function createOrder(input: OrderInput): Promise<{ orderId: string; orderNumber: string }> {
+/** Reserve stock and persist the order and its lines in one transaction. */
+export async function createOrder(input: OrderInput) {
   const supabase = createAdminClient();
+  const items = input.items.map((item) => ({
+    product_id: item.productId,
+    color_id: item.colorId,
+    size_id: item.sizeId ?? null,
+    unit_price: item.unitPrice,
+    quantity: item.quantity,
+  }));
 
-  /* Stock belongs to the colour, so re-read the live count before writing the
-     order. The cart carries a snapshot from the product page, but that can be
-     stale by the time someone finishes checkout — and the request itself is
-     untrusted. Doing this here keeps the rule in one server-side place instead
-     of relying on the checkout component. */
-  const colorIds = [...new Set(input.items.map((item) => item.colorId))];
-  const { data: stockRows, error: stockReadError } = await supabase
-    .from("product_colors")
-    .select("id, product_id, color_name, stock_quantity")
-    .in("id", colorIds);
-
-  if (stockReadError) {
-    throw new Error("Could not check stock. Please try again.");
-  }
-
-  const stockById = new Map(
-    (stockRows ?? []).map((row) => [row.id, row]),
-  );
-
-  for (const item of input.items) {
-    const row = stockById.get(item.colorId);
-    const available =
-      row && row.product_id === item.productId ? row.stock_quantity : 0;
-
-    if (item.quantity > available) {
-      throw new Error(
-        `Sorry, only ${available} of ${item.name} in ${row?.color_name ?? item.colorName} are available.`,
-      );
-    }
-  }
-
-  // Generate order number with retry on conflict
-  let orderNumber: string;
-  let attempts = 0;
-  const maxAttempts = 3;
-
-  while (attempts < maxAttempts) {
-    orderNumber = await generateOrderNumber();
-
-    // Try to insert the order
-    const { data: order, error: orderError } = await supabase
-      .from("orders")
-      .insert({
-        order_number: orderNumber,
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data, error } = await supabase.rpc("website_create_order", {
+      p_request_id: input.requestId,
+      p_order: {
+        order_number: await generateOrderNumber(),
         customer_name: input.customer.name,
         customer_email: input.customer.email,
         customer_phone: input.customer.phone,
@@ -177,74 +143,25 @@ export async function createOrder(input: OrderInput): Promise<{ orderId: string;
         delivery_address: input.deliveryAddress,
         delivery_fee: input.deliveryFee,
         subtotal: input.subtotal,
-        discount_total: input.discountTotal,
-        total: input.total,
         notes: input.notes,
-        status: "pending_payment",
-        payment_status: "pending",
         zone_id: input.zoneId,
         zone_name: input.zoneName,
-      })
-      .select("id")
-      .single();
+      },
+      p_items: items,
+    }).single();
 
-    if (!orderError) {
-      // Order inserted successfully
-      const orderId = order.id;
-
-      // Insert order items
-      const orderItems = input.items.map((item) => ({
-        order_id: orderId,
-        product_id: item.productId,
-        product_name: item.name,
-        product_slug: item.slug,
-        color_name: item.colorName,
-        color_hex: item.colorHex,
-        unit_price: item.unitPrice,
-        quantity: item.quantity,
-        line_total: item.unitPrice * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
-
-      if (itemsError) {
-        // Rollback: delete the order
-        await supabase.from("orders").delete().eq("id", orderId);
-        throw new Error(`Failed to create order items: ${itemsError.message}`);
-      }
-
-      // Decrement stock for each item
-      for (const item of input.items) {
-        const { error: stockError } = await supabase.rpc("decrement_color_stock", {
-          color_id: item.colorId,
-          qty: item.quantity,
-        });
-
-        if (stockError) {
-          // If stock decrement fails, we have a problem.
-          // The order exists but stock wasn't decremented.
-          // In production, this should trigger an alert.
-          console.error(`Failed to decrement stock for colour ${item.colorId}:`, stockError);
-          // We don't rollback here because the order is already created.
-          // The admin will need to handle this manually.
-        }
-      }
-
-      return { orderId, orderNumber: orderNumber! };
+    if (data) return { orderId: data.order_id, orderNumber: data.order_number, created: data.created };
+    if (error?.code === "23505") continue;
+    if (error?.message === "website_variant_unavailable") {
+      throw new Error("An item or shoe size in your cart is unavailable. Please update your cart.");
     }
-
-    // Handle unique constraint violation on order_number
-    if (orderError.code === "23505" && orderError.message.includes("order_number")) {
-      attempts++;
-      // Wait a tiny bit before retrying
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      continue;
+    if (error?.message === "website_price_changed") {
+      throw new Error("A price in your cart has changed. Please remove and re-add the item.");
     }
-
-    throw new Error(`Failed to create order: ${orderError.message}`);
+    throw new Error("Checkout could not reserve your items. Please try again.");
   }
 
-  throw new Error("Failed to generate unique order number after retries");
+  throw new Error("Checkout could not assign an order number. Please try again.");
 }
 
 /**

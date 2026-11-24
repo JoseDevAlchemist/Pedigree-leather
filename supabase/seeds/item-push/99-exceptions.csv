@@ -1,0 +1,162 @@
+batch,identity,code,sheet,row,cell,recorded_value,issue,next_action
+01-vn-bags.sql,ph 3459,PH 3459,VN,4,D4,,missing_price,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 3459,PH 3459,VN,4,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 3459,PH 3459,VN,4,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2102,PH 2102,VN,5,C5,PH 2102,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2102,PH 2102,VN,5,C5,PH 2102,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2102,PH 2102,VN,5,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2102,PH 2102,VN,5,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2102,PH 2102,VN,6,C6,PH 2102,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2102,PH 2102,VN,6,C6,PH 2102,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2102,PH 2102,VN,6,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2102,PH 2102,VN,6,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2329,PH 2329,VN,7,C7,PH 2329,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2329,PH 2329,VN,7,C7,PH 2329,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2329,PH 2329,VN,7,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2329,PH 2329,VN,7,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2329,PH 2329,VN,8,C8,PH 2329,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2329,PH 2329,VN,8,C8,PH 2329,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2329,PH 2329,VN,8,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2329,PH 2329,VN,8,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2303,PH 2303,VN,9,C9,PH 2303,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2303,PH 2303,VN,9,C9,PH 2303,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2303,PH 2303,VN,9,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2303,PH 2303,VN,9,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2303,PH 2303,VN,10,C10,PH 2303,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2303,PH 2303,VN,10,C10,PH 2303,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2303,PH 2303,VN,10,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2303,PH 2303,VN,10,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2106,PH 2106,VN,11,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2106,PH 2106,VN,11,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2131,PH 2131,VN,12,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2131,PH 2131,VN,12,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2661,PH 2661,VN,13,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2661,PH 2661,VN,13,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 9066,PH 9066,VN,14,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 9066,PH 9066,VN,14,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2715,PH 2715,VN,15,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2715,PH 2715,VN,15,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,16,D16,11350,conflicting_price_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,16,C16,PH 2126,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,16,C16,PH 2126,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,16,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,16,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,17,D17,11350,conflicting_price_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,17,C17,PH 2126,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,17,C17,PH 2126,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,17,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,17,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,18,D18,11350,conflicting_price_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,18,C18,PH 2126,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,18,C18,PH 2126,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,18,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,18,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,19,D19,0,conflicting_price_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,19,C19,PH 2126,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,19,C19,PH 2126,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,19,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,19,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2126,PH 2126,VN,19,D19,0,zero_price,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 7130,PH 7130,VN,20,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 7130,PH 7130,VN,20,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2251,PH 2251,VN,21,C21,PH 2251,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2251,PH 2251,VN,21,C21,PH 2251,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2251,PH 2251,VN,21,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2251,PH 2251,VN,21,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2251,PH 2251,VN,22,C22,PH 2251,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2251,PH 2251,VN,22,C22,PH 2251,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2251,PH 2251,VN,22,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2251,PH 2251,VN,22,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 9795,PH-W 9795,VN,23,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 9795,PH-W 9795,VN,23,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2692,PH 2692,VN,24,C24,PH 2692,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2692,PH 2692,VN,24,C24,PH 2692,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2692,PH 2692,VN,24,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2692,PH 2692,VN,24,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2692,PH 2692,VN,25,C25,PH 2692,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2692,PH 2692,VN,25,C25,PH 2692,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2692,PH 2692,VN,25,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2692,PH 2692,VN,25,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,26,C26,PH-W 6229,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,26,C26,PH-W 6229,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,26,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,26,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,27,C27,PH-W 6229,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,27,C27,PH-W 6229,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,27,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,27,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,28,C28,PH-W 6229,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,28,C28,PH-W 6229,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,28,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph-w 6229,PH-W 6229,VN,28,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2330,PH 2330,VN,29,C29,PH 2330,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2330,PH 2330,VN,29,C29,PH 2330,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2330,PH 2330,VN,29,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2330,PH 2330,VN,29,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2330,PH 2330,VN,30,C30,PH 2330,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2330,PH 2330,VN,30,C30,PH 2330,multiple_recorded_names_for_code,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2330,PH 2330,VN,30,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2330,PH 2330,VN,30,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2160,PH 2160,VN,31,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2160,PH 2160,VN,31,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,lx-z 7406,LX-Z 7406,VN,32,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,lx-z 7406,LX-Z 7406,VN,32,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 6308,PH 6308,VN,33,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 6308,PH 6308,VN,33,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2036,PH 2036,VN,34,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2036,PH 2036,VN,34,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2700,PH 2700,VN,35,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2700,PH 2700,VN,35,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2691,PH 2691,VN,36,C36,PH 2691,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2691,PH 2691,VN,36,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2691,PH 2691,VN,36,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2691,PH 2691,VN,37,C37,PH 2691,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2691,PH 2691,VN,37,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2691,PH 2691,VN,37,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2503,PH 2503,VN,38,C38,PH 2503,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2503,PH 2503,VN,38,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2503,PH 2503,VN,38,,,no_quantity_cells,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2503,PH 2503,VN,39,C39,PH 2503,duplicate_code_requires_resolution,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2503,PH 2503,VN,39,,,no_importable_inventory,Review source and approve a corrected manifest
+01-vn-bags.sql,ph 2503,PH 2503,VN,39,,,no_quantity_cells,Review source and approve a corrected manifest
+03-cn-shoes-a.sql,ss-am4140,SS-AM4140,CN Working Sheet,22,C22,,missing_colour,Review source and approve a corrected manifest
+03-cn-shoes-a.sql,ss-am4140,SS-AM4140,CN Working Sheet,22,,,no_importable_inventory,Review source and approve a corrected manifest
+03-cn-shoes-a.sql,lss-99051,LSS-99051,CN Working Sheet,26,L26,],invalid_quantity,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:39,,CN Working Sheet,39,D39,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:39,,CN Working Sheet,39,D39,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:40,,CN Working Sheet,40,D40,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:40,,CN Working Sheet,40,D40,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:41,,CN Working Sheet,41,D41,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:41,,CN Working Sheet,41,D41,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:42,,CN Working Sheet,42,D42,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:42,,CN Working Sheet,42,D42,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:43,,CN Working Sheet,43,D43,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:43,,CN Working Sheet,43,D43,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:44,,CN Working Sheet,44,D44,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:44,,CN Working Sheet,44,D44,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:45,,CN Working Sheet,45,D45,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:45,,CN Working Sheet,45,D45,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:46,,CN Working Sheet,46,D46,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:46,,CN Working Sheet,46,D46,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:47,,CN Working Sheet,47,D47,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:47,,CN Working Sheet,47,D47,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:48,,CN Working Sheet,48,D48,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:48,,CN Working Sheet,48,D48,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:49,,CN Working Sheet,49,D49,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:49,,CN Working Sheet,49,D49,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:50,,CN Working Sheet,50,D50,,missing_pedigree_code,Review source and approve a corrected manifest
+04-cn-shoes-b.sql,source:CN Working Sheet:50,,CN Working Sheet,50,D50,,same_name_uncoded_variant_requires_resolution,Review source and approve a corrected manifest
+05-cn-bags-b.sql,lb-3301,LB-3301,CN Working Sheet,77,AT77,19401.568627450983,invalid_catalogue_price,Review source and approve a corrected manifest
+05-cn-bags-b.sql,lb-3301,LB-3301,CN Working Sheet,77,,,no_importable_inventory,Review source and approve a corrected manifest
+05-cn-bags-b.sql,lb-3301,LB-3301,CN Working Sheet,77,,,no_quantity_cells,Review source and approve a corrected manifest
+06-cn-belt.sql,lss-2125,LSS-2125,CN Working Sheet,104,,,no_importable_inventory,Review source and approve a corrected manifest
+06-cn-belt.sql,lss-2125,LSS-2125,CN Working Sheet,104,,,no_quantity_cells,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a219,LB-A219,CN Working Sheet,107,H107,5,footwear_quantity_without_size,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a219,LB-A219,CN Working Sheet,107,L107,5,footwear_quantity_without_size,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a219,LB-A219,CN Working Sheet,107,,,no_importable_inventory,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a273,LB-A273,CN Working Sheet,108,H108,5,footwear_quantity_without_size,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a273,LB-A273,CN Working Sheet,108,L108,5,footwear_quantity_without_size,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a273,LB-A273,CN Working Sheet,108,,,no_importable_inventory,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a260,LB-A260,CN Working Sheet,109,H109,5,footwear_quantity_without_size,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a260,LB-A260,CN Working Sheet,109,L109,5,footwear_quantity_without_size,Review source and approve a corrected manifest
+07-cn-hua-cai-shoes.sql,lb-a260,LB-A260,CN Working Sheet,109,,,no_importable_inventory,Review source and approve a corrected manifest

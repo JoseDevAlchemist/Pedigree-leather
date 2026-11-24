@@ -10,13 +10,14 @@ import type { CartItem } from "@/lib/types";
 type AddToCartButtonProps = {
   /** The line to add. Assembled by the detail page, which owns the colour and quantity. */
   item: CartItem;
+  needsSize?: boolean;
   className?: string;
 };
 
 /** How long the confirmation holds before the label returns. */
 const CONFIRM_MS = 1500;
 
-export function AddToCartButton({ item, className = "" }: AddToCartButtonProps) {
+export function AddToCartButton({ item, needsSize, className = "" }: AddToCartButtonProps) {
   const reduceMotion = useReducedMotion();
   const addItem = useCartStore((state) => state.addItem);
 
@@ -56,7 +57,7 @@ export function AddToCartButton({ item, className = "" }: AddToCartButtonProps) 
       {/* The resting label always occupies the button, so the confirmation can
           overlay it without the button resizing. */}
       <span className="flex items-center" aria-hidden={!soldOut && isConfirmed}>
-        {soldOut ? "Sold out" : "Add to Cart"}
+        {needsSize ? "Choose a size" : soldOut ? "Sold out" : "Add to Cart"}
       </span>
 
       <AnimatePresence initial={false}>

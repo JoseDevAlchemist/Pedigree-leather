@@ -87,7 +87,7 @@ export default async function ContactPage() {
                 <p className="text-sm text-muted">{config.phone}</p>
               </div>
             </div>
-            <p className="text-sm text-muted">Mon–Sat, 9am–6pm (EAT)</p>
+            <p className="text-sm text-muted">{config.operatingHours || "Mon–Sat, 9am–6pm (EAT)"}</p>
             <a
               href={`tel:+${config.phone.replace(/\D/g, "")}`}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
@@ -105,12 +105,12 @@ export default async function ContactPage() {
               </span>
               <div>
                 <h3 className="font-semibold text-foreground">Email us</h3>
-                <p className="text-sm text-muted">{config.email || "hello@pedigree.co.ke"}</p>
+                <p className="text-sm text-muted">{config.supportEmail || config.email || "hello@pedigree.co.ke"}</p>
               </div>
             </div>
             <p className="text-sm text-muted">We reply within 24 hours</p>
             <a
-              href={`mailto:${config.email || "hello@pedigree.co.ke"}`}
+              href={`mailto:${config.supportEmail || config.email || "hello@pedigree.co.ke"}`}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-amber-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
             >
               <Mail aria-hidden="true" className="size-4" />
@@ -164,10 +164,10 @@ export default async function ContactPage() {
               <div>
                 <p className="font-medium text-foreground">Email</p>
                 <a
-                  href={`mailto:${config.email || "hello@pedigree.co.ke"}`}
+                  href={`mailto:${config.supportEmail || config.email || "hello@pedigree.co.ke"}`}
                   className="text-muted hover:text-primary transition-colors"
                 >
-                  {config.email || "hello@pedigree.co.ke"}
+                  {config.supportEmail || config.email || "hello@pedigree.co.ke"}
                 </a>
               </div>
             </div>

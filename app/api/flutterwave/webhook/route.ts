@@ -111,14 +111,18 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("orders")
     .update({
       payment_status: "paid",
       payment_method: "card",
       status: "paid",
     })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .neq("payment_status", "paid")
+    .neq("payment_status", "refunded")
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     console.error("[flutterwave/webhook] update failed:", error);
@@ -128,5 +132,5 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  return NextResponse.json({ status: "ok", message: "Paid" });
+  return NextResponse.json({ status: "ok", message: updated ? "Paid" : "Already processed" });
 }

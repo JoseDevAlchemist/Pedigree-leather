@@ -67,6 +67,7 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string | null
+          updated_at: string
           fee: number
           id: string
           name: string
@@ -430,6 +431,8 @@ export type Database = {
       }
       shop_settings: {
         Row: {
+          storefront_preferences: Json
+          exchange_rate_updated_at: string | null
           address: string
           delivery_flat_rate: number
           email: string | null
@@ -479,12 +482,25 @@ export type Database = {
         }
         Relationships: []
       }
+      website_admin_preferences: {
+        Row: { id: string; preferences: Json }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      shop_settings_audit: {
+        Row: { id: number; changed_at: string; actor: string; changes: Json }
+        Insert: { actor: string; changes: Json }
+        Update: never
+        Relationships: []
+      }
       legal_pages: {
         Row: {
           slug: string
           title: string
           content: string
           updated_at: string | null
+          published_at: string | null
         }
         Insert: {
           slug: string
@@ -535,6 +551,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      read_legal_policy_editor: {
+        Args: { p_actor: string; p_slug: string }
+        Returns: Json
+      }
+      save_legal_policy: {
+        Args: { p_actor: string; p_slug: string; p_title: string; p_action: string; p_revision: string | null; p_content: string | null; p_baseline: string }
+        Returns: Json
+      }
+      read_website_settings: {
+        Args: { p_actor: string; p_section: string }
+        Returns: Json
+      }
+      save_website_settings: {
+        Args: { p_actor: string; p_version: string | null; p_core: Json; p_preferences: Json; p_private: Json; p_policies: Json }
+        Returns: string | null
+      }
       website_cancel_order: {
         Args: { p_order_id: string; p_actor_email: string; p_actor_role: string; p_note: string }
         Returns: boolean

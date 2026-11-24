@@ -27,7 +27,6 @@ export async function generateMetadata({
   return {
     title: category.name,
     description: `Shop ${category.name} at Pedigree.`,
-    robots: { index: true, follow: true },
   };
 }
 

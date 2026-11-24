@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
 import { getOrderById } from "@/lib/orders-api";
+import { getShopSettings } from "@/lib/settings-api";
+import { allowsDeferredPayment, isStkConfigured } from "@/lib/payments/config";
 import { PaymentClient } from "./PaymentClient";
 
 /**
@@ -19,27 +21,6 @@ import { PaymentClient } from "./PaymentClient";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-/** Which payment methods are available on the payment page. */
-function availableMethods(): {
-  mpesa: boolean;
-  card: boolean;
-  payOnDelivery: boolean;
-} {
-  const mpesa =
-    Boolean(process.env.MPESA_CONSUMER_KEY) &&
-    Boolean(process.env.MPESA_CONSUMER_SECRET) &&
-    Boolean(process.env.MPESA_SHORTCODE) &&
-    Boolean(process.env.MPESA_PASSKEY) &&
-    Boolean(process.env.MPESA_CALLBACK_URL);
-
-  /* The card option is a deliberate demo until Flutterwave keys are live.
-     Keep it visible so the payment page always offers the three documented
-     methods; the client never sends card details to a provider. */
-  const card = true;
-
-  return { mpesa, card, payOnDelivery: true };
-}
 
 export const metadata: Metadata = {
   title: "Payment",
@@ -73,7 +54,11 @@ export default async function PaymentPage({
     redirect(`/order/${order.id}`);
   }
 
-  const methods = availableMethods();
+  const settings = await getShopSettings().catch(() => null);
+  const methods = {
+    mpesa: Boolean(settings) && isStkConfigured() && settings?.storefront_preferences.stk_enabled !== false,
+    payOnDelivery: !!settings && allowsDeferredPayment(settings.storefront_preferences, order.delivery_method),
+  };
 
   return (
     <PaymentClient
@@ -89,6 +74,8 @@ export default async function PaymentPage({
         payment_status: order.payment_status,
       }}
       availableMethods={methods}
+      manualInstructions={settings?.storefront_preferences.manual_payment_instructions}
+      confirmationWaitSeconds={settings?.storefront_preferences.stk_wait_seconds}
     />
   );
 }

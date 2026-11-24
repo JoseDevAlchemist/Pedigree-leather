@@ -1,10 +1,6 @@
-/**
- * WhatsApp notifications using Twilio.
- *
- * TODO: When TWILIO_* env vars are missing, log to console and return ok:true
- * so dev flow isn't blocked. In production, fail loudly.
- */
+import "server-only";
 
+import { getNotificationSettings } from "@/lib/notification-settings";
 import twilio from "twilio";
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -43,7 +39,7 @@ function formatWhatsAppNumber(phone: string): string {
 
 /**
  * Send a WhatsApp message via Twilio.
- * If Twilio is not configured, logs to console and returns ok:true (dev mode).
+ * Report configuration errors without logging customer information.
  */
 export async function sendWhatsApp(
   to: string,
@@ -52,10 +48,7 @@ export async function sendWhatsApp(
   const formattedTo = formatWhatsAppNumber(to);
 
   if (!isConfigured || !client) {
-    // Dev mode: log to console instead of sending
-    console.log("[WhatsApp DEV MODE] Would send to:", formattedTo);
-    console.log("[WhatsApp DEV MODE] Message:", body);
-    return { ok: true };
+    return { ok: false, error: "Twilio WhatsApp is not configured." };
   }
 
   try {
@@ -66,7 +59,7 @@ export async function sendWhatsApp(
     });
     return { ok: true };
   } catch (error) {
-    console.error("[WhatsApp] Send failed:", error);
+    console.error("[WhatsApp] Send failed.");
     return { ok: false, error: error instanceof Error ? error.message : "Failed to send WhatsApp" };
   }
 }
@@ -83,6 +76,9 @@ export async function notifyShopOwner(order: {
   delivery_address?: string | null;
   delivery_fee?: number;
 }): Promise<void> {
+  if (!client) return;
+  const settings = await getNotificationSettings();
+  if (!settings?.notify_new_order) return;
   const itemsSummary = order.items
     .map((item) => `${item.name} ×${item.quantity}`)
     .join(", ");
@@ -99,7 +95,8 @@ export async function notifyShopOwner(order: {
     .filter(Boolean)
     .join("\n");
 
-  await sendWhatsApp(shopWhatsAppNumber, body);
+  const recipients = settings?.notification_phones?.split(",").map(phone => phone.trim()) ?? [shopWhatsAppNumber];
+  await Promise.all(Array.from(new Set(recipients), phone => sendWhatsApp(phone, body)));
 }
 
 /**
@@ -115,6 +112,7 @@ export async function notifyCustomer(order: {
   delivery_fee?: number;
   shop_address?: string;
 }): Promise<void> {
+  if (!client || !(await getNotificationSettings())?.notify_customer_order) return;
   const isDelivery = order.delivery_method === "delivery";
 
   const body = [
@@ -144,6 +142,11 @@ export async function notifyStatusChange(order: {
   status: string;
   delivery_method: "delivery" | "pickup";
 }): Promise<void> {
+  if (!client) return;
+  const settings = await getNotificationSettings();
+  const enabled = order.status === "cancelled" ? settings?.notify_customer_cancellation : settings?.notify_customer_status;
+  if (!enabled) return;
+
   const statusMessages: Record<string, string> = {
     paid: "Payment confirmed. We're preparing your order.",
     preparing: "Your order is being prepared.",

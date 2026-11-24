@@ -1,3 +1,4 @@
+import { productPhotoVariant } from "@/lib/product-image-url";
 import { createClient } from "@/lib/supabase/client";
 import type { Angle } from "@/lib/types";
 
@@ -60,26 +61,29 @@ function imagePath(
   return `${productId}/${color}-${angle}-${crypto.randomUUID()}.webp`;
 }
 
-/** Encode photos before upload so the filename and content type match the bytes. */
-async function encodeWebp(file: File): Promise<Blob> {
-  if (file.type === "image/webp") return file;
-
+/** Resize before upload, keeping the source orientation and aspect ratio. */
+async function encodeWebp(file: File) {
   const image = await createImageBitmap(file);
   try {
-    const canvas = document.createElement("canvas");
-    canvas.width = image.width;
-    canvas.height = image.height;
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("Could not prepare the image for upload.");
-
-    context.drawImage(image, 0, 0);
-    const webp = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/webp", 0.9),
-    );
-    if (webp?.type !== "image/webp") {
-      throw new Error("This browser could not encode the image as WebP.");
+    async function encode(maxEdge: number, quality: number) {
+      const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Could not prepare the image for upload.");
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+      if (blob?.type !== "image/webp") throw new Error("This browser could not encode the image as WebP.");
+      return { blob, width: canvas.width };
     }
-    return webp;
+
+    const original = file.type === "image/webp" && file.size <= MAX_BYTES &&
+      Math.max(image.width, image.height) <= 1440
+      ? { blob: file, width: image.width }
+      : await encode(1440, 0.88);
+    const card = original.width > 640 ? await encode(720, 0.84) : null;
+    return { original, card };
   } finally {
     image.close();
   }
@@ -127,21 +131,25 @@ export async function uploadProductImage(
     throw new Error(`${file.name} is empty.`);
   }
 
-  const webp = await encodeWebp(file);
-  if (webp.size > MAX_BYTES) {
+  const { original, card } = await encodeWebp(file);
+  if (original.blob.size > MAX_BYTES || (card && card.blob.size > MAX_BYTES)) {
     throw new Error("The converted image is too large. Please resize it to under 4MB.");
   }
 
-  const supabase = createClient();
-  const path = imagePath(productId, colorId, colorName, angle);
+  const bucket = createClient().storage.from(BUCKET);
+  const basePath = imagePath(productId, colorId, colorName, angle);
+  const options = { upsert: false, contentType: "image/webp", cacheControl: "31536000" };
+  const cardPath = card ? basePath.replace(/\.webp$/, "-card.webp") : null;
+  const cardUpload = card && cardPath ? await bucket.upload(cardPath, card.blob, options) : null;
+  const hasCard = Boolean(cardUpload && !cardUpload.error);
+  const path = hasCard && card
+    ? basePath.replace(/\.webp$/, `-r${card.width}x${original.width}.webp`)
+    : basePath;
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, webp, {
-    upsert: false,
-    contentType: "image/webp",
-    cacheControl: "31536000",
-  });
+  const { error } = await bucket.upload(path, original.blob, options);
 
   if (error) {
+    if (hasCard && cardPath) await bucket.remove([cardPath]);
     /* The most common cause by far, and the least obvious from the message. */
     if (/row-level security|permission denied/i.test(error.message)) {
       throw new Error(
@@ -175,6 +183,7 @@ export async function deleteProductImage(publicUrl: string): Promise<void> {
   const path = decodeURIComponent(publicUrl.slice(index + base.length).split("?")[0]);
   const supabase = createClient();
 
-  const { error } = await supabase.storage.from(BUCKET).remove([path]);
+  const variant = productPhotoVariant(path);
+  const { error } = await supabase.storage.from(BUCKET).remove(variant ? [path, variant.url] : [path]);
   if (error) console.warn(`[pedigree/upload] could not remove ${path}: ${error.message}`);
 }

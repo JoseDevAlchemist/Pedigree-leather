@@ -1,0 +1,3260 @@
+{
+  "approved_destination": "scvscxbxfpjqbqkfkset",
+  "remote_verified": false,
+  "batch_approval_id": null,
+  "workbook_sha256": "a299523b77936493abe5079d45a1687b6405ec75a4d0fcc3b0a832d54dc89aa5",
+  "first_seed_file": "02-cn-bags-a.sql",
+  "first_prepared_batch_id": "742a73ee0a8ac8b746589c81683257ca84c89c242bcddbfce99889a75b6d4fca",
+  "first_seed_sha256": "4c51f76ee71182bb0dcb59cf96eb87144f9b90d8be1a17a00c43908a18091f20",
+  "shared_sql_sha256": "2507d95679153c513d72be734d928ccfab05f493585cd5e1dfd873c57eab7aaf",
+  "first_batch_action_counts": {
+    "CREATE": 0,
+    "LINK": 0,
+    "REVIEW": 12,
+    "SKIP": 0
+  },
+  "all_action_counts": {
+    "CREATE": 0,
+    "LINK": 0,
+    "REVIEW": 80,
+    "SKIP": 0
+  },
+  "first_batch_recorded_units": 59,
+  "verified_units_for_insertion": null,
+  "future_photo_angles": [
+    "front",
+    "back",
+    "side-left",
+    "side-right",
+    "top"
+  ],
+  "records": [
+    {
+      "internal_code": "LB-532",
+      "name": "Not Named",
+      "slug": "lb-532-bdd6bd6e8b94",
+      "category": "bag",
+      "price_kes": 12850,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Almond Green",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 5
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 5,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-5569",
+      "name": "Not Named",
+      "slug": "lb-5569-6ef8bcc0d966",
+      "category": "bag",
+      "price_kes": 12550,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 6
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 2,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-6867",
+      "name": "Not Named",
+      "slug": "lb-6867-2a9c3d596967",
+      "category": "bag",
+      "price_kes": 20350,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Golden Brown",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Gray",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 7
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-2419",
+      "name": "Not Named",
+      "slug": "lb-2419-9339dcd69079",
+      "category": "bag",
+      "price_kes": 22400,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 4,
+          "sizes": []
+        },
+        {
+          "name": "Milkshake",
+          "quantity": 3,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 8
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 7,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8931",
+      "name": "Not Named",
+      "slug": "lb-8931-90854a965ad7",
+      "category": "bag",
+      "price_kes": 18400,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Golden Brown",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Chestnut Brown",
+          "quantity": 0,
+          "sizes": []
+        },
+        {
+          "name": "Pottery Brown",
+          "quantity": 0,
+          "sizes": []
+        },
+        {
+          "name": "Elephant Gray",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 9
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-9343",
+      "name": "Not Named",
+      "slug": "lb-9343-f4eb6683fb56",
+      "category": "bag",
+      "price_kes": 23600,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "White",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Blue",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Chestnut Brown",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Pottery Brown",
+          "quantity": 0,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 10
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 10,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8710",
+      "name": "Not Named",
+      "slug": "lb-8710-8a9236a31991",
+      "category": "bag",
+      "price_kes": 23600,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Almond Green",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Gray",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 11
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 4,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-9283",
+      "name": "Not Named",
+      "slug": "lb-9283-e3d005fe17f5",
+      "category": "bag",
+      "price_kes": 23600,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Almond Green",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Chestnut Brown",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Pottery Brown",
+          "quantity": 0,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 12
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 3,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-369",
+      "name": "Not Named",
+      "slug": "lb-369-333b443c5d19",
+      "category": "bag",
+      "price_kes": 20950,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 13
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 4,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-6251",
+      "name": "Not Named",
+      "slug": "lb-6251-8957f6814cea",
+      "category": "bag",
+      "price_kes": 19900,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Linen Blue",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 14
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-9337",
+      "name": "Not Named",
+      "slug": "lb-9337-b03d9c3f4574",
+      "category": "bag",
+      "price_kes": 19900,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 15
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-28KL",
+      "name": "Hermes",
+      "slug": "lb-28kl-f2d358c7900f",
+      "category": "bag",
+      "price_kes": 39900,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Off White",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Elephant Gray",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 16
+        }
+      ],
+      "seed_file": "02-cn-bags-a.sql",
+      "starting_units": 5,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "SS-6008",
+      "name": "China Sport",
+      "slug": "ss-6008-428b3a735bb5",
+      "category": "shoe",
+      "price_kes": 11700,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 3
+            },
+            {
+              "label": "43",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "name": "Brown",
+          "quantity": 5,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 51
+        },
+        {
+          "sheet": "CN Working Sheet",
+          "row": 52
+        }
+      ],
+      "seed_file": "04-cn-shoes-b.sql",
+      "starting_units": 10,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "SS- SC",
+      "name": "Stark Comfort",
+      "slug": "ss-sc-616e40f1008c",
+      "category": "shoe",
+      "price_kes": 11700,
+      "colours": [
+        {
+          "name": "Green",
+          "quantity": 6,
+          "sizes": [
+            {
+              "label": "39",
+              "quantity": 1
+            },
+            {
+              "label": "40",
+              "quantity": 0
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 53
+        }
+      ],
+      "seed_file": "04-cn-shoes-b.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "SS-DC",
+      "name": "Dream Comfort",
+      "slug": "ss-dc-b03f14a2b1f7",
+      "category": "shoe",
+      "price_kes": 11700,
+      "colours": [
+        {
+          "name": "Brown",
+          "quantity": 6,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 54
+        }
+      ],
+      "seed_file": "04-cn-shoes-b.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LSS- 6H061",
+      "name": "New York Tide Boots",
+      "slug": "lss-6h061-2766a10da940",
+      "category": "shoe",
+      "price_kes": 11700,
+      "colours": [
+        {
+          "name": "Dark Brown",
+          "quantity": 3,
+          "sizes": [
+            {
+              "label": "39",
+              "quantity": 0
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            }
+          ]
+        },
+        {
+          "name": "Brown",
+          "quantity": 3,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 55
+        },
+        {
+          "sheet": "CN Working Sheet",
+          "row": 56
+        }
+      ],
+      "seed_file": "04-cn-shoes-b.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "SS-8808",
+      "name": "Buchinu 8808",
+      "slug": "ss-8808-3a7ee36b83a9",
+      "category": "shoe",
+      "price_kes": 10100,
+      "colours": [
+        {
+          "name": "White",
+          "quantity": 15,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 4
+            },
+            {
+              "label": "43",
+              "quantity": 5
+            },
+            {
+              "label": "44",
+              "quantity": 4
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 19
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 15,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "SS-G107",
+      "name": "G107- Puma",
+      "slug": "ss-g107-36fa6f885966",
+      "category": "shoe",
+      "price_kes": 8900,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 3,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 0
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            }
+          ]
+        },
+        {
+          "name": "Brown",
+          "quantity": 3,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 20
+        },
+        {
+          "sheet": "CN Working Sheet",
+          "row": 21
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "SS-aLa",
+      "name": "Vic Nicole (aLa)",
+      "slug": "ss-ala-fab2cc4af26e",
+      "category": "shoe",
+      "price_kes": 7500,
+      "colours": [
+        {
+          "name": "Blue",
+          "quantity": 3,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "name": "Green",
+          "quantity": 4,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 2
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 23
+        },
+        {
+          "sheet": "CN Working Sheet",
+          "row": 24
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 7,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LSS-598P7",
+      "name": "Helmer",
+      "slug": "lss-598p7-0769d4ecdc6a",
+      "category": "shoe",
+      "price_kes": 14600,
+      "colours": [
+        {
+          "name": "White",
+          "quantity": 6,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 2
+            },
+            {
+              "label": "42",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 25
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LSS-33F",
+      "name": "Fashion 33",
+      "slug": "lss-33f-cf01ca1dea1e",
+      "category": "shoe",
+      "price_kes": 8900,
+      "colours": [
+        {
+          "name": "Blue",
+          "quantity": 3,
+          "sizes": [
+            {
+              "label": "42",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "name": "Brown",
+          "quantity": 4,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 2
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 28
+        },
+        {
+          "sheet": "CN Working Sheet",
+          "row": 29
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 7,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "SS-Rmx33",
+      "name": "Remxus",
+      "slug": "ss-rmx33-7507cf952b7a",
+      "category": "shoe",
+      "price_kes": 8900,
+      "colours": [
+        {
+          "name": "White",
+          "quantity": 1,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 0
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 0
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 30
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "OLS-JN",
+      "name": "JUN- Official Leather Shoes",
+      "slug": "ols-jn-87ee02ff8529",
+      "category": "shoe",
+      "price_kes": 12400,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 2,
+          "sizes": [
+            {
+              "label": "42",
+              "quantity": 0
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 31
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 2,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "OLS-WB",
+      "name": "Waterbuck Official Leather Shoes",
+      "slug": "ols-wb-147c7b9f6fc9",
+      "category": "shoe",
+      "price_kes": 12400,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 4,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 1
+            },
+            {
+              "label": "43",
+              "quantity": 1
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 32
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 4,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "OLS-LKSD",
+      "name": "LK-SD- Official Leather Shoes",
+      "slug": "ols-lksd-111a918016fc",
+      "category": "shoe",
+      "price_kes": 12400,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 2,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 0
+            },
+            {
+              "label": "42",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 33
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 2,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "OLS- SS",
+      "name": "Silvetone Spider- Official Leather Shoes",
+      "slug": "ols-ss-68b59e086f43",
+      "category": "shoe",
+      "price_kes": 9800,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 6,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 34
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "OLS-CL",
+      "name": "Clarks- Official Leather Shoes",
+      "slug": "ols-cl-c16fc5c0116c",
+      "category": "shoe",
+      "price_kes": 15500,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 0
+            },
+            {
+              "label": "42",
+              "quantity": 0
+            },
+            {
+              "label": "43",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 35
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LSS-33Pop",
+      "name": "Herilios Ezogeuo",
+      "slug": "lss-33pop-ee1993289ca4",
+      "category": "shoe",
+      "price_kes": 14600,
+      "colours": [
+        {
+          "name": "White",
+          "quantity": 6,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 36
+        }
+      ],
+      "seed_file": "03-cn-shoes-a.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "JY75805BX01",
+      "name": "JY75805BX01",
+      "slug": "jy75805bx01-0a8a66803ae9",
+      "category": "shoe",
+      "price_kes": 27500,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 10,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 3
+            },
+            {
+              "label": "44",
+              "quantity": 2
+            },
+            {
+              "label": "45",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 112
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 10,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "H13857JH01",
+      "name": "H13857JH01",
+      "slug": "h13857jh01-07e389267bc9",
+      "category": "shoe",
+      "price_kes": 26500,
+      "colours": [
+        {
+          "name": "Coffee",
+          "quantity": 10,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 3
+            },
+            {
+              "label": "43",
+              "quantity": 3
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            },
+            {
+              "label": "45",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 113
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 10,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "GA385A93-3",
+      "name": "GA385A93-3",
+      "slug": "ga385a93-3-bc2d092a7caa",
+      "category": "shoe",
+      "price_kes": 28700,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 20,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 2
+            },
+            {
+              "label": "42",
+              "quantity": 6
+            },
+            {
+              "label": "43",
+              "quantity": 6
+            },
+            {
+              "label": "44",
+              "quantity": 3
+            },
+            {
+              "label": "45",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 114
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 20,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "FA53324-1",
+      "name": "FA53324-1",
+      "slug": "fa53324-1-63bde0053b9a",
+      "category": "shoe",
+      "price_kes": 28700,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 20,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 2
+            },
+            {
+              "label": "42",
+              "quantity": 6
+            },
+            {
+              "label": "43",
+              "quantity": 6
+            },
+            {
+              "label": "44",
+              "quantity": 3
+            },
+            {
+              "label": "45",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 115
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 20,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "K599-6A",
+      "name": "K599-6A",
+      "slug": "k599-6a-493d346647b3",
+      "category": "shoe",
+      "price_kes": 24600,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 20,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 4
+            },
+            {
+              "label": "43",
+              "quantity": 7
+            },
+            {
+              "label": "44",
+              "quantity": 5
+            },
+            {
+              "label": "45",
+              "quantity": 2
+            }
+          ]
+        },
+        {
+          "name": "Coffee",
+          "quantity": 10,
+          "sizes": [
+            {
+              "label": "40",
+              "quantity": 1
+            },
+            {
+              "label": "41",
+              "quantity": 2
+            },
+            {
+              "label": "42",
+              "quantity": 2
+            },
+            {
+              "label": "43",
+              "quantity": 2
+            },
+            {
+              "label": "44",
+              "quantity": 2
+            },
+            {
+              "label": "45",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 116
+        },
+        {
+          "sheet": "CN Working Sheet",
+          "row": 117
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 30,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "SF1750-01A",
+      "name": "SF1750-01A",
+      "slug": "sf1750-01a-44c601bae635",
+      "category": "shoe",
+      "price_kes": 24600,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 20,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 8
+            },
+            {
+              "label": "43",
+              "quantity": 7
+            },
+            {
+              "label": "44",
+              "quantity": 3
+            },
+            {
+              "label": "45",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 118
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 20,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "S213-5",
+      "name": "S213-5",
+      "slug": "s213-5-927bb71f25e9",
+      "category": "shoe",
+      "price_kes": 24600,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 15,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 4
+            },
+            {
+              "label": "43",
+              "quantity": 4
+            },
+            {
+              "label": "44",
+              "quantity": 4
+            },
+            {
+              "label": "45",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 119
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 15,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "S213-3",
+      "name": "S213-3",
+      "slug": "s213-3-475585ddb089",
+      "category": "shoe",
+      "price_kes": 24600,
+      "colours": [
+        {
+          "name": "Navy",
+          "quantity": 15,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 4
+            },
+            {
+              "label": "43",
+              "quantity": 4
+            },
+            {
+              "label": "44",
+              "quantity": 4
+            },
+            {
+              "label": "45",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 120
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 15,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "JL55860JH01",
+      "name": "JL55860JH01",
+      "slug": "jl55860jh01-23651ec2a522",
+      "category": "shoe",
+      "price_kes": 28700,
+      "colours": [
+        {
+          "name": "Coffee",
+          "quantity": 10,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 2
+            },
+            {
+              "label": "42",
+              "quantity": 3
+            },
+            {
+              "label": "43",
+              "quantity": 3
+            },
+            {
+              "label": "44",
+              "quantity": 1
+            },
+            {
+              "label": "45",
+              "quantity": 1
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 121
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 10,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "JL55860BX01",
+      "name": "JL55860BX01",
+      "slug": "jl55860bx01-f18486b06ae5",
+      "category": "shoe",
+      "price_kes": 28700,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 20,
+          "sizes": [
+            {
+              "label": "41",
+              "quantity": 1
+            },
+            {
+              "label": "42",
+              "quantity": 7
+            },
+            {
+              "label": "43",
+              "quantity": 7
+            },
+            {
+              "label": "44",
+              "quantity": 3
+            },
+            {
+              "label": "45",
+              "quantity": 2
+            }
+          ]
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 122
+        }
+      ],
+      "seed_file": "08-cn-broadway-shoes.sql",
+      "starting_units": 20,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-1028",
+      "name": "Not Named",
+      "slug": "lb-1028-dc555bf35477",
+      "category": "bag",
+      "price_kes": 18700,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Off White",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Sage Green",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Pottery Brown",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 59
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 8,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-55-802",
+      "name": "Not Named",
+      "slug": "lb-55-802-334800eff21b",
+      "category": "bag",
+      "price_kes": 17150,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 10,
+          "sizes": []
+        },
+        {
+          "name": "Milk White",
+          "quantity": 10,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Burgundy",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Peacock Blue",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 60
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 25,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-9079",
+      "name": "Not Named",
+      "slug": "lb-9079-8ce7c03cba9c",
+      "category": "bag",
+      "price_kes": 18250,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Earthy Yellow",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 61
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-3217",
+      "name": "Not Named",
+      "slug": "lb-3217-633cb1938802",
+      "category": "bag",
+      "price_kes": 22150,
+      "colours": [
+        {
+          "name": "Earthy Yellow",
+          "quantity": 3,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 62
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 3,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-J-033",
+      "name": "Not Named",
+      "slug": "lb-j-033-f9406a30054f",
+      "category": "bag",
+      "price_kes": 19200,
+      "colours": [
+        {
+          "name": "Earthy Yellow",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 63
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-920",
+      "name": "Not Named",
+      "slug": "lb-920-b6cc0179b9c7",
+      "category": "bag",
+      "price_kes": 28900,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 0,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 64
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-9062",
+      "name": "Not Named",
+      "slug": "lb-9062-4e7631030d62",
+      "category": "bag",
+      "price_kes": 26250,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 65
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-6663",
+      "name": "Not Named",
+      "slug": "lb-6663-18cf45542852",
+      "category": "bag",
+      "price_kes": 25150,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 66
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 2,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-6739",
+      "name": "Not Named",
+      "slug": "lb-6739-b9a28ed4fb6b",
+      "category": "bag",
+      "price_kes": 37500,
+      "colours": [
+        {
+          "name": "Black & Green",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Black & Brown",
+          "quantity": 3,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 67
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-5097",
+      "name": "Not Named",
+      "slug": "lb-5097-cd0b74aa46c5",
+      "category": "bag",
+      "price_kes": 11970,
+      "colours": [
+        {
+          "name": "Anchor Red",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Golden Brown",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 68
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8035",
+      "name": "Not Named",
+      "slug": "lb-8035-fd3292b9e187",
+      "category": "bag",
+      "price_kes": 28500,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 0,
+          "sizes": []
+        },
+        {
+          "name": "Brown",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Golden Brown",
+          "quantity": 0,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 69
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 3,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-6656",
+      "name": "Not Named",
+      "slug": "lb-6656-0810c7b6b1c7",
+      "category": "bag",
+      "price_kes": 7450,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 10,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Peacock Blue",
+          "quantity": 10,
+          "sizes": []
+        },
+        {
+          "name": "Oil Fruit Green",
+          "quantity": 3,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 70
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 25,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8255",
+      "name": "BVLGARI",
+      "slug": "lb-8255-2fc733c66b25",
+      "category": "bag",
+      "price_kes": 16800,
+      "colours": [
+        {
+          "name": "Milk White",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 71
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8256",
+      "name": "BVLGARI",
+      "slug": "lb-8256-1fa4b0277583",
+      "category": "bag",
+      "price_kes": 17900,
+      "colours": [
+        {
+          "name": "Milk White",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 72
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8257",
+      "name": "Crocodile",
+      "slug": "lb-8257-6170c2d7f73b",
+      "category": "bag",
+      "price_kes": 15450,
+      "colours": [
+        {
+          "name": "Milk White",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 73
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "CLB-A25",
+      "name": "Custom made Platinum- A25",
+      "slug": "clb-a25-d68acbc29860",
+      "category": "bag",
+      "price_kes": 17600,
+      "colours": [
+        {
+          "name": "White",
+          "quantity": 10,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 74
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 10,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8716",
+      "name": "Not Named",
+      "slug": "lb-8716-575c21f4f98d",
+      "category": "bag",
+      "price_kes": 21550,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Burgundy",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Blue",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Lake Green",
+          "quantity": 5,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 75
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 19,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-23018",
+      "name": "Not Named",
+      "slug": "lb-23018-296beb92d63c",
+      "category": "bag",
+      "price_kes": 21550,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 4,
+          "sizes": []
+        },
+        {
+          "name": "Burgundy",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Blue",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Green",
+          "quantity": 6,
+          "sizes": []
+        },
+        {
+          "name": "Apricot",
+          "quantity": 5,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 76
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 30,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8002",
+      "name": "Not Named",
+      "slug": "lb-8002-129887608a11",
+      "category": "bag",
+      "price_kes": 10200,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Off White",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Lake Blue",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 78
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-9701",
+      "name": "Not Named",
+      "slug": "lb-9701-ffa1687e3e95",
+      "category": "bag",
+      "price_kes": 8550,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Brown",
+          "quantity": 5,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 79
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 10,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-A122",
+      "name": "Not Named",
+      "slug": "lb-a122-6c0af45d7f45",
+      "category": "bag",
+      "price_kes": 14400,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Sage Green",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Brown",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Apricot",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 80
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 14,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-6832",
+      "name": "Not Named",
+      "slug": "lb-6832-83d95750ea8e",
+      "category": "bag",
+      "price_kes": 11450,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Off White",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Lake Blue",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Brown",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 81
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 16,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-3808",
+      "name": "Not Named",
+      "slug": "lb-3808-17990e8ca8e6",
+      "category": "bag",
+      "price_kes": 23400,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 8,
+          "sizes": []
+        },
+        {
+          "name": "Brown",
+          "quantity": 5,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 82
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 13,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-A066",
+      "name": "Not Named",
+      "slug": "lb-a066-03ab3af8a81d",
+      "category": "bag",
+      "price_kes": 9600,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 0,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 83
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-A078",
+      "name": "Not Named",
+      "slug": "lb-a078-b518a7911ec0",
+      "category": "bag",
+      "price_kes": 9600,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Gray",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 84
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 2,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8922",
+      "name": "Not Named",
+      "slug": "lb-8922-3bfcd6cce36a",
+      "category": "bag",
+      "price_kes": 9600,
+      "colours": [
+        {
+          "name": "Blue",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 85
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 2,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-5232",
+      "name": "Not Named",
+      "slug": "lb-5232-5ba645c3b03f",
+      "category": "bag",
+      "price_kes": 7950,
+      "colours": [
+        {
+          "name": "Blue",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 86
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-5182",
+      "name": "Not Named",
+      "slug": "lb-5182-909b16d6c52d",
+      "category": "bag",
+      "price_kes": 7950,
+      "colours": [
+        {
+          "name": "Blue",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 87
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8700",
+      "name": "Not Named",
+      "slug": "lb-8700-bf26dbe312e4",
+      "category": "bag",
+      "price_kes": 7950,
+      "colours": [
+        {
+          "name": "Pink",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 88
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8800",
+      "name": "Not Named",
+      "slug": "lb-8800-7d6006ef98d7",
+      "category": "bag",
+      "price_kes": 12800,
+      "colours": [
+        {
+          "name": "Khaki",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 89
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8182",
+      "name": "Not Named",
+      "slug": "lb-8182-2653e464da91",
+      "category": "bag",
+      "price_kes": 7950,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 90
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-5561",
+      "name": "Not Named",
+      "slug": "lb-5561-e618eb7d9c60",
+      "category": "bag",
+      "price_kes": 9400,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Milk White",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Red",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Oil Fruit Green",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Taro Powder",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 91
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 18,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-2207",
+      "name": "Not Named",
+      "slug": "lb-2207-e9ffc7301b08",
+      "category": "bag",
+      "price_kes": 7100,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 4,
+          "sizes": []
+        },
+        {
+          "name": "Milk White",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 4,
+          "sizes": []
+        },
+        {
+          "name": "Peacock Blue",
+          "quantity": 4,
+          "sizes": []
+        },
+        {
+          "name": "Oil Fruit Green",
+          "quantity": 4,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 3,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 92
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 24,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-288",
+      "name": "Not Named",
+      "slug": "lb-288-81e4f9c85f5a",
+      "category": "bag",
+      "price_kes": 6650,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 0,
+          "sizes": []
+        },
+        {
+          "name": "Milk White",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Oil Fruit Green",
+          "quantity": 0,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 93
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 4,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-266",
+      "name": "Not Named",
+      "slug": "lb-266-4f3ef829e332",
+      "category": "bag",
+      "price_kes": 6650,
+      "colours": [
+        {
+          "name": "Caramel",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 5,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 94
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 6,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-3036",
+      "name": "Not Named",
+      "slug": "lb-3036-820aa885fb87",
+      "category": "bag",
+      "price_kes": 10200,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Khaki",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Burgundy",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Lake Blue",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Light Gray",
+          "quantity": 5,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 95
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 24,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8008",
+      "name": "Not Named",
+      "slug": "lb-8008-c7f8088e5bd8",
+      "category": "bag",
+      "price_kes": 10200,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Off White",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Light Khaki",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Lake Blue",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Light Gray",
+          "quantity": 7,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 96
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 22,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-A090",
+      "name": "Not Named",
+      "slug": "lb-a090-45ba6a8135ce",
+      "category": "bag",
+      "price_kes": 11450,
+      "colours": [
+        {
+          "name": "Brown",
+          "quantity": 7,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 97
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 7,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8620",
+      "name": "Not Named",
+      "slug": "lb-8620-3be4a6428910",
+      "category": "bag",
+      "price_kes": 7450,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Burgundy",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Red",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Lake Blue",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Dark Green",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Earthy Yellow",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Gray",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Mayanlan",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 98
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 14,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-88-218",
+      "name": "Not Named",
+      "slug": "lb-88-218-0de21f1108ce",
+      "category": "bag",
+      "price_kes": 7450,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 3,
+          "sizes": []
+        },
+        {
+          "name": "Caramel",
+          "quantity": 2,
+          "sizes": []
+        },
+        {
+          "name": "Oil Fruit Green",
+          "quantity": 1,
+          "sizes": []
+        },
+        {
+          "name": "Coffee",
+          "quantity": 2,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 99
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 8,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8568",
+      "name": "Not Named",
+      "slug": "lb-8568-3c2b5ca56d99",
+      "category": "bag",
+      "price_kes": 20300,
+      "colours": [
+        {
+          "name": "Black",
+          "quantity": 5,
+          "sizes": []
+        },
+        {
+          "name": "Taro Powder",
+          "quantity": 0,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 100
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 5,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    },
+    {
+      "internal_code": "LB-8569",
+      "name": "Not Named",
+      "slug": "lb-8569-4f12809c0a19",
+      "category": "bag",
+      "price_kes": 20300,
+      "colours": [
+        {
+          "name": "Earthy Yellow",
+          "quantity": 1,
+          "sizes": []
+        }
+      ],
+      "source_rows": [
+        {
+          "sheet": "CN Working Sheet",
+          "row": 101
+        }
+      ],
+      "seed_file": "05-cn-bags-b.sql",
+      "starting_units": 1,
+      "proposed_action": "REVIEW",
+      "existing_product_id": null,
+      "existing_stock": null,
+      "review_reason": "Existing target records and committed import audit could not be inspected"
+    }
+  ]
+}

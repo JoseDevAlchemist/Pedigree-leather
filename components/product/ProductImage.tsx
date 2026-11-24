@@ -4,9 +4,9 @@ import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import { useState } from "react";
 
-import { angleLabel, angleSpoken } from "@/lib/angles";
+import { angleSpoken } from "@/lib/angles";
 import { onColorOpacity, readableTextClass, shade } from "@/lib/color";
-import { originalProductImageUrl } from "@/lib/product-image-url";
+import { originalProductImageUrl, productPhotoVariant } from "@/lib/product-image-url";
 import type { Angle } from "@/lib/types";
 
 type ProductImageProps = {
@@ -25,19 +25,11 @@ type ProductImageProps = {
   /** Animate in on mount. Used by the angle swiper, not by grid cards. */
   animateIn?: boolean;
   loading?: "eager" | "lazy";
+  fetchPriority?: "high";
+  sizes?: string;
 };
 
-/**
- * One angle of one colour.
- *
- * Renders a real `<Image>` when photography exists, and otherwise a block of
- * the colour's own hex, treated as a leather swatch rather than a missing
- * image: a directional grain, a soft sheen, and the angle name stamped into it.
- * The stamp is what makes the five dots legible as "five views of this bag"
- * instead of an unexplained row of dots.
- *
- * When photography arrives the only change is that `src` stops being `null`.
- */
+/** Show a stored photo or a colour sample while photography is pending. */
 export function ProductImage({
   src,
   hex,
@@ -48,6 +40,8 @@ export function ProductImage({
   className = "",
   animateIn = false,
   loading = "lazy",
+  fetchPriority,
+  sizes = "(min-width: 1024px) 560px, 100vw",
 }: ProductImageProps) {
   /* Alt text reads as a sentence, so it uses the spoken label ("left side")
    * rather than the stamped one ("Side L"). */
@@ -64,10 +58,13 @@ export function ProductImage({
         src={originalProductImageUrl(src)}
         alt={alt}
         hex={hex}
-        angle={angle}
+        colorName={colorName}
+        placeholderLabel={`${productName} in ${colorName}. Photo unavailable.`}
         frame={frame}
         className={className}
         loading={loading}
+        fetchPriority={fetchPriority}
+        sizes={sizes}
         animateIn={animateIn}
       />
     );
@@ -75,9 +72,9 @@ export function ProductImage({
 
   return (
     <ProductPlaceholder
-      alt={alt}
+      alt={`${productName} in ${colorName}. Photo unavailable.`}
       hex={hex}
-      angle={angle}
+      colorName={colorName}
       frame={frame}
       className={className}
       animateIn={animateIn}
@@ -88,11 +85,14 @@ export function ProductImage({
 type ProductPhotoProps = {
   src: string;
   alt: string;
+  placeholderLabel: string;
   hex: string;
-  angle: Angle;
+  colorName: string;
   frame: string;
   className: string;
   loading: "eager" | "lazy";
+  fetchPriority?: "high";
+  sizes: string;
   animateIn: boolean;
 };
 
@@ -100,21 +100,26 @@ type ProductPhotoProps = {
 function ProductPhoto({
   src,
   alt,
+  placeholderLabel,
   hex,
-  angle,
+  colorName,
   frame,
   className,
   loading,
+  fetchPriority,
+  sizes,
   animateIn,
 }: ProductPhotoProps) {
   const [failed, setFailed] = useState(false);
+  const [variantFailed, setVariantFailed] = useState(false);
+  const variant = variantFailed ? null : productPhotoVariant(src);
 
   if (failed) {
     return (
       <ProductPlaceholder
-        alt={alt}
+        alt={placeholderLabel}
         hex={hex}
-        angle={angle}
+        colorName={colorName}
         frame={frame}
         className={className}
         animateIn={animateIn}
@@ -124,15 +129,27 @@ function ProductPhoto({
 
   return (
     <div className={`${frame} overflow-hidden ${className}`}>
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        loading={loading}
-        className="object-cover"
-        style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.1)" }}
-        onError={() => setFailed(true)}
-      />
+      <picture>
+        {variant && (
+          <source
+            srcSet={`${variant.url} ${variant.cardWidth}w, ${src} ${variant.originalWidth}w`}
+            sizes={sizes}
+          />
+        )}
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          loading={loading}
+          fetchPriority={fetchPriority}
+          className="object-cover"
+          style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.1)" }}
+          onError={(event) => {
+            if (variant && event.currentTarget.currentSrc === variant.url) setVariantFailed(true);
+            else setFailed(true);
+          }}
+        />
+      </picture>
     </div>
   );
 }
@@ -140,23 +157,16 @@ function ProductPhoto({
 type ProductPlaceholderProps = {
   alt: string;
   hex: string;
-  angle: Angle;
+  colorName: string;
   frame: string;
   className: string;
   animateIn: boolean;
 };
 
-/**
- * The no-photograph state: a block of the colour's own hex, treated as a leather
- * swatch rather than a missing image. The three background layers are a fine
- * diagonal grain, a sheen in the top-left, and a top-to-bottom tone shift — all
- * derived from the colour itself, so cream reads as pale leather and black reads
- * as deep.
- */
 function ProductPlaceholder({
   alt,
   hex,
-  angle,
+  colorName,
   frame,
   className,
   animateIn,
@@ -184,20 +194,12 @@ function ProductPlaceholder({
         boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.08)",
       }}
     >
-      {/* The stamp. Debossed rather than printed: a dark offset and a light
-          counter-offset read as pressed-in, at any colour lightness. */}
+      <div className="absolute inset-3 rounded-[inherit] border border-current opacity-15" aria-hidden="true" />
       <span
         aria-hidden="true"
-        className={`absolute inset-x-0 bottom-4 flex justify-center font-serif text-[0.6875rem] font-medium tracking-[0.14em] uppercase ${labelClass}`}
-        style={{
-          textShadow:
-            labelClass === "text-background"
-              ? "0 1px 0 rgb(0 0 0 / 0.35)"
-              : "0 -1px 0 rgb(255 255 255 / 0.4)",
-          opacity: 0.72,
-        }}
+        className={`absolute inset-x-0 bottom-6 px-5 text-center font-serif text-lg font-semibold sm:text-xl ${labelClass}`}
       >
-        {angleLabel(angle)}
+        {colorName}
       </span>
     </motion.div>
   );

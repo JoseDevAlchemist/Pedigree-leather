@@ -13,6 +13,8 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { markPaymentMethodAction } from "@/lib/actions/orders";
 import { initiateStkPush, normalizeMpesaPhone } from "@/lib/payments/mpesa";
+import { isStkConfigured } from "@/lib/payments/config";
+import { getShopSettings } from "@/lib/settings-api";
 import { isValidKenyanPhone } from "@/lib/payment-utils";
 
 const startMpesaSchema = z.object({
@@ -35,6 +37,10 @@ export async function startMpesaPaymentAction(
       };
     }
 
+    if (!isStkConfigured() || (await getShopSettings()).storefront_preferences.stk_enabled === false) {
+      return { ok: false, error: "M-Pesa STK Push is currently unavailable." };
+    }
+
     const { orderId, phone } = parsed.data;
     const normalizedPhone = normalizeMpesaPhone(phone);
 
@@ -43,12 +49,16 @@ export async function startMpesaPaymentAction(
     const supabase = createAdminClient();
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("total, payment_status, order_number")
+      .select("total, payment_status, status, order_number")
       .eq("id", orderId)
       .single();
 
     if (orderError || !order) {
       return { ok: false, error: "Order not found." };
+    }
+
+    if (order.status === "cancelled") {
+      return { ok: false, error: "This order has been cancelled." };
     }
 
     if (order.payment_status === "paid") {
@@ -70,7 +80,7 @@ export async function startMpesaPaymentAction(
 
     /* Persist the CheckoutRequestID before the callback can arrive. Without
        this, two simultaneous customers would be indistinguishable. */
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("orders")
       .update({
         payment_status: "pending",
@@ -82,7 +92,12 @@ export async function startMpesaPaymentAction(
         payment_reference: null,
         paid_at: null,
       })
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .neq("status", "cancelled")
+      .neq("payment_status", "paid")
+      .neq("payment_status", "refunded")
+      .select("status")
+      .maybeSingle();
 
     if (error) {
       console.error(`[payments] startMpesa:${orderId}:`, error);
@@ -90,6 +105,27 @@ export async function startMpesaPaymentAction(
         ok: false,
         error:
           "The M-Pesa prompt was sent, but we could not record it. Please contact us before paying.",
+      };
+    }
+
+    if (!updated) {
+      // A cancellation may have committed while the provider sent the prompt.
+      // Retain the attempt ID for its callback and preserve existing payment data.
+      const { data: cancelled, error: cancelledError } = await supabase
+        .from("orders")
+        .update({ checkout_request_id: result.checkoutRequestId })
+        .eq("id", orderId)
+        .eq("status", "cancelled")
+        .neq("payment_status", "paid")
+        .neq("payment_status", "refunded")
+        .select("id")
+        .maybeSingle();
+      if (cancelledError) console.error("[payments] cancelled attempt persistence failed:", cancelledError);
+      return {
+        ok: false,
+        error: cancelled
+          ? "This order was cancelled. Do not pay the M-Pesa prompt."
+          : "The order status changed. Do not pay the M-Pesa prompt. Contact us if you already paid.",
       };
     }
 
@@ -104,21 +140,6 @@ export async function startMpesaPaymentAction(
       error: error instanceof Error ? error.message : "Payment failed.",
     };
   }
-}
-
-/* Kept for the future real Flutterwave flow. The current card card is a
-   deliberate demo and uses `completeCardPlaceholderAction` instead. */
-export async function startCardPaymentAction(
-  orderId: string,
-): Promise<
-  | { ok: true; txRef: string }
-  | { ok: false; error: string }
-> {
-  /* Flutterwave v3 inline checkout is initiated client-side (the script opens
-     the checkout overlay). The server action only returns a tx_ref derived
-     from the order id, which the client passes to Flutterwave. */
-  const txRef = `PED-${orderId}`;
-  return { ok: true, txRef: txRef };
 }
 
 const manualMpesaSchema = z.object({
@@ -167,37 +188,5 @@ export async function submitManualMpesaAction(
         ok: false,
         error:
           result.error ?? "Could not save the M-Pesa confirmation code.",
-      };
-}
-
-/**
- * TEMPORARY: the card provider keys are not configured yet.
- *
- * The client waits a moment, tells the shopper card integration is coming, and
- * then calls this so test orders do not remain stuck in pending. Remove this
- * alongside the demo card form when Flutterwave is live.
- */
-export async function completeCardPlaceholderAction(
-  orderId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const parsed = z.string().uuid("Invalid order").safeParse(orderId);
-
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid order.",
-    };
-  }
-
-  const result = await markPaymentMethodAction(parsed.data, "card", {
-    markPaid: true,
-    reference: `CARD-DEMO-${Date.now()}`,
-  });
-
-  return result.ok
-    ? { ok: true }
-    : {
-        ok: false,
-        error: result.error ?? "Could not record the demo payment.",
       };
 }

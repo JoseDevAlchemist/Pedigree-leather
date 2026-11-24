@@ -110,7 +110,7 @@ export async function POST(request: Request): Promise<Response> {
     ? "paid"
     : order.status;
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("orders")
     .update({
       payment_status: success ? "paid" : "failed",
@@ -121,7 +121,12 @@ export async function POST(request: Request): Promise<Response> {
       paid_at: paidAt,
       status: nextStatus,
     })
-    .eq("id", order.id);
+    .eq("id", order.id)
+    .eq("checkout_request_id", CheckoutRequestID)
+    .neq("payment_status", "paid")
+    .neq("payment_status", "refunded")
+    .select("status")
+    .maybeSingle();
 
   if (updateError) {
     console.error("[mpesa/callback] update failed:", updateError);
@@ -131,7 +136,9 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  if (success && nextStatus === "paid") {
+  if (!updated) return NextResponse.json({ ResultCode: 0, ResultDesc: "Already processed" });
+
+  if (success && order.status === "pending_payment" && updated.status === "paid") {
     const { error: historyError } = await supabase
       .from("order_status_history")
       .insert({

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { DatabaseSetupNotice } from "@/components/admin/DatabaseSetupNotice";
 import { ToastProvider } from "@/components/admin/Toast";
@@ -43,6 +44,8 @@ import { getCurrentAdmin, isAllowedAdmin, getAdminRole } from "@/lib/supabase/gu
  * narrowest place that can refuse the whole tree to somebody who is not on the list,
  * and the actions enforce it again for writes.
  */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const user = await getCurrentAdmin();
 

@@ -8,9 +8,7 @@ import type { CartItem } from "@/lib/types";
 /**
  * The cart.
  *
- * Identity is `productId` + `colorId`: one bag in cognac and the same bag in
- * black are two lines, because they are two different objects that will ship
- * separately.
+ * A line identifies one product, colour and optional shoe size.
  *
  * Persisted to localStorage, so the cart survives a reload and a closed tab.
  * Everything a line needs is denormalised into the item itself, so rehydrating
@@ -22,18 +20,18 @@ export const MAX_QUANTITY_PER_ITEM = 10;
 
 const CART_STORAGE_KEY = "pedigree-cart";
 
-export function cartLineKey(productId: string, colorId: string): string {
-  return `${productId}:${colorId}`;
+export function cartLineKey(productId: string, colorId: string, sizeId?: string): string {
+  return `${productId}:${colorId}:${sizeId ?? ""}`;
 }
 
 export interface CartStore {
   items: CartItem[];
 
-  /** Adds a line, or tops up the quantity if that product+colour is already in. */
+  /** Adds a line, or tops up the quantity if that variant is already in. */
   addItem: (item: CartItem) => void;
-  removeItem: (productId: string, colorId: string) => void;
+  removeItem: (productId: string, colorId: string, sizeId?: string) => void;
   /** Setting a quantity of 0 or less removes the line. Quantity is capped at the line's stock and `MAX_QUANTITY_PER_ITEM`. */
-  updateQuantity: (productId: string, colorId: string, quantity: number) => void;
+  updateQuantity: (productId: string, colorId: string, quantity: number, sizeId?: string) => void;
   clearCart: () => void;
 
   /* Derived. Defined once at store creation so their identity is stable across
@@ -67,7 +65,7 @@ export const useCartStore = create<CartStore>()(
           const incoming = clampQuantity(item.quantity, item.stockQuantity);
           const match = state.items.findIndex(
             (line) =>
-              line.productId === item.productId && line.colorId === item.colorId,
+              line.productId === item.productId && line.colorId === item.colorId && line.sizeId === item.sizeId,
           );
 
           if (match === -1) {
@@ -87,17 +85,17 @@ export const useCartStore = create<CartStore>()(
           return { items };
         }),
 
-      removeItem: (productId, colorId) =>
+      removeItem: (productId, colorId, sizeId) =>
         set((state) => ({
           items: state.items.filter(
-            (line) => !(line.productId === productId && line.colorId === colorId),
+            (line) => !(line.productId === productId && line.colorId === colorId && line.sizeId === sizeId),
           ),
         })),
 
-      updateQuantity: (productId, colorId, quantity) =>
+      updateQuantity: (productId, colorId, quantity, sizeId) =>
         set((state) => {
           const match = state.items.find(
-            (line) => line.productId === productId && line.colorId === colorId,
+            (line) => line.productId === productId && line.colorId === colorId && line.sizeId === sizeId,
           );
           if (!match) return state;
 
@@ -105,7 +103,7 @@ export const useCartStore = create<CartStore>()(
             return {
               items: state.items.filter(
                 (line) =>
-                  !(line.productId === productId && line.colorId === colorId),
+                  !(line.productId === productId && line.colorId === colorId && line.sizeId === sizeId),
               ),
             };
           }
@@ -128,10 +126,11 @@ export const useCartStore = create<CartStore>()(
         get().items.reduce((sum, line) => sum + line.quantity, 0),
 
       subtotal: () =>
-        get().items.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0),
+        get().items.reduce((sum, line) => sum + Math.round(line.unitPrice) * line.quantity, 0),
     }),
     {
       name: CART_STORAGE_KEY,
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       version: 1,
       /* Only `items` is written to storage. Actions are functions and would be
@@ -157,5 +156,5 @@ export function useCartCount(): number {
 /** Cart total in KES, as a number. Format with `formatPrice` at the edge. */
 export function useCartSubtotal(): number {
   const items = useCartStore((state) => state.items);
-  return items.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+  return items.reduce((sum, line) => sum + Math.round(line.unitPrice) * line.quantity, 0);
 }

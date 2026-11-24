@@ -11,6 +11,8 @@ import { OrderTimeline } from "@/components/shop/OrderTimeline";
    Order confirmation page (Server Component)
    --------------------------------------------------------------------------- */
 
+export const revalidate = 0;
+
 export default async function OrderConfirmationPage({
   params,
 }: {
@@ -67,7 +69,7 @@ export default async function OrderConfirmationPage({
       </div>
 
       {/* Status Timeline + Delivery/Pickup info - Client component with refresh */}
-      <OrderTimeline order={order} shopConfig={shopConfig} />
+      <OrderTimeline order={order} pickupAddress={shopConfig.pickupAddress || shopConfig.address} />
 
       {/* Order summary */}
       <section className="mt-8 space-y-4" aria-labelledby="summary-heading">
@@ -102,7 +104,7 @@ export default async function OrderConfirmationPage({
                         }}
                         aria-hidden="true"
                       />
-                      <span className="text-muted">{item.color_name}</span>
+                      <span className="text-muted">{[item.color_name, [item.size_system, item.size_label].filter(Boolean).join(" ")].filter(Boolean).join(" · ")}</span>
                     </div>
                   </td>
                   <td className="py-3 text-right tabular-nums text-foreground">{item.quantity}</td>
@@ -142,7 +144,7 @@ export default async function OrderConfirmationPage({
                     }}
                     aria-hidden="true"
                   />
-                  <span>{item.color_name}</span>
+                  <span>{[item.color_name, [item.size_system, item.size_label].filter(Boolean).join(" ")].filter(Boolean).join(" · ")}</span>
                   <span>×</span>
                   <span className="tabular-nums">{item.quantity}</span>
                 </div>
@@ -207,7 +209,7 @@ export default async function OrderConfirmationPage({
         </div>
 
         <Link
-          href="/bags"
+          href="/category/bags"
           className="inline-flex h-11 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold tracking-wide text-background transition-colors duration-200 ease-out hover:bg-primary-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           Continue shopping

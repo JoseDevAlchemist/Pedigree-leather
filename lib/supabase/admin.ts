@@ -72,6 +72,7 @@ export function createAdminClient(): SupabaseClient<Database> {
   /* No session persistence and no auto-refresh. This client represents the
      application, not a person, so there is no user to refresh a token for. */
   const client = createSupabaseClient<Database>(url, serviceRoleKey, {
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store", next: undefined }) },
     auth: {
       autoRefreshToken: false,
       persistSession: false,
