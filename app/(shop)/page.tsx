@@ -88,10 +88,9 @@ export default async function Home() {
           <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             {storefrontBrandCopy(settings.hero_title) || "Our Catalogue"}
           </h1>
-          <p className="mt-3 text-muted">{BRAND_STATEMENT}</p>
         </header>
 
-        <div className="mt-8 sm:mt-10">
+        <div className="mt-6 sm:mt-8">
           <Suspense fallback={<ProductGridSkeleton count={8} />}>
             <Catalogue />
           </Suspense>
