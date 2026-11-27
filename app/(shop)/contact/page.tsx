@@ -123,7 +123,7 @@ export default async function ContactPage() {
       {/* Shop info block */}
       <section aria-labelledby="shop-info-heading" className="mt-16">
         <h2 id="shop-info-heading" className="font-serif text-2xl font-semibold tracking-tight text-foreground">
-          Visit our workshop
+          Visit our shop
         </h2>
         <div className="mt-6 grid gap-8 md:grid-cols-2">
           <div className="space-y-4">

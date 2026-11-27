@@ -4,13 +4,15 @@ import { createRequire } from "node:module";
 import test from "node:test";
 import { createClient } from "@supabase/supabase-js";
 import ts from "typescript";
+import { createElement } from "react";
+import { renderToReadableStream } from "react-dom/server";
 
 const require = createRequire(import.meta.url);
 
 // Load the real catalogue and its local dependencies with an isolated HTTP client.
 function loadModule(path, imports = {}) {
   const code = ts.transpileModule(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
   }).outputText;
   const exports = {};
   new Function("exports", "require", code)(exports, (id) => imports[id] ?? require(id));
@@ -21,7 +23,7 @@ test("every public product read omits the SKU and requires website publication",
   const requests = [];
   const published = {
     id: "published", name: "Shoes", slug: "visible-shoe", description: "Shoe",
-    category: "shoe", category_id: "shoes", base_price: 500, base_price_usd: null,
+    category: "shoe", category_id: "loafers", base_price: 500, base_price_usd: null,
     discount_percent: 0, featured: true, created_at: "2026-11-18",
     stock_tracking_mode: "size", active: true, is_website_published: true, barcode: "INTERNAL",
     product_colors: [{
@@ -34,9 +36,14 @@ test("every public product read omits the SKU and requires website publication",
       ],
     }],
   };
-  const hidden = { ...published, id: "hidden", slug: "hidden-shoe", is_website_published: false };
-  const inactive = { ...published, id: "inactive", slug: "inactive-shoe", active: false };
-  const categories = [{ id: "shoes", slug: "shoes", name: "Shoes", parent_id: null }];
+  const hidden = { ...published, id: "hidden", slug: "hidden-shoe", is_website_published: false, category_id: "draft-only" };
+  const inactive = { ...published, id: "inactive", slug: "inactive-shoe", active: false, category_id: "inactive-only" };
+  const categories = [
+    { id: "shoes", slug: "shoes", name: "Shoes", parent_id: null },
+    ...["loafers", "draft-only", "inactive-only", "empty"].map((id) => ({
+      id, slug: id, name: id, parent_id: "shoes",
+    })),
+  ];
   const client = createClient("https://fixture.example", "fixture", {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
@@ -46,7 +53,7 @@ test("every public product read omits the SKU and requires website publication",
         const table = url.pathname.split("/").at(-1);
         requests.push({ table, query });
         const rows = table === "products"
-          ? [published, hidden, inactive].filter((row) => ["active", "is_website_published", "slug"].every(
+          ? [published, hidden, inactive].filter((row) => ["active", "is_website_published", "slug", "category"].every(
             (field) => !query.has(field) || query.get(field) === `eq.${row[field]}`,
           ))
           : table === "categories"
@@ -66,6 +73,9 @@ test("every public product read omits the SKU and requires website publication",
   });
 
   assert.deepEqual((await api.getProducts()).map((item) => item.slug), ["visible-shoe"]);
+  assert.deepEqual((await api.getHomepageProducts("shoe")).map((item) => item.slug), ["visible-shoe"]);
+  assert.deepEqual(await api.getHomepageProducts("belt"), []);
+  assert.deepEqual((await api.getPopulatedSubcategories()).map(({ slug }) => slug), ["loafers"]);
   assert.equal(await api.getProductBySlug("hidden-shoe"), null);
   const item = await api.getProductBySlug("visible-shoe");
   assert.equal(item.colors[0].stockQuantity, 2);
@@ -84,10 +94,48 @@ test("every public product read omits the SKU and requires website publication",
   assert.equal((await api.getNewArrivals(2)).length, 1);
 
   const productRequests = requests.filter(({ table }) => table === "products");
-  assert.equal(productRequests.filter(({ query }) => query.get("limit") !== "0").length, 9);
+  assert.equal(productRequests.filter(({ query }) => query.get("limit") !== "0").length, 12);
   for (const { query } of productRequests) {
     assert.equal(query.get("active"), "eq.true");
     assert.equal(query.get("is_website_published"), "eq.true");
     assert.doesNotMatch(query.get("select"), /\*|\bbarcode\b|\bqr_code\b/);
   }
+});
+
+test("the homepage mixes available categories and omits empty sections", async () => {
+  const products = {
+    bag: Array.from({ length: 10 }, (_, index) => ({ id: `bag-${index}`, featured: true })),
+    shoe: [{ id: "shoe-0", featured: false }],
+    belt: [{ id: "belt-0", featured: false }],
+  };
+  const { default: Home } = loadModule("app/(shop)/page.tsx", {
+    "next/link": ({ children }) => children,
+    "@/lib/api": { getHomepageProducts: async (category) => products[category] },
+    "@/lib/brand": loadModule("lib/brand.ts"),
+    "@/lib/category": loadModule("lib/category.ts"),
+    "@/lib/format": { effectivePrice: (price) => price },
+    "@/lib/navigation": loadModule("lib/navigation.ts"),
+    "@/lib/settings-api": { getStorefrontPreferences: async () => ({}) },
+    "@/components/product/ProductGrid": {
+      ProductGrid: ({ products: entries }) => createElement("p", null, entries.map(({ id }) => id).join(",")),
+      visibleCatalogueProducts: (entries) => entries,
+    },
+    "@/components/product/ProductCardSkeleton": { ProductGridSkeleton: () => null },
+  });
+
+  const renderHome = async () => {
+    const stream = await renderToReadableStream(await Home());
+    await stream.allReady;
+    return new Response(stream).text();
+  };
+  const html = await renderHome();
+  const headings = (markup) => [...markup.matchAll(/<h2[^>]*>([^<]+)<\/h2>/g)].map((match) => match[1]);
+  assert.deepEqual(headings(html), ["Featured Products", "Bags", "Shoes", "Belts"]);
+  const featured = html.match(/<h2[^>]*>Featured Products<\/h2><p>([^<]+)<\/p>/)[1].split(",");
+  assert.deepEqual(featured.slice(0, 3), ["bag-0", "shoe-0", "belt-0"]);
+  assert.equal(featured.length, 8);
+  assert.equal(new Set(featured).size, featured.length);
+
+  products.belt = [];
+  assert.deepEqual(headings(await renderHome()), ["Featured Products", "Bags", "Shoes"]);
 });

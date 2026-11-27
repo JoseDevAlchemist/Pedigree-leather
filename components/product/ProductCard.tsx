@@ -144,7 +144,7 @@ export function ProductCard({ product, className = "", priority = false, showDis
       initial="rest"
       whileHover={reduceMotion ? undefined : "hover"}
       transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-      className={`group relative flex flex-col rounded-2xl bg-card shadow-card ${className}`}
+      className={`group relative flex min-w-0 flex-col rounded-2xl bg-card shadow-card ${className}`}
     >
       {/* First in the DOM so the shadow paints behind everything else here. */}
       <motion.span
@@ -162,7 +162,7 @@ export function ProductCard({ product, className = "", priority = false, showDis
           `ProductImage` gave this div a height of zero and collapsed the card. */}
       <div
         ref={imageRef}
-        className="relative group aspect-square overflow-hidden rounded-2xl"
+        className="relative group aspect-[5/4] sm:aspect-square overflow-hidden rounded-2xl"
         style={{ boxShadow: "inset 0 0 0 1px rgb(0 0 0 / 0.06)" }}
       >
         <AnimatePresence initial={false} mode="sync">
@@ -185,7 +185,7 @@ export function ProductCard({ product, className = "", priority = false, showDis
               angle={angle}
               loading={priority ? "eager" : "lazy"}
               fetchPriority={priority && angleIndex === 0 ? "high" : undefined}
-              sizes="(min-width: 1024px) 270px, (min-width: 768px) 33vw, 50vw"
+              sizes="(min-width: 1024px) 270px, (min-width: 768px) 33vw, calc(50vw - 22px)"
             />
           </motion.div>
         </AnimatePresence>
@@ -230,10 +230,10 @@ export function ProductCard({ product, className = "", priority = false, showDis
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 px-3 pt-3 pb-4 sm:gap-2.5 sm:px-4 sm:pt-3.5 sm:pb-5">
+      <div className="flex flex-1 flex-col gap-1 px-2 pt-2 pb-2 sm:gap-2.5 sm:px-4 sm:pt-3.5 sm:pb-5">
         <AngleDots activeIndex={angleIndex} angles={product.angles} align="start" />
 
-        <h3 className="mt-0.5 font-serif text-base leading-snug font-semibold tracking-tight text-foreground sm:text-lg">
+        <h3 className="mt-0.5 font-serif text-sm leading-snug [overflow-wrap:anywhere] font-semibold tracking-tight text-foreground sm:text-lg">
           {product.name}
         </h3>
 
@@ -251,7 +251,7 @@ export function ProductCard({ product, className = "", priority = false, showDis
             broke the figure across lines ("KES" / "14,850" / "KES" / "16,500").
             `flex-wrap` here moves the whole swatch group to its own line
             instead, which is also the layout a 375px phone gets anyway. */}
-        <div className="mt-auto flex flex-wrap items-end justify-between gap-x-3 gap-y-2 pt-1.5">
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-x-2 gap-y-0 sm:gap-x-3 sm:gap-y-2 sm:pt-1.5">
           <PriceRow
             basePrice={product.basePrice}
             discountPercent={product.discountPercent}
@@ -267,7 +267,7 @@ export function ProductCard({ product, className = "", priority = false, showDis
               setColorIndex(product.colors.findIndex((entry) => entry.id === colorId));
               setAngleIndex(0);
             }}
-            className="relative z-10 shrink-0"
+            className="relative z-10 min-w-0 max-w-full"
           />
         </div>
       </div>

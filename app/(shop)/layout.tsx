@@ -3,12 +3,14 @@ import { SharedImageTransitionProvider } from "@/components/motion/SharedImageTr
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { ContactWidgetWrapper } from "@/components/layout/ContactWidgetWrapper";
-import { getCategories, getParentCategories } from "@/lib/categories-api";
+import { getPopulatedSubcategories } from "@/lib/api";
+import { getParentCategories } from "@/lib/categories-api";
 import { brandingUrl, getStorefrontShopSettings, getStorefrontPreferences } from "@/lib/settings-api";
 import { ExchangeRateProvider } from "@/components/product/ExchangeRateContext";
 import { Toaster } from "sonner";
 import type { Metadata } from "next";
 import { DEFAULT_USD_EXCHANGE_RATE } from "@/lib/exchange-rate";
+import { storefrontBrandCopy } from "@/lib/brand";
 import { metadata as defaults } from "@/app/layout";
 
 // POS managers can update the shared rate outside this deployment.
@@ -16,8 +18,8 @@ export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getStorefrontPreferences();
-  const title = settings.seo_title;
-  const description = settings.seo_description;
+  const title = storefrontBrandCopy(settings.seo_title);
+  const description = storefrontBrandCopy(settings.seo_description);
   const image = brandingUrl(settings.social);
   const favicon = brandingUrl(settings.favicon);
   return {
@@ -26,14 +28,14 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: settings.allow_indexing === false ? { index: false, follow: false } : defaults.robots,
     openGraph: {
       ...defaults.openGraph,
-      title: settings.sharing_title || title || defaults.openGraph?.title,
-      description: settings.sharing_description || description || defaults.openGraph?.description,
+      title: storefrontBrandCopy(settings.sharing_title) || title || defaults.openGraph?.title,
+      description: storefrontBrandCopy(settings.sharing_description) || description || defaults.openGraph?.description,
       images: image ? [image] : defaults.openGraph?.images,
     },
     twitter: {
       card: "summary_large_image",
-      title: settings.sharing_title || title || defaults.twitter?.title,
-      description: settings.sharing_description || description || defaults.twitter?.description,
+      title: storefrontBrandCopy(settings.sharing_title) || title || defaults.twitter?.title,
+      description: storefrontBrandCopy(settings.sharing_description) || description || defaults.twitter?.description,
       images: image ? [image] : defaults.twitter?.images,
     },
     ...(favicon ? { icons: { icon: favicon, shortcut: favicon, apple: favicon } } : {}),
@@ -45,8 +47,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ShopLayout({
   children,
 }: LayoutProps<"/">) {
-  const [categories, parentCategories, settings] = await Promise.all([
-    getCategories(),
+  const [populatedSubcategories, parentCategories, settings] = await Promise.all([
+    getPopulatedSubcategories(),
     getParentCategories(),
     getStorefrontShopSettings().catch(() => null),
   ]);
@@ -56,7 +58,7 @@ export default async function ShopLayout({
     <CartDrawerProvider>
       <SharedImageTransitionProvider>
         <ExchangeRateProvider rate={settings?.exchange_rate_kes_to_usd ?? DEFAULT_USD_EXCHANGE_RATE}>
-          <Navbar categories={categories} parentCategories={parentCategories}
+          <Navbar populatedSubcategories={populatedSubcategories} parentCategories={parentCategories}
             brandName={settings?.shop_name} logoUrl={brandingUrl(preferences?.logo)} />
           {preferences?.announcement_enabled && preferences.announcement && (
             <p className="bg-primary px-4 py-2 text-center text-sm text-background">{preferences.announcement}</p>

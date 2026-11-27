@@ -1,3 +1,4 @@
+import { BRAND_STATEMENT } from "@/lib/brand";
 import {
   Document,
   Page,
@@ -268,7 +269,7 @@ export function ReceiptPDF({ order }: { order: ReceiptOrder }) {
         <View style={styles.header}>
           <View>
             <Text style={styles.brand}>PEDIGREE LEATHER</Text>
-            <Text style={styles.tagline}>Handcrafted in Nairobi</Text>
+            <Text style={styles.tagline}>{BRAND_STATEMENT}</Text>
           </View>
           <View style={styles.receiptBadge}>
             <Text style={styles.receiptBadgeText}>Receipt</Text>

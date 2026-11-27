@@ -1,3 +1,4 @@
+import { BRAND_STATEMENT } from "@/lib/brand";
 import { getNotificationSettings } from "@/lib/notification-settings";
 import "server-only";
 
@@ -68,7 +69,7 @@ export async function sendReceiptEmail(
           <h2 style="color: #5d4037; margin-bottom: 8px;">Thank you, ${escapeHtml(order.customer_name)}.</h2>
           <p>Your payment for order <strong>#${escapeHtml(order.order_number)}</strong> has been confirmed.</p>
           <p>Your PDF receipt is attached to this email.</p>
-          <p style="margin-top: 24px;">Pedigree Leather<br />Handcrafted in Nairobi</p>
+          <p style="margin-top: 24px;">Pedigree Leather<br />${BRAND_STATEMENT}</p>
         </div>
       `,
       attachments: [

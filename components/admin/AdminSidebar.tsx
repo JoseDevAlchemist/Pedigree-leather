@@ -122,16 +122,15 @@ export function AdminSidebar({
     toast.error("Could not sign out", result.error);
   }, [router, toast]);
 
+  const focusCloseButton = useCallback((button: HTMLButtonElement | null) => {
+    button?.focus();
+  }, []);
+
   const roleLabel = role === "owner" ? "Owner" : role === "worker" ? "Worker" : "";
 
   const nav = (
     <>
-      <div className="flex h-16 shrink-0 items-center gap-3 px-5">
-        <BrandMark />
-        <Wordmark className="text-lg" />
-      </div>
-
-      <nav aria-label="Admin" className="flex-1 overflow-y-auto px-3 py-2">
+      <nav aria-label="Admin" className="flex-1 px-3 py-2">
         <ul className="flex flex-col gap-1">
           {links.map((link) => {
             const active = isActive(link.href, link.exact);
@@ -195,6 +194,10 @@ export function AdminSidebar({
       {/* Desktop rail. `hidden md:flex` rather than a JS media query, so it is in
           the first paint and there is no flash of a page with no navigation. */}
       <aside className="hidden w-64 shrink-0 flex-col bg-charcoal md:flex">
+        <div className="flex h-16 shrink-0 items-center gap-3 px-5">
+          <BrandMark />
+          <Wordmark className="text-lg" />
+        </div>
         {nav}
       </aside>
 
@@ -234,18 +237,21 @@ export function AdminSidebar({
                 </span>
                 <button
                   type="button"
+                  ref={focusCloseButton}
                   onClick={() => {
                     onClose();
                     triggerRef.current?.focus();
                   }}
                   aria-label="Close menu"
-                  className="-mr-2 flex size-11 cursor-pointer items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  className="-mr-2 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-background transition-colors duration-150 ease-out hover:bg-background/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <X size={22} strokeWidth={2} aria-hidden="true" />
                 </button>
               </div>
 
-              {nav}
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
+                {nav}
+              </div>
             </motion.div>
           </div>
         ) : null}

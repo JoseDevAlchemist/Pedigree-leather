@@ -4,6 +4,7 @@ import type { Product } from "@/lib/types";
 
 type ProductGridProps = {
   products: Product[];
+  eagerFirstImage?: boolean;
   /** Optional note shown when the list is empty. */
   emptyMessage?: string;
   /**
@@ -37,9 +38,9 @@ type ProductGridProps = {
  * missing from only one of the two.
  */
 const PINNED: Record<NonNullable<ProductGridProps["columns"]>, string> = {
-  2: "grid grid-cols-2 gap-3 sm:gap-6",
-  3: "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-6",
-  4: "grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4",
+  2: "grid grid-cols-2 gap-2.5 sm:gap-6",
+  3: "grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-6",
+  4: "grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4",
 };
 
 export function gridColumnsClass(columns: NonNullable<ProductGridProps["columns"]>) {
@@ -71,6 +72,7 @@ export function visibleCatalogueProducts(products: Product[], hideUnavailable?: 
  */
 export async function ProductGrid({
   products,
+  eagerFirstImage = true,
   emptyMessage,
   category,
   columns,
@@ -95,7 +97,7 @@ export async function ProductGrid({
   return (
     <ul className={`${gridColumnsClass(columns ?? 4)} ${className}`}>
       {visible.map((product, index) => (
-        <ProductCard key={product.id} product={product} priority={index === firstPhotoIndex} showDiscountBadge={settings.show_discount_badge} />
+        <ProductCard key={product.id} product={product} priority={eagerFirstImage && index === firstPhotoIndex} showDiscountBadge={settings.show_discount_badge} />
       ))}
     </ul>
   );

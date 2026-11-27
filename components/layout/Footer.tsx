@@ -4,6 +4,7 @@ import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { email as defaultEmail, whatsappMessage } from "@/lib/contact";
 import { getShopConfig } from "@/lib/shop-config";
 import { brandingUrl, getStorefrontPreferences } from "@/lib/settings-api";
+import { BRAND_STATEMENT } from "@/lib/brand";
 import { NAV_ITEMS } from "@/lib/navigation";
 
 import { BrandMark, Wordmark } from "@/components/layout/Brand";
@@ -96,7 +97,7 @@ export async function Footer() {
               <Wordmark name={config.shopName} className="text-xl" />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-pretty text-background/70">
-              High-quality leather products, crafted in Nairobi.
+              {BRAND_STATEMENT}
             </p>
           </div>
 
@@ -230,7 +231,6 @@ export async function Footer() {
           {/* Editable credit line. Kept as literal text rather than pulled from a
               config object: it is prose, it changes when someone decides to
               change it, and there is exactly one of them. */}
-          <p>Handmade in Nairobi · Stitched to last</p>
         </div>
       </div>
     </footer>

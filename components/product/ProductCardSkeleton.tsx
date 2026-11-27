@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
  * The loading twin of `ProductCard`.
  *
  * Eight of these stand in for the grid while the products are in flight. The
- * layout has to be the card's layout — square image, dots, name, price, swatches
+ * layout has to be the card's layout — image, dots, name, price, swatches
  * — for the loading state to do its actual job, which is to hold the page's shape
  * so nothing moves when the real grid arrives. A row of generic grey bars would
  * be less code and worth less: the shopper would see the grid jump up by the
@@ -26,11 +26,9 @@ type ProductCardSkeletonProps = {
 export function ProductCardSkeleton({ className = "" }: ProductCardSkeletonProps) {
   return (
     <div className={`flex flex-col rounded-2xl bg-card shadow-card ${className}`}>
-      {/* Square image well. Same `aspect-square` as the card's, which is what
-          actually fixes the card's height. */}
-      <div className="aspect-square rounded-2xl bg-border/40" />
+      <div className="aspect-[5/4] sm:aspect-square rounded-2xl bg-border/40" />
 
-      <div className="flex flex-1 flex-col gap-2 px-3 pt-3 pb-4 sm:gap-2.5 sm:px-4 sm:pt-3.5 sm:pb-5">
+      <div className="flex flex-1 flex-col gap-1 px-2 pt-2 pb-2 sm:gap-2.5 sm:px-4 sm:pt-3.5 sm:pb-5">
         {/* The five angle dots, as five small blocks. */}
         <div aria-hidden="true" className="flex items-center gap-1.5">
           {Array.from({ length: 5 }, (_, index) => (

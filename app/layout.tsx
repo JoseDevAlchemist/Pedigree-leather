@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 
+import { BRAND_STATEMENT } from "@/lib/brand";
+
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -19,12 +21,12 @@ const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Pedigree Leather — Handcrafted Bags & Shoes in Nairobi",
+    default: "Pedigree Leather — Leather Bags, Shoes & Belts",
     template: "%s | Pedigree Leather",
   },
   description:
-    "Premium leather bags and shoes, hand-stitched in our Nairobi workshop. Shop totes, satchels, weekenders, and more.",
-  keywords: ["leather bags", "handcrafted shoes", "Nairobi leather", "Kenya leather products", "totes", "satchels", "weekenders"],
+    BRAND_STATEMENT,
+  keywords: ["leather bags", "leather shoes", "Nairobi leather", "Kenya leather products", "totes", "satchels", "weekenders"],
   authors: [{ name: "Pedigree Leather" }],
   creator: "Pedigree Leather",
   publisher: "Pedigree Leather",
@@ -37,9 +39,9 @@ export const metadata: Metadata = {
     locale: "en_KE",
     url: siteUrl,
     siteName: "Pedigree Leather",
-    title: "Pedigree Leather — Handcrafted Bags & Shoes in Nairobi",
+    title: "Pedigree Leather — Leather Bags, Shoes & Belts",
     description:
-      "Premium leather bags and shoes, hand-stitched in our Nairobi workshop. Shop totes, satchels, weekenders, and more.",
+      BRAND_STATEMENT,
     images: [
       {
         url: "/icon.png",
@@ -51,9 +53,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pedigree Leather — Handcrafted Bags & Shoes in Nairobi",
+    title: "Pedigree Leather — Leather Bags, Shoes & Belts",
     description:
-      "Premium leather bags and shoes, hand-stitched in our Nairobi workshop. Shop totes, satchels, weekenders, and more.",
+      BRAND_STATEMENT,
     images: ["/icon.png"],
   },
   icons: {
@@ -61,7 +63,6 @@ export const metadata: Metadata = {
     shortcut: "/icon.png",
     apple: "/icon.png",
   },
-  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {

@@ -1,65 +1,81 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 
-import { ProductGrid } from "@/components/product/ProductGrid";
+import { ProductGrid, visibleCatalogueProducts } from "@/components/product/ProductGrid";
 import { ProductGridSkeleton } from "@/components/product/ProductCardSkeleton";
-import { getProducts } from "@/lib/api";
+import { getHomepageProducts } from "@/lib/api";
+import { BRAND_STATEMENT, storefrontBrandCopy } from "@/lib/brand";
+import { CATEGORY_SEGMENT } from "@/lib/category";
 import { effectivePrice } from "@/lib/format";
+import { NAV_ITEMS } from "@/lib/navigation";
 import { getStorefrontPreferences } from "@/lib/settings-api";
+import type { Product } from "@/lib/types";
 
-/**
- * The shop, as a catalogue.
- *
- * This page used to be a landing page: a full-height hero, a curated "Featured"
- * carousel, an automatic "New arrivals" rail and a bags/shoes split below the
- * fold. That is four things to scroll past before the first price, and the
- * shopper who already knows what they came for paid for all of it. The home page
- * is now the catalogue itself — a heading, then every product. Nothing sits
- * between the shopper and the grid.
- *
- * The hero and the two rails are gone rather than moved. `getFeaturedProducts()`
- * and `getNewArrivals()` still exist in `lib/api.ts` and still work; this page
- * simply no longer calls them. If a curated rail is wanted again it belongs
- * somewhere it can be honest about being curated, not as a gate in front of the
- * whole shop.
- */
+const sectionsByCategory = (["bag", "shoe", "belt"] as const).map((category) => {
+  const href = `/category/${CATEGORY_SEGMENT[category]}`;
+  return { category, href, label: NAV_ITEMS.find((item) => item.href === href)?.label ?? CATEGORY_SEGMENT[category] };
+});
+const previewSize = 4;
+const featuredSize = 8;
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getStorefrontPreferences();
+  const title = storefrontBrandCopy(settings.seo_title);
   return {
-    title: settings.seo_title ? { absolute: settings.seo_title } : "Shop All",
-    description: settings.seo_description || "Browse our full collection of handcrafted leather bags and shoes.",
+    title: title ? { absolute: title } : "Shop All",
+    description: storefrontBrandCopy(settings.seo_description) || BRAND_STATEMENT,
   };
 }
 
-/**
- * The grid, in its own Suspense boundary.
- *
- * Scoped inside the page rather than a `loading.tsx` for the same reason `/bags`
- * does it (see the note in `app/(shop)/bags/page.tsx`): a segment-level loading
- * file wraps every route beneath the segment, and that is how a dead product URL
- * once became a permanent "Loading…" page. Keeping the boundary here also lets
- * the heading paint immediately instead of waiting on the products.
- */
 async function Catalogue() {
-  /* Read through the api seam so this page never learns where data comes from. */
-  const [products, settings] = await Promise.all([getProducts(), getStorefrontPreferences()]);
-  const sort = settings.homepage_sort;
-  const direction = sort === "price_asc" ? 1 : sort === "price_desc" ? -1 : 0;
-  const visible = direction || settings.feature_first
-    ? [...products].sort((a, b) => {
+  const [settings, ...groups] = await Promise.all([
+    getStorefrontPreferences(),
+    ...sectionsByCategory.map(({ category }) => getHomepageProducts(category)),
+  ]);
+
+  const direction = settings.homepage_sort === "price_asc" ? 1
+    : settings.homepage_sort === "price_desc" ? -1 : 0;
+  const sections = sectionsByCategory.map((item, index) => ({
+    ...item,
+    products: visibleCatalogueProducts(groups[index], settings.hide_unavailable).toSorted((a, b) => {
       const featured = settings.feature_first ? Number(b.featured) - Number(a.featured) : 0;
       return featured || direction * (
         effectivePrice(a.basePrice, a.discountPercent) - effectivePrice(b.basePrice, b.discountPercent)
       );
-    })
-    : products;
+    }),
+  }));
+
+  const featured = new Map<string, Product>();
+  const candidates = sections.map(({ products }) =>
+    products.toSorted((a, b) => Number(b.featured) - Number(a.featured)).slice(0, featuredSize),
+  );
+  for (let rank = 0; rank < featuredSize && featured.size < featuredSize; rank++) {
+    for (const group of candidates) {
+      const product = group[rank];
+      if (product) featured.set(product.id, product);
+      if (featured.size === featuredSize) break;
+    }
+  }
 
   return (
-    <ProductGrid
-      products={visible}
-      emptyMessage="No products are listed right now. Please check back soon."
-    />
+    <div className="space-y-10 sm:space-y-14">
+      <section aria-labelledby="featured-products">
+        <h2 id="featured-products" className="mb-4 font-serif text-2xl font-semibold sm:text-3xl">Featured Products</h2>
+        <ProductGrid products={[...featured.values()]} />
+      </section>
+      {sections.filter(({ products }) => products.length > 0).map(({ href, label, products }) => (
+        <section key={href} aria-label={label}>
+          <div className="mb-4 flex items-baseline justify-between gap-4">
+            <h2 className="font-serif text-2xl font-semibold sm:text-3xl">{label}</h2>
+            <Link href={href} className="text-sm font-semibold text-primary underline underline-offset-4">
+              View all {label.toLowerCase()}
+            </Link>
+          </div>
+          <ProductGrid products={products.slice(0, previewSize)} eagerFirstImage={false} />
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -70,9 +86,9 @@ export default async function Home() {
       <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-20 lg:px-8">
         <header className="max-w-3xl">
           <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            {settings.hero_title || "Our Catalogue"}
+            {storefrontBrandCopy(settings.hero_title) || "Our Catalogue"}
           </h1>
-          {settings.hero_description && <p className="mt-3 text-muted">{settings.hero_description}</p>}
+          <p className="mt-3 text-muted">{BRAND_STATEMENT}</p>
         </header>
 
         <div className="mt-8 sm:mt-10">

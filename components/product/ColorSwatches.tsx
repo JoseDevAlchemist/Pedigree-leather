@@ -11,7 +11,7 @@ type ColorSwatchesProps = {
   /**
    * `sm` on a card, `lg` on the detail page (where hovering reveals the name).
    * `sm` is responsive: the dot is 16px on a phone, where two cards share a
-   * 375px row, and 20px from `sm` up. The hit area stays 32px either way —
+   * 375px row, and 20px from `sm` up. The hit area stays at least 28px —
    * below that it fails WCAG's 24px minimum, and the button is what a phone
    * shopper is aiming at.
    */
@@ -39,13 +39,13 @@ export function ColorSwatches({
   const reduceMotion = useReducedMotion();
 
   const dot = size === "sm" ? "size-4 sm:size-5" : "size-8";
-  const hit = size === "sm" ? "size-8" : "size-11";
+  const hit = size === "sm" ? "size-7 sm:size-8" : "size-11";
 
   const activeColor = colors.find((color) => color.id === activeColorId);
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-1 ${className}`}
+      className={`flex flex-wrap items-center gap-0.5 sm:gap-1 ${className}`}
       role="radiogroup"
       aria-label="Colour"
     >

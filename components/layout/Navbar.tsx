@@ -16,14 +16,9 @@ import { BrandMark, Wordmark } from "@/components/layout/Brand";
 const STITCH_SPRING = { type: "spring", duration: 0.35, bounce: 0 } as const;
 
 type NavbarProps = {
-  /**
-   * Server-fetched active categories. When empty or absent the navbar falls back
-   * to the static items in `lib/navigation.ts` — the shell never crashes because
-   * the category fetch failed.
-   */
   brandName?: string;
   logoUrl?: string;
-  categories?: readonly Category[];
+  populatedSubcategories?: readonly Category[];
   parentCategories?: readonly Category[];
 };
 
@@ -34,7 +29,7 @@ function isActive(href: string, pathname: string | null): boolean {
   return href === "/" ? pathname === href : pathname.startsWith(href);
 }
 
-export function Navbar({ categories, parentCategories, brandName, logoUrl }: NavbarProps = {}) {
+export function Navbar({ populatedSubcategories, parentCategories, brandName, logoUrl }: NavbarProps = {}) {
   const pathname = usePathname();
   // A prerendered route can have a different pathname before browser hydration.
   const activePathname = useSyncExternalStore(subscribeToHydration, () => pathname, () => null);
@@ -66,42 +61,14 @@ export function Navbar({ categories, parentCategories, brandName, logoUrl }: Nav
   /* Desktop dropdown state: which category slug is expanded. */
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  /* Build the link list: server-fetched categories when they exist, plus the
-     static items (Home, Contact). The old hardcoded Bags/Shoes links are only a
-     fallback for a failed/empty category fetch; once the database has roots, the
-     categories own those slots and the static duplicates disappear. */
-  const categoryLinks = parentCategories ?? [];
-  const usingCategories = categoryLinks.length > 0;
-  const staticLinks = NAV_ITEMS.filter(
-    (item) => !usingCategories || (item.href !== "/category/bags" && item.href !== "/category/shoes"),
-  );
-
-  type NavEntry = {
-    href: string;
-    label: string;
-    key: string;
-    children: { id: string; name: string; slug: string }[];
-  };
-
-  const links: NavEntry[] = [
-    ...categoryLinks.map((cat) => ({
-      href: `/category/${cat.slug}`,
-      label: cat.name,
-      key: `cat-${cat.id}`,
-      children:
-        categories?.filter((c) => c.parentId === cat.id).map((c) => ({
-          id: c.id,
-          name: c.name,
-          slug: c.slug,
-        })) ?? [],
-    })),
-    ...staticLinks.map((item) => ({
-      href: item.href,
-      label: item.label,
-      key: `static-${item.href}`,
-      children: [],
-    })),
-  ];
+  const links = NAV_ITEMS.map((item) => {
+    const parent = parentCategories?.find((category) => item.href === `/category/${category.slug}`);
+    return {
+      ...item,
+      key: item.href,
+      children: parent ? populatedSubcategories?.filter((category) => category.parentId === parent.id) ?? [] : [],
+    };
+  });
 
   /* Bar picks up a shadow once the page has scrolled off the top. */
   useEffect(() => {
@@ -355,7 +322,7 @@ export function Navbar({ categories, parentCategories, brandName, logoUrl }: Nav
                                     <Link
                                       href={`/category/${child.slug}`}
                                       aria-current={childActive ? "page" : undefined}
-                                      className={`block px-4 py-2 text-sm transition-colors duration-150 ease-out hover:bg-background/5 ${childActive ? "text-accent" : "text-background/75"}`}
+                                      className={`block px-4 py-2 text-sm transition-colors duration-150 ease-out hover:bg-primary/10 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${childActive ? "font-semibold text-primary" : "text-foreground"}`}
                                     >
                                       {child.name}
                                     </Link>

@@ -9,11 +9,22 @@ import { createPublicClient } from "@/lib/supabase/public";
 
 type Props = { params: Promise<{ slug: string }> };
 
+// Migration 023 seeded these bodies before the publication workflow existed.
+const legacyPlaceholderTitles: Readonly<Record<string, string>> = {
+  terms: "Terms of Service",
+  privacy: "Privacy Policy",
+  returns: "Returns Policy",
+};
+
 const getPublishedPolicy = cache(async (slug: string) => {
   try {
     const { data, error } = await createPublicClient("legal").from("legal_pages")
       .select("title, content").eq("slug", slug).not("published_at", "is", null).maybeSingle();
-    return error ? null : data;
+    if (error || !data?.content.trim()) return null;
+
+    const legacyTitle = Object.hasOwn(legacyPlaceholderTitles, slug) && legacyPlaceholderTitles[slug];
+    const placeholder = `This is a placeholder ${legacyTitle} for Pedigree Leather. Update this via the database.`;
+    return legacyTitle && data.content.trim() === placeholder ? null : data;
   } catch {
     return null;
   }
@@ -27,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: slug === "terms" ? { absolute: title } : title };
   }
 
-  const { data } = await createPublicClient().from("legal_pages").select("title").eq("slug", slug).maybeSingle();
+  const data = await getPublishedPolicy(slug);
   return { title: data?.title ?? "Legal" };
 }
 
@@ -49,8 +60,8 @@ export default async function LegalPage({ params }: Props) {
   const policy = getLegalPage(slug);
 
   if (!policy) {
-    const { data, error } = await createPublicClient().from("legal_pages").select("title, content").eq("slug", slug).maybeSingle();
-    if (error || !data) notFound();
+    const data = await getPublishedPolicy(slug);
+    if (!data) notFound();
     return <LegalDocument title={data.title}><p className="whitespace-pre-wrap">{data.content}</p></LegalDocument>;
   }
 

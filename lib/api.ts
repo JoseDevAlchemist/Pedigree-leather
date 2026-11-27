@@ -278,6 +278,31 @@ function publicProducts<Projection extends string>(
     .eq("is_website_published", true);
 }
 
+/** Read category IDs in batches without loading product cards for the shop shell. */
+export const getPopulatedSubcategories = cache(async () => {
+  const categories = (await getCategories()).filter(({ parentId }) => parentId);
+  const remaining = new Set(categories.map(({ id }) => id));
+  const populated = new Set<string>();
+  const ids = [...remaining];
+  const pageSize = 500;
+
+  for (let offset = 0; remaining.size > 0; offset += pageSize) {
+    const rows = await readFromSupabase("getPopulatedSubcategories", (supabase) =>
+      publicProducts(supabase, "category_id")
+        .in("category_id", ids)
+        .order("id")
+        .range(offset, offset + pageSize - 1),
+    );
+    if (!rows) break;
+    for (const { category_id } of rows) {
+      if (category_id && remaining.delete(category_id)) populated.add(category_id);
+    }
+    if (rows.length < pageSize) break;
+  }
+
+  return categories.filter(({ id }) => populated.has(id));
+});
+
 function withShopColors(product: Product): Product {
   const available = product.colors.filter((color) => color.stockQuantity > 0);
   return available.length > 0 ? { ...product, colors: available } : product;
@@ -292,14 +317,21 @@ function toShopProduct(row: ProductWithRelations): Product {
  * category pages pass theirs so a real database query would only ever return one
  * category.
  */
-export async function getProducts(category?: Product["category"]): Promise<Product[]> {
-  const rows = await readFromSupabase(`getProducts:${category ?? "all"}`, async (supabase) => {
+const readPublicProducts = cache(async (category?: Product["category"]) =>
+  readFromSupabase(`getProducts:${category ?? "all"}`, async (supabase) => {
     let query = publicProducts(supabase, await catalogueProjection())
       .order("created_at", { ascending: false });
     if (category) query = query.eq("category", category);
     return query;
-  });
+  }),
+);
 
+export async function getHomepageProducts(category: Product["category"]): Promise<Product[]> {
+  return (await readPublicProducts(category) ?? []).map(toShopProduct);
+}
+
+export async function getProducts(category?: Product["category"]): Promise<Product[]> {
+  const rows = await readPublicProducts(category);
   if (rows === null) return mockProducts(category);
   return rows.map(toShopProduct).sort((a, b) => byCreatedAtDesc(a, b));
 }

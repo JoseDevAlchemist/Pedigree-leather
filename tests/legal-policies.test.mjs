@@ -115,6 +115,22 @@ test("policy markdown renders HTML-like input as escaped text", () => {
   assert.equal(html, "<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>");
 });
 
+test("the legacy published placeholder falls back to the approved terms and title", async () => {
+  publishedOverride = {
+    title: "Terms of Service",
+    content: "This is a placeholder Terms of Service for Pedigree Leather. Update this via the database.",
+  };
+  try {
+    const params = Promise.resolve({ slug: "terms" });
+    assert.deepEqual(await route.generateMetadata({ params }), { title: { absolute: policies.termsTitle } });
+    const html = await render("terms");
+    assert.match(html, /Welcome to Pedigree Leather/);
+    assert.doesNotMatch(html, /Update this via the database/);
+  } finally {
+    publishedOverride = null;
+  }
+});
+
 test("a published override retains heading navigation and replaces the file text", async () => {
   publishedOverride = {
     title: policies.termsTitle,

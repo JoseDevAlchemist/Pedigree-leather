@@ -7,7 +7,7 @@ import { ProductGrid } from "@/components/product/ProductGrid";
 import { ProductGridSkeleton } from "@/components/product/ProductCardSkeleton";
 import { FilterBar } from "@/components/shop/FilterBar";
 import { getCategories, getCategoryBySlug } from "@/lib/categories-api";
-import { getCategoryColorOptions, getProductsByCategory } from "@/lib/api";
+import { getCategoryColorOptions, getPopulatedSubcategories, getProductsByCategory } from "@/lib/api";
 import {
   countActiveFilters,
   parseProductFilters,
@@ -49,7 +49,7 @@ export default async function CategoryPage({
 
   const [category, categories, colorOptions] = await Promise.all([
     getCategoryBySlug(slug),
-    getCategories(),
+    getPopulatedSubcategories(),
     getCategoryColorOptions(slug),
   ]);
   if (!category) {
