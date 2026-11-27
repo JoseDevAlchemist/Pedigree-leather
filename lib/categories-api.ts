@@ -44,7 +44,7 @@ function toCategory(row: CategoryRow): Category {
  */
 function publicClientOrNull(label: string) {
   try {
-    return createPublicClient();
+    return createPublicClient("categories");
   } catch (error) {
     console.error(`[pedigree/categories] ${label}:`, error);
     return null;
@@ -78,7 +78,7 @@ export const getCategories = cache(async (): Promise<Category[]> => {
 
   const { data, error } = await supabase
     .from("categories")
-    .select("*")
+    .select("id, name, slug, parent_id, display_order, is_active, created_at")
     .eq("is_active", true)
     .order("display_order", { ascending: true })
     .order("name", { ascending: true });

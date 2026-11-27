@@ -5,65 +5,64 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/lib/supabase/types";
 
-/**
- * A stateless server client, for reads nobody has to sign in for.
- *
- * ---------------------------------------------------------------------------
- * Why this file exists, and why `lib/supabase/server.ts` cannot do this job
- * ---------------------------------------------------------------------------
- * The cookie-aware client in `server.ts` calls `cookies()`. Calling `cookies()` opts a
- * route out of static rendering, so using it for the shop's product reads turned
- * `/`, `/bags`, `/shoes` and all twelve product pages from prerendered (`○`) into
- * server-rendered on demand (`ƒ`) — every page view became a database round trip, and
- * the build printed a misleading "couldn't be rendered statically because it used
- * `cookies`" error for each one.
- *
- * None of that access is needed. Reading the catalogue is governed by RLS rules that
- * are the same for every visitor: `active = true` or nothing. There is no per-user
- * rule to evaluate, so there is no session to carry — and a client with no session
- * cannot dirty the cache key, which is what lets these pages stay static.
- *
- * So the public read path is this file, and the session-aware path stays in
- * `server.ts` for the admin, where the session genuinely decides what may be read.
- *
- * ---------------------------------------------------------------------------
- * It is still the anon key
- * ---------------------------------------------------------------------------
- * RLS applies exactly as it does in the browser. This client has *more* power than a
- * browser one in one narrow way — it will not see a user's session, so a signed-in
- * admin viewing the shop sees what a visitor sees — and less in none. It cannot read
- * an inactive product, because the policy says so and policies are enforced by
- * Postgres, not by the client.
- */
+import { legalPolicyCacheTag, storefrontCache, type StorefrontCacheScope } from "@/lib/storefront-cache";
 
-const globalForPublic = globalThis as typeof globalThis & {
-  __pedigreePublicClient?: SupabaseClient<Database>;
-};
+type ClientScope = StorefrontCacheScope | "fresh";
 
-export function createPublicClient(): SupabaseClient<Database> {
-  const existing = globalForPublic.__pedigreePublicClient;
+// A scoped client only shares approved anonymous PostgREST reads.
+const clients = new Map<ClientScope, SupabaseClient<Database>>();
+
+function publicFetch(url: string, anonKey: string, scope: ClientScope): typeof fetch {
+  const origin = new URL(url).origin;
+
+  return (input, init) => {
+    const request = input instanceof Request ? input : null;
+    const target = new URL(request?.url ?? String(input));
+    const headers = new Headers(init?.headers ?? request?.headers);
+    const method = (init?.method ?? request?.method ?? "GET").toUpperCase();
+    const rule = scope === "fresh" ? null : storefrontCache[scope];
+    const query = target.searchParams;
+    const projection = query.get("select");
+    const slug = query.get("slug");
+    const safeSlug = slug && /^eq\.[a-z-]{1,60}$/.test(slug) ? slug.slice(3) : null;
+
+    const publicRead = rule && method === "GET" && target.origin === origin &&
+      target.pathname === `/rest/v1/${rule.table}` &&
+      !headers.has("cookie") && headers.get("authorization") === `Bearer ${anonKey}` &&
+      headers.get("apikey") === anonKey && projection && !projection.includes("*") &&
+      (scope !== "catalogue" || (query.get("active") === "eq.true" && query.get("is_website_published") === "eq.true")) &&
+      (scope !== "categories" || query.get("is_active") === "eq.true") &&
+      (scope !== "settings" || query.get("id") === "eq.default") &&
+      (scope !== "legal" || (safeSlug && query.get("published_at") === "not.is.null"));
+
+    if (!publicRead) return fetch(input, { ...init, cache: "no-store", next: undefined });
+
+    return fetch(input, {
+      ...init,
+      cache: "force-cache",
+      next: {
+        revalidate: rule.revalidate,
+        tags: scope === "legal" && safeSlug ? [rule.tag, legalPolicyCacheTag(safeSlug)] : [rule.tag],
+      },
+    });
+  };
+}
+
+export function createPublicClient(scope: ClientScope = "fresh"): SupabaseClient<Database> {
+  const existing = clients.get(scope);
   if (existing) return existing;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. Copy .env.example to .env.local and fill both in.",
-    );
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.");
   }
 
   const client = createSupabaseClient<Database>(url, anonKey, {
-    auth: {
-      /* No session, and none is invented. `persistSession: false` is the important
-         one: with it on, this client would try to read a session out of a cookie store
-         it does not have, which is exactly the dynamic-rendering trap above. */
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: publicFetch(url, anonKey, scope) },
   });
-
-  globalForPublic.__pedigreePublicClient = client;
+  clients.set(scope, client);
   return client;
 }

@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { storefrontCache } from "@/lib/storefront-cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 
 import {
@@ -124,16 +125,6 @@ function isRedirect(error: unknown): boolean {
   );
 }
 
-/**
- * Create a product.
- *
- * `revalidatePath("/")` afterwards because the shop's pages are statically
- * prerendered: a new product is on its own page immediately (`dynamicParams`
- * defaults to true, so the slug renders on demand) but it will not appear in the home
- * page's featured rail, the new-arrivals grid or a category grid until those are
- * revalidated. That is the one gap in the static build, and this is where it gets
- * closed.
- */
 export async function createProductAction(
   input: unknown,
   productId?: string,
@@ -169,10 +160,6 @@ export async function updateProductAction(
 
     const updated = await updateProductRow(id, parsed.data);
     revalidateShop();
-    /* The product's own page is prerendered at build, so an edited photograph —
-       or price, or description — would otherwise sit stale there until the next
-       build. `/bags` and `/shoes` revalidate the grids; this is the page itself,
-       which is what makes a new upload show on the product page without one. */
     revalidateProductPage(parsed.data.category, parsed.data.slug);
     return updated;
   }, () => requireAdminRole("owner"));
@@ -195,11 +182,7 @@ export async function deleteProductAction(id: string): Promise<ActionResult<null
  * cell cannot represent six colours with different counts. That value is edited
  * on the product form instead.
  *
- * Revalidates only the admin tree. This writes one column of one row, so it cannot
- * change what the shop shows except in the case of `active` — but `revalidateShop`
- * is not worth its cost on every keystroke committed in a table, and `active` is
- * rare enough that revalidating `/admin` plus the shop on that field alone is a
- * reasonable trade.
+ * Every field changes the public catalogue projection.
  */
 export async function updateFieldAction(
   id: string,
@@ -232,8 +215,8 @@ export async function updateFieldAction(
 
     const updated = await updateProductFieldRow(id, parsed.data.field as QuickField, numeric);
 
-    if (parsed.data.field === "active") revalidateShop();
-    else revalidatePath("/admin", "layout");
+    revalidateShop();
+    revalidatePath("/admin", "layout");
 
     return updated;
   });
@@ -266,21 +249,8 @@ class ValidationError extends Error {
 }
 
 function revalidateShop() {
-  /* The shop's static pages: home, the two legacy grids, and every dynamic
-     category grid. The dynamic route is revalidated as a whole because a product
-     save only knows its `category_id`; looking the slug up here would add another
-     query to every write, and this invalidates the few pages that exist. */
-  revalidatePath("/");
-  revalidatePath("/bags");
-  revalidatePath("/shoes");
-  revalidatePath("/category/[slug]", "page");
+  updateTag(storefrontCache.catalogue.tag);
   revalidatePath("/sitemap.xml");
-
-  /* Deleting a product leaves its detail page stale, and a create/update may
-     change the slug. Revalidating the dynamic detail routes as a whole covers
-     every case without another read. */
-  revalidatePath("/bags/[slug]", "page");
-  revalidatePath("/shoes/[slug]", "page");
 }
 
 /** The shop path a product lives at, from its category and slug. */

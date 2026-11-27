@@ -47,3 +47,12 @@ export const legalPages = {
 export function getLegalPage(slug: string) {
   return Object.hasOwn(legalPages, slug) ? legalPages[slug as keyof typeof legalPages] : undefined;
 }
+
+export function getLegalBaseline(slug: string) {
+  const policy = getLegalPage(slug);
+  if (!policy) return undefined;
+  const sections = policy.sections.map(section => `## ${section.title}\n\n${section.content}`);
+  return slug === "terms"
+    ? [termsIntroduction, ...sections, "---", termsClosing].join("\n\n")
+    : [`**Effective date:** ${effectiveDate}`, ...sections].join("\n\n");
+}

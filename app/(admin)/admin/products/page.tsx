@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { ProductFilters } from "@/components/admin/ProductFilters";
 import { ProductTable } from "@/components/admin/ProductTable";
 import { listProducts } from "@/lib/admin-api";
-import { requireRole } from "@/lib/roles";
+import { requireAdminRole } from "@/lib/supabase/guards";
 import { getInventoryPreferences } from "@/lib/admin-inventory-preferences";
 import { inventoryDefaults } from "@/lib/settings-schema";
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminProductsPage({ searchParams }: PageProps<"/admin/products">) {
-  await requireRole("owner");
+  await requireAdminRole("owner");
 
   const params = await searchParams;
   const rawCategory = params.category;

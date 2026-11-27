@@ -78,7 +78,10 @@ async function encodeWebp(file: File) {
       return { blob, width: canvas.width };
     }
 
-    const original = await encode(1440, 0.88);
+    const original = file.type === "image/webp" && file.size <= MAX_BYTES &&
+      Math.max(image.width, image.height) <= 1440
+      ? { blob: file, width: image.width }
+      : await encode(1440, 0.88);
     const card = original.width > 640 ? await encode(720, 0.84) : null;
     return { original, card };
   } finally {

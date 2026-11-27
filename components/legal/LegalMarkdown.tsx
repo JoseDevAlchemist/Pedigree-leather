@@ -2,16 +2,25 @@ import { Fragment } from "react";
 
 function emphasis(text: string) {
   return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, index) => {
-    if (part.startsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    if (part.startsWith("*")) return <em key={index}>{part.slice(1, -1)}</em>;
+    if (/^\*\*[^*]+\*\*$/.test(part)) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (/^\*[^*]+\*$/.test(part)) return <em key={index}>{part.slice(1, -1)}</em>;
     return part;
   });
 }
 
 export function LegalMarkdown({ content }: { content: string }) {
-  return content.trim().split(/\n[ \t]*\n/).map((block, index) => {
-    if (block.startsWith("### ")) {
-      return <h3 key={index}>{emphasis(block.slice(4))}</h3>;
+  if (!content.trim()) return null;
+  return content.replace(/\r\n/g, "\n").trim().split(/\n[ \t]*\n/).map((block, index) => {
+    if (block === "---") return <hr key={index} className="border-border" />;
+    const heading = /^(#{1,6}) ([^\n]+)(?:\n([\s\S]*))?$/.exec(block);
+    if (heading) {
+      const Heading = heading[1].length <= 2 ? "h2" : heading[1].length === 3 ? "h3" : "h4";
+      return (
+        <Fragment key={index}>
+          <Heading>{emphasis(heading[2])}</Heading>
+          {heading[3] && <LegalMarkdown content={heading[3]} />}
+        </Fragment>
+      );
     }
     if (block.startsWith("- ")) {
       return (

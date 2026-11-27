@@ -4,7 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { ContactWidgetWrapper } from "@/components/layout/ContactWidgetWrapper";
 import { getCategories, getParentCategories } from "@/lib/categories-api";
-import { brandingUrl, getShopSettings, getStorefrontPreferences } from "@/lib/settings-api";
+import { brandingUrl, getStorefrontShopSettings, getStorefrontPreferences } from "@/lib/settings-api";
 import { ExchangeRateProvider } from "@/components/product/ExchangeRateContext";
 import { Toaster } from "sonner";
 import type { Metadata } from "next";
@@ -48,7 +48,7 @@ export default async function ShopLayout({
   const [categories, parentCategories, settings] = await Promise.all([
     getCategories(),
     getParentCategories(),
-    getShopSettings().catch(() => null),
+    getStorefrontShopSettings().catch(() => null),
   ]);
 
   const preferences = settings?.storefront_preferences;

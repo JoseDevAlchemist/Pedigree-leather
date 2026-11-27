@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Banknote, Bell, Brush, ChevronDown, ClipboardList, CreditCard, History, Package, Search, Server, Shield, Store, Truck, Users } from "lucide-react";
 import type { Metadata } from "next";
 
+import { LegalPoliciesPanel } from "@/components/admin/LegalPoliciesPanel";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 import { SettingsMaintenanceAction } from "@/components/admin/SettingsMaintenanceAction";
 import { createClient } from "@/lib/supabase/server";
@@ -97,7 +98,7 @@ async function loadSnapshot(owner: string, section: string) {
 
 export default async function AdminSettingsPage({ searchParams }: PageProps<"/admin/settings">) {
   const owner = await requireRole("owner");
-  const { section: requested } = await searchParams;
+  const { section: requested, policy } = await searchParams;
   const section = settingsSections.find(item => item.id === requested) ?? settingsSections[0];
   const fields = section.groups?.flatMap(group => group.fields) ?? [];
   const [snapshot, health, assurance] = await Promise.all([
@@ -161,6 +162,7 @@ export default async function AdminSettingsPage({ searchParams }: PageProps<"/ad
               notificationProviders={section.id === "notifications" ? notificationAvailability() : undefined} stkConfigured={section.id === "payments" && isStkConfigured()} rateUpdated={settings.exchange_rate_updated_at} brandingBase={brandingBaseUrl()}
               initialValues={Object.fromEntries(fields.map(([key]) => [key, (values as Partial<Record<SettingKey, SettingValue>>)[key] ?? null]))} />
           ) : <p role="alert" className="text-sm text-red-800">Could not load the store settings. Check the database connection and reload.</p>)}
+          {section.id === "orders" && <LegalPoliciesPanel owner={owner.email} policy={policy} />}
           {section.id === "payments" && <PaymentStatus />}
           {section.id === "notifications" && (
             <div className="space-y-2 text-sm text-muted">

@@ -7,6 +7,8 @@
  * input, call the server-only API, and return serializable results.
  */
 
+import { updateTag } from "next/cache";
+import { storefrontCache } from "@/lib/storefront-cache";
 import { z } from "zod";
 import { createOrder, getOrderById } from "@/lib/orders-api";
 import { allowsDeferredPayment } from "@/lib/payments/config";
@@ -144,6 +146,7 @@ export async function createOrderAction(
     });
 
     if (!result.created) return { ok: true, orderId: result.orderId };
+    updateTag(storefrontCache.catalogue.tag);
 
     // Fetch the created order to get the order number for WhatsApp
     const createdOrder = await getOrderById(result.orderId);

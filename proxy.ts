@@ -44,11 +44,29 @@ const ADMIN_PREFIX = "/admin";
 const LOGIN_PATH = "/admin/login";
 
 export async function proxy(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (!url || !anonKey || !serviceRoleKey) {
+    const message = "Admin is temporarily unavailable because its database connection is not configured. Contact the site administrator.";
+    const headers = { "Cache-Control": "no-store" };
+
+    if (request.nextUrl.pathname.startsWith("/api/admin/")) {
+      return NextResponse.json({ error: message }, { status: 503, headers });
+    }
+
+    return new NextResponse(message, {
+      status: 503,
+      headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -113,19 +131,5 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = {
-  /* Everything except static assets and image optimisation output, which cannot
-     be an admin page and would only add latency. Running on `_next/image` in
-     particular would mean a Supabase round trip for every thumbnail. */
-  matcher: [
-    /*
-     * Everything except:
-     *  - _next/static  (build output)
-     *  - _next/image   (the image optimiser)
-     *  - favicon.ico   and any file with an extension (.*\\.)
-     *  - payment webhooks, which are called by providers with no session and
-     *    must not depend on a Supabase Auth round trip
-     */
-    "/((?!_next/static|_next/image|favicon.ico|api/mpesa/callback|api/flutterwave/webhook|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
-  ],
-};
+// Only the administration tree and its APIs use session cookies.
+export const config = { matcher: ["/admin/:path*", "/api/admin/:path*"] };
