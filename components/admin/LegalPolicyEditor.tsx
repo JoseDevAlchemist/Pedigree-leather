@@ -19,7 +19,8 @@ export function LegalPolicyEditor({ slug, baseline, initial }: {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ text: string; error?: boolean }>();
   const saving = useRef(false);
-  const dirty = content !== (state.draft ?? state.published ?? baseline);
+  const savedContent = state.draft ?? state.published ?? baseline;
+  const dirty = content !== savedContent;
   useUnsavedSettings(dirty, pending);
 
   async function save(action: Operation) {
@@ -68,10 +69,14 @@ export function LegalPolicyEditor({ slug, baseline, initial }: {
         <button type="button" className={`${button} bg-primary text-background`} disabled={pending || !content.trim() || (!dirty && state.draft === null && state.published !== null)}
           onClick={() => void save("publish")}>Publish</button>
         <button type="button" className={button} disabled={pending || !state.canRestore} onClick={() => void save("restore")}>Restore previous version</button>
+        <button type="button" className={button} disabled={pending || !dirty} onClick={() => {
+          setContent(savedContent);
+          setMessage(undefined);
+        }}>Reset edits</button>
       </div>
       {pending && <p role="status" className="text-sm">Saving policy…</p>}
       {message && <p role={message.error ? "alert" : "status"} className={message.error ? "text-sm text-red-800" : "text-sm"}>{message.text}</p>}
-      {preview && <div id="policy-preview" className="space-y-4 rounded-md border border-border p-4 [&_h2]:font-serif [&_h2]:text-xl [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-6">
+      {preview && <div id="policy-preview" className="space-y-4 rounded-md border border-border p-4 [overflow-wrap:anywhere] [&_h2]:font-serif [&_h2]:text-xl [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-6">
         <LegalMarkdown content={content} />
       </div>}
     </div>

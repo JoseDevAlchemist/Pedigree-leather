@@ -9,11 +9,12 @@ type Section = {
   notes?: string[];
   links?: [string, string][];
   confirm?: boolean;
+  hidden?: boolean;
 };
 
 export const settingsSections: Section[] = [
   {
-    id: "store", label: "Store information", description: "Manage the identity and contact details customers see.",
+    id: "store", label: "Store Information", description: "Manage the identity and contact details customers see.",
     groups: [
       { title: "Identity", fields: [["business_name", "Business name"], ["shop_name", "Store display name"], ["logo", "Business logo", "image"], ["favicon", "Favicon", "image"]] },
       { title: "Contact and location", fields: [["email", "Contact email", "email"], ["support_email", "Customer support email", "email"], ["phone", "Telephone"], ["whatsapp", "WhatsApp number (including country code)"], ["address", "Shop address"], ["google_maps_url", "Google Maps link", "url"], ["operating_hours", "Business hours", "textarea"]] },
@@ -22,7 +23,7 @@ export const settingsSections: Section[] = [
     ],
   },
   {
-    id: "currency", label: "Currency and pricing", description: "KES is the checkout currency. The website and POS use the shared KES-per-USD rate.",
+    id: "currency", label: "Currency and Pricing", description: "KES is the checkout currency. The website reads the KES-per-USD display rate from the shared database.",
     groups: [
       { title: "Exchange rate", fields: [["exchange_rate_kes_to_usd", "KES per 1 USD", "decimal"]] },
       { title: "Website price display", fields: [["show_discount_badge", "Show discount badges on product cards", "checkbox"], ["tax_display_note", "Tax information shown at checkout"]] },
@@ -38,11 +39,11 @@ export const settingsSections: Section[] = [
     links: [["Website orders and payment records", "/admin/orders"]],
   },
   {
-    id: "delivery", label: "Delivery and pickup", description: "Manage fulfilment availability, fees and instructions shown at checkout.",
+    id: "delivery", label: "Delivery and Pickup", description: "Manage fulfilment availability, fees and instructions shown at checkout.",
     groups: [
       { title: "Delivery", fields: [["delivery_enabled", "Offer delivery", "checkbox"], ["delivery_flat_rate", "Default delivery fee (KES)", "number"], ["free_delivery_threshold", "Free delivery from (KES)", "number"], ["delivery_estimate", "Estimated delivery time"]] },
       { title: "Store pickup", fields: [["pickup_available", "Offer store pickup", "checkbox"], ["pickup_address", "Pickup address"], ["pickup_hours", "Pickup hours"], ["pickup_instructions", "Pickup instructions", "textarea"]] },
-      { title: "Preparation", fields: [["preparation_time", "Estimated preparation time"]] },
+      { title: "Checkout information", fields: [["preparation_time", "Estimated preparation time"], ["checkout_instructions", "Customer-facing instructions", "textarea"]] },
     ],
     notes: ["Courier contact and dispatch integration require configuration."],
     links: [["Manage delivery zones and fees", "/admin/settings/zones"]],
@@ -54,11 +55,11 @@ export const settingsSections: Section[] = [
       { title: "Storefront stock display", fields: [["hide_unavailable", "Hide sold-out products in website listings", "checkbox"]] },
       { title: "Website admin product list", fields: [["low_stock_threshold", "Low-stock warning threshold (0 to disable)", "number"], ["show_admin_codes", "Show product codes", "checkbox"], ["show_colour_stock", "Show stock by colour", "checkbox"], ["show_size_stock", "Show EU size counts", "checkbox"]] },
     ],
-    notes: ["Automated stock alerts, stock adjustment permissions and POS display preferences require POS integration.", "Cross-application sync and inventory activity need a verified POS integration."],
-    links: [["Manage products and variants", "/admin/products"]],
+    notes: ["Low-stock warnings appear in Products. Automated low-stock notifications are unavailable."],
+    links: [["Manage products and variants", "/admin/products"], ["Open Pedigree POS", "https://pedigree-pos.vercel.app"]],
   },
   {
-    id: "orders", label: "Orders and checkout", description: "Set the information customers receive during checkout.",
+    id: "orders", hidden: true, label: "Orders and checkout", description: "Set the information customers receive during checkout.",
     groups: [
       { title: "Checkout information", fields: [["checkout_instructions", "Customer-facing instructions", "textarea"], ["preparation_time", "Estimated preparation time"]] },
     ],
@@ -73,24 +74,24 @@ export const settingsSections: Section[] = [
       { title: "Email notifications", fields: [["notify_payment_receipt", "Send payment receipts to customers", "checkbox"]] },
     ],
     confirm: true,
-    notes: ["Leave staff recipients blank to use the existing WhatsApp recipient. Failed payment, refund request, stock and security event delivery require additional integration."],
+    notes: ["Leave staff recipients blank to use the existing WhatsApp recipient. The low-stock threshold in Inventory and POS controls the warning in Products."],
   },
   {
-    id: "staff", label: "Staff and permissions", description: "Review website roles and open the existing staff manager.",
+    id: "staff", hidden: true, label: "Staff and permissions", description: "Review website roles and open the existing staff manager.",
     notes: ["Owner and worker are the two website roles. Owners manage products, publication, pricing, staff and settings. Workers can access the dashboard and manage orders. POS manager permissions are enforced separately by POS.", "Custom role permissions and staff session policies require application and authentication support."],
     links: [["Manage staff accounts", "/admin/staff"], ["View settings audit", "/admin/settings?section=audit"]],
   },
   {
-    id: "appearance", label: "Website appearance", description: "Edit the catalogue introduction and storefront messages.",
+    id: "appearance", hidden: true, label: "Website appearance", description: "Edit the catalogue heading, product display and storefront messages.",
     groups: [
-      { title: "Catalogue introduction", fields: [["hero_title", "Homepage heading"], ["hero_description", "Homepage introduction", "textarea"], ["homepage_sort", "Homepage catalogue sorting", "sort"], ["feature_first", "List featured products first", "checkbox"], ["show_discount_badge", "Show discount badges on product cards", "checkbox"]] },
+      { title: "Catalogue display", fields: [["hero_title", "Homepage heading"], ["homepage_sort", "Homepage catalogue sorting", "sort"], ["feature_first", "List featured products first", "checkbox"], ["show_discount_badge", "Show discount badges on product cards", "checkbox"]] },
       { title: "Storefront messages", fields: [["announcement_enabled", "Show announcement", "checkbox"], ["announcement", "Announcement message", "textarea"], ["maintenance_message", "Maintenance message", "textarea"]] },
     ],
     notes: ["The maintenance message is informational. Separate homepage sections require storefront support."],
     links: [["Edit footer contact details and social links", "/admin/settings"]],
   },
   {
-    id: "seo", label: "SEO and marketing", description: "Set default search and sharing metadata for the storefront.",
+    id: "seo", hidden: true, label: "SEO and marketing", description: "Set default search and sharing metadata for the storefront.",
     groups: [
       { title: "Search appearance", fields: [["seo_title", "Default website title"], ["seo_description", "Default meta description", "textarea"], ["allow_indexing", "Allow storefront indexing", "checkbox"], ["search_verification", "Google Search Console verification token"]] },
       { title: "Social sharing", fields: [["sharing_title", "Sharing title"], ["sharing_description", "Sharing description", "textarea"], ["social", "Default Open Graph image", "image"]] },
@@ -104,10 +105,13 @@ export const settingsSections: Section[] = [
     links: [["Change password by email", "/admin/forgot-password"], ["View settings audit", "/admin/settings?section=audit"]],
   },
   {
-    id: "system", label: "System health", description: "Inspect this deployment and the settings database.",
+    id: "system", hidden: true, label: "System health", description: "Inspect this deployment and the settings database.",
     notes: ["Verified backup information and POS heartbeat data require connected monitoring."],
   },
   {
-    id: "audit", label: "Audit history", description: "Review the latest changes to storefront settings, the shared exchange rate and delivery zones.",
+    id: "audit", label: "Audit History", description: "Review changes to store settings, delivery zones and legal policies.",
+  },
+  {
+    id: "legal", label: "Legal Policies", description: "Edit, preview and publish the policies customers see on the website.",
   },
 ];

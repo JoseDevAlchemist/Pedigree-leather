@@ -115,6 +115,7 @@ export async function saveSettingsAction(section: string, version: string | null
     if (Object.keys(core).length || Object.keys(preferences).length) {
       updateTag(storefrontCache.settings.tag);
       if (section === "delivery" || section === "orders") revalidatePath("/checkout");
+      if (section === "payments") revalidatePath("/admin/settings");
       if (section === "seo") revalidatePath("/sitemap.xml");
     }
     if (section === "inventory" && Object.keys(privateSettings).length) revalidatePath("/admin/products");

@@ -494,6 +494,19 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      legal_policy_revisions: {
+        Row: {
+          id: number
+          slug: string
+          content: string
+          action: "baseline" | "draft" | "publish" | "restore"
+          actor: string
+          created_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       legal_pages: {
         Row: {
           slug: string

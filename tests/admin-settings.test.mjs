@@ -25,6 +25,110 @@ const cacheRules = load("lib/storefront-cache.ts");
 const timestamp = "2026-11-22T19:00:00.001234+00:00";
 const savedTimestamp = "2026-11-22T19:01:00.004321+00:00";
 
+test("Settings navigation keeps nine sections while preserving old editor definitions", () => {
+  const visible = sections.settingsSections.filter(section => !section.hidden);
+  assert.deepEqual(visible.map(({ id }) => id), [
+    "store", "currency", "payments", "delivery", "inventory", "notifications",
+    "security", "audit", "legal",
+  ]);
+  assert.deepEqual(sections.settingsSections.filter(section => section.hidden).map(({ id }) => id), [
+    "orders", "staff", "appearance", "seo", "system",
+  ]);
+});
+
+test("the audit view shows settings and legal events without reading policy text", async () => {
+  const { createElement } = nativeRequire("react");
+  const { renderToReadableStream } = nativeRequire("react-dom/server");
+  const requests = [];
+  const { default: SettingsPage } = load("app/(admin)/admin/settings/page.tsx", {
+    "next/link": { default: ({ children, href }) => createElement("a", { href }, children) },
+    "lucide-react": nativeRequire("lucide-react"),
+    "@/components/admin/LegalPoliciesPanel": {},
+    "@/components/admin/AdminSettings": {},
+    "@/components/admin/SettingsMaintenanceAction": {},
+    "@/lib/supabase/server": {},
+    "@/lib/settings-api": {},
+    "@/lib/roles": { requireRole(role) { assert.equal(role, "owner"); return { email: "owner@example.test" }; } },
+    "@/lib/notification-settings": {},
+    "@/lib/settings-sections": sections,
+    "@/lib/settings-schema": schema,
+    "@/lib/admin-settings-snapshot": {},
+    "@/lib/payments/config": {},
+    "@/content/legal": { getLegalPage: () => ({ label: "Terms" }) },
+    "@/lib/supabase/admin": { createAdminClient: () => ({
+      from(table) {
+        const request = [table];
+        requests.push(request);
+        return {
+          select(columns) { request.push(columns); return this; },
+          neq(...filter) { request.push(filter); return this; },
+          order() { return this; },
+          async limit() {
+            const data = table === "shop_settings_audit"
+              ? [{ id: 1, changed_at: timestamp, actor: "owner@example.test", changes: { exchange_rate_kes_to_usd: 145.25 } }]
+              : [{ id: 1, created_at: savedTimestamp, actor: "publisher@example.test", slug: "terms", action: "publish" }];
+            return { data, error: null };
+          },
+        };
+      },
+    }) },
+  });
+  const stream = await renderToReadableStream(await SettingsPage({ searchParams: Promise.resolve({ section: "audit" }) }));
+  await stream.allReady;
+  const html = await new Response(stream).text();
+  assert.deepEqual(requests, [
+    ["shop_settings_audit", "id, changed_at, actor, changes"],
+    ["legal_policy_revisions", "id, slug, action, actor, created_at", ["action", "baseline"]],
+  ]);
+  assert.match(html, /publisher@example\.test.*owner@example\.test/s);
+  assert.match(html, /exchange_rate_kes_to_usd/);
+  assert.match(html, /publish/);
+  assert.equal([...html.matchAll(/href="\/admin\/settings\?section=legal"/g)].length, 2);
+  assert.doesNotMatch(html, /href="\/admin\/settings\?section=(?:orders|staff|appearance|seo|system)"/);
+});
+
+test("settings reads distinguish missing RPC, denied access, empty rows and invalid snapshots", async (t) => {
+  const log = t.mock.method(console, "error", () => {});
+  const shop = { updated_at: timestamp, exchange_rate_updated_at: null, storefront_preferences: {}, exchange_rate_kes_to_usd: 130 };
+  let response = { data: { shop, private: null }, error: null };
+  let expectedSection = "currency";
+  const { loadAdminSettingsSnapshot } = load("lib/admin-settings-snapshot.ts", {
+    "server-only": {},
+    "@/lib/settings-schema": schema,
+    "@/lib/supabase/admin": { createAdminClient: () => ({
+      async rpc(name, args) {
+        assert.equal(name, "read_website_settings");
+        assert.deepEqual(args, { p_actor: "owner@example.test", p_section: expectedSection });
+        return response;
+      },
+    }) },
+  });
+  const read = () => loadAdminSettingsSnapshot("owner@example.test", expectedSection);
+  assert.deepEqual(await read(), { ok: true, data: { shop, private: null } });
+
+  for (const [failure, reason, message] of [
+    [{ error: { code: "PGRST202" } }, "rpc", /read function is unavailable/],
+    [{ error: { code: "42703" } }, "schema", /required table or column/],
+    [{ error: { code: "42501" } }, "access", /denied access/],
+    [{ data: null }, "empty", /default store row/],
+    [{ data: { shop: {}, private: null } }, "invalid", /unexpected format/],
+    [{ error: { code: "" } }, "unavailable", /server connection/],
+  ]) {
+    response = failure;
+    const result = await read();
+    assert.equal(result.ok, false);
+    assert.match(result.message, message);
+    const event = log.mock.calls.at(-1).arguments[1];
+    assert.deepEqual(event, { section: expectedSection, reason, code: failure.error?.code });
+  }
+
+  expectedSection = "inventory";
+  response = { data: { shop, private: null }, error: null };
+  assert.match((await read()).message, /default admin preferences row/);
+  response = { data: { shop, private: { low_stock_threshold: 4 } }, error: null };
+  assert.equal((await read()).data.private.low_stock_threshold, 4);
+});
+
 function settingsFixture({ role = "owner", version = timestamp, configured = false, rpcError } = {}) {
   const operations = [];
   const client = {
@@ -111,6 +215,7 @@ test("invalid, stale or unauthorized settings changes never reach the writer", a
   }
   const stale = settingsFixture({ version: savedTimestamp });
   assert.match((await stale.saveSettingsAction("store", timestamp, { shop_name: "Fixture" }, new FormData())).error, /another session/);
+  assert.match((await stale.saveSettingsAction("currency", timestamp, { exchange_rate_kes_to_usd: 145.25 }, new FormData())).error, /another session/);
   assert.deepEqual(fixture.operations, []);
   assert.deepEqual(stale.operations, []);
 });
@@ -227,8 +332,35 @@ test("settings render labelled inputs and the shared currency preview", () => {
   }));
   assert.match(html, /<fieldset[^>]*><legend[^>]*>Exchange rate<\/legend>/);
   assert.match(html, /<label[^>]*>KES per 1 USD<input[^>]*value="125"/);
-  assert.match(html, /KES 10,000 converts to \$80\.00/);
+  assert.equal([...html.matchAll(/KES 10,000 converts to \$80\.00/g)].length, 1);
   assert.match(html, /type="submit" disabled=""[^>]*>Save changes/);
+});
+
+test("each editable section accepts only its own fields and routes changes to the expected storage", async () => {
+  for (const [section, key, value, argument] of [
+    ["store", "shop_name", "Fixture store", "p_core"],
+    ["currency", "exchange_rate_kes_to_usd", 145.25, "p_core"],
+    ["payments", "stk_wait_seconds", 60, "p_preferences"],
+    ["delivery", "delivery_flat_rate", 350, "p_core"],
+    ["delivery", "checkout_instructions", "Fixture instructions", "p_preferences"],
+    ["inventory", "show_size_stock", true, "p_private"],
+    ["orders", "checkout_instructions", "Fixture instructions", "p_preferences"],
+    ["notifications", "notify_payment_receipt", false, "p_private"],
+    ["appearance", "homepage_sort", "price_asc", "p_preferences"],
+    ["seo", "allow_indexing", false, "p_preferences"],
+  ]) {
+    const fixture = settingsFixture();
+    const result = await fixture.saveSettingsAction(section, timestamp, { [key]: value }, new FormData());
+    assert.equal(result.ok, true, section);
+    assert.deepEqual(result.values, { [key]: value });
+    assert.deepEqual(fixture.operations[0][2][argument], { [key]: value });
+    if (section === "payments") assert.ok(fixture.operations.some(([kind, path]) => kind === "revalidate" && path === "/admin/settings"));
+
+    const outOfSectionKey = section === "store" ? "exchange_rate_kes_to_usd" : "shop_name";
+    const outOfSectionValue = section === "store" ? 130 : "Fixture store";
+    const rejected = await fixture.saveSettingsAction(section, timestamp, { [outOfSectionKey]: outOfSectionValue }, new FormData());
+    assert.equal(rejected.ok, false, section);
+  }
 });
 
 test("configured WhatsApp preferences use only selected fixtures without calling live Twilio", async () => {

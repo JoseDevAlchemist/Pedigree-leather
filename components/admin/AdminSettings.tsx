@@ -131,7 +131,7 @@ export function AdminSettings({ section, initialValues, initialVersion, rateUpda
               );
             })}
           </div>
-          {section === "currency" && (
+          {section === "currency" && group.fields.some(([key]) => key === "exchange_rate_kes_to_usd") && (
             <div className="mt-4 space-y-1 text-sm text-muted">
               <p>KES 10,000 converts to {Number(values.exchange_rate_kes_to_usd) > 0
                 ? getDisplayPrices({ basePrice: 10_000, discountPercent: 0, exchangeRate: Number(values.exchange_rate_kes_to_usd) }).usd
